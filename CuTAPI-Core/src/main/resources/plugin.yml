@@ -1,0 +1,9 @@
+name: CuTAPI
+authors: [ Mastriel ]
+version: '${version}'
+main: xyz.mastriel.cutapi.CuTAPIPlugin
+api-version: 1.17
+prefix: CuTAPI
+description: An API designed to make creating cool things in plugins possible!
+website: mastriel.xyz
+

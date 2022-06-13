@@ -1,0 +1,4 @@
+# Project exclude paths
+/.gradle/
+/CuTAPI-Core/build/
+/ExamplePlugin/build/
