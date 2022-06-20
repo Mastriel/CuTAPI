@@ -1,7 +1,8 @@
 package xyz.mastriel.cutapi
 
-import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
+import xyz.mastriel.cutapi.commands.CuTGiveCommand
+import xyz.mastriel.cutapi.items.bukkitevents.PlayerItemEvents
 
 
 internal lateinit var Plugin : CuTAPIPlugin
@@ -13,6 +14,13 @@ class CuTAPIPlugin : JavaPlugin() {
     override fun onEnable() {
         Plugin = this
         info("CuTAPI enabled!")
+
+        CuTAPI.registerPlugin(this, "cutapi")
+
+        getCommand("cutgive")?.setExecutor(CuTGiveCommand)
+        getCommand("cutgive")?.tabCompleter = CuTGiveCommand
+
+        server.pluginManager.registerEvents(PlayerItemEvents, this)
 
     }
 

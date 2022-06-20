@@ -7,13 +7,13 @@ import xyz.mastriel.cutapi.registry.IdentifiableSerializer
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.IdentifierMap
 import xyz.mastriel.cutapi.registry.descriptors.defaultMaterialDescriptor
-import xyz.mastriel.cutapi.registry.descriptors.materialDescriptor
 
 
 private object CustomMaterialSerializer : IdentifiableSerializer<CustomMaterial>("customMaterial", CustomMaterial)
 
 @Serializable(with = CustomMaterialSerializer::class)
 open class CustomMaterial(override val id: Identifier, val type: Material) : Identifiable {
+
 
     /**
      * The descriptor that describes the custom material's default values, such
@@ -22,14 +22,12 @@ open class CustomMaterial(override val id: Identifier, val type: Material) : Ide
      */
     open val materialDescriptor = defaultMaterialDescriptor()
 
-    /**
-     * A function that is called when a [CustomItemStack]'s constructor is called.
-     *
-     * @param itemStack The CustomItemStack being created.
-     * */
-    open fun onCreate(itemStack: CustomItemStack) {
 
-    }
+    fun createItemStack(quantity: Int) =
+        CustomItemStack(this, quantity)
+
+    open fun onCreate(item: CustomItemStack) {}
+
 
     companion object : IdentifierMap<CustomMaterial>() {
         override fun register(item: CustomMaterial) {

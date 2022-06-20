@@ -1,15 +1,12 @@
 package xyz.mastriel.exampleplugin
 
-import kotlinx.serialization.Serializable
-import org.bukkit.Material
+import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
 import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.items.CustomItemStack
 import xyz.mastriel.cutapi.items.CustomMaterial
-import xyz.mastriel.cutapi.items.ItemData
-import xyz.mastriel.cutapi.registry.descriptors.materialDescriptor
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.utils.colored
+import xyz.mastriel.cutapi.items.components.ComponentSerializer
+import xyz.mastriel.exampleplugin.components.Soulbound
+import xyz.mastriel.exampleplugin.items.RubySword
 
 internal lateinit var Plugin : ExamplePlugin
     private set
@@ -17,10 +14,13 @@ internal lateinit var Plugin : ExamplePlugin
 class ExamplePlugin : JavaPlugin() {
 
     override fun onEnable() {
-        CuTAPI.registerPlugin(this, "example_plugin")
+        Plugin = this
+        CuTAPI.registerPlugin(this, "brazil")
 
         CustomMaterial.register(RubySword)
-
+        ComponentSerializer.register(Soulbound)
+        Bukkit.getPluginManager().registerEvents(Soulbound, this)
+        getCommand("test")?.setExecutor(TestCommand)
     }
 
     override fun onDisable() {
@@ -29,13 +29,3 @@ class ExamplePlugin : JavaPlugin() {
 }
 
 
-object RubySword : CustomMaterial(id(Plugin, "ruby_sword"), Material.DIAMOND_SWORD) {
-
-    override val materialDescriptor = materialDescriptor {
-        name = "&fRuby Sword".colored
-    }
-
-    override fun onCreate(itemStack: CustomItemStack) {
-
-    }
-}

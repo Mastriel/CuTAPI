@@ -22,7 +22,7 @@ object CuTAPI {
      *
      * @param plugin The plugin being registered.
      * @param namespace The namespace being used for the plugin. By default, this is just the plugin's name
-     * in all lowercase. A namespace must follow Regex `[a-z0-9_]+`, must be between 3 and 16 characters, and must
+     * in all lowercase. A namespace must follow Regex `[a-z0-9_]+`, must be between 3 and 64 characters, and must
      * not start or end with an underscore (_). Also, namespaces must be unique between plugins, and cannot be shared.
      * @throws IllegalArgumentException If the namespace is invalid.
      * @throws IllegalStateException If the namespace is already in use.
@@ -116,7 +116,7 @@ object CuTAPI {
      * @throws IllegalStateException If the namespace is already in use.
      * */
     internal fun requireValidNamespace(namespace: String) {
-        if (namespace.length !in 3..16) throw IllegalArgumentException("Namespace $namespace is not valid! (not within 3-16 chars)")
+        if (namespace.length !in 3..64) throw IllegalArgumentException("Namespace $namespace is not valid! (not within 3-64 chars)")
 
         if (!namespaceRegex.matches(namespace)) {
             throw IllegalArgumentException("Namespace $namespace is not valid! (does not match ${namespaceRegex.pattern})")

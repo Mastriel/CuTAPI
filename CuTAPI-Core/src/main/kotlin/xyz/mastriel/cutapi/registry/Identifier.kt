@@ -29,11 +29,11 @@ data class Identifier internal constructor(val namespace: String, val id: String
     override fun toString(): String {
         return "$namespace:$id"
     }
+
 }
 
 /**
- * An identifier, for any type of registrable object. If an identifier is not able to resolve,
- * it will automatically be `cutapi:unknown`.
+ * An identifier, for any type of registrable object.
  *
  * @param plugin The plugin used for the namespace
  * @param id This must follow the same naming rules as namespaces. See [CuTAPI.registerPlugin] for more info.
@@ -47,6 +47,36 @@ fun id(plugin: Plugin, id: String) : Identifier {
     val namespace = CuTAPI.getDescriptor(plugin).namespace
     return Identifier(namespace, id)
 }
+
+/**
+ * An identifier, for any type of registrable object. You should not use this manually, and instead
+ * use the other overload, as supplying an invalid plugin can result in errors. This should only be used
+ * to get an [Identifier] from already stored data.
+ *
+ * @param stringRepresentation The string representation of the [Identifier] you are trying to get.
+ *
+ * @see CuTAPI.registerPlugin
+ */
+fun id(stringRepresentation: String) : Identifier {
+    val (namespace, id) = stringRepresentation.split(":")
+    return Identifier(namespace, id)
+}
+
+/**
+ * An identifier, for any type of registrable object. You should not use this manually, and instead
+ * use the other overload. This should only be used to get an [Identifier] from already stored data.
+ *
+ * @param stringRepresentation The string representation of the [Identifier] you are trying to get.
+ *
+ * @see CuTAPI.registerPlugin
+ */
+fun idOrNull(stringRepresentation: String) : Identifier? {
+    val list = stringRepresentation.split(":")
+    if (list.getOrNull(0) == null || list.getOrNull(1) == null || list.isEmpty()) return null
+    return Identifier(list[0], list[1])
+}
+
+fun unknownID() = id(Plugin, "unknown")
 
 object IdentifierSerializer : KSerializer<Identifier> {
 

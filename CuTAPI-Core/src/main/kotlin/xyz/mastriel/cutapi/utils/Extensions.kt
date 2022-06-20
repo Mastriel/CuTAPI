@@ -1,8 +1,11 @@
 package xyz.mastriel.cutapi.utils
 
+import de.tr7zw.changeme.nbtapi.NBTItem
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
+import org.bukkit.Bukkit
+import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import java.time.Instant
 
@@ -43,3 +46,11 @@ fun ItemStack.appendLore(vararg lore: Component) : ItemStack {
     }
     return this
 }
+
+fun <T> list(list: MutableList<T>.() -> Unit) = mutableListOf<T>().apply(list).toList()
+
+
+fun playerList() = Bukkit.getServer().onlinePlayers.filterNotNull().toList()
+fun playerNameList() = Bukkit.getServer().onlinePlayers.filterNotNull().toList().map(Player::getName)
+
+val ItemStack.nbt get() = NBTItem(this)
