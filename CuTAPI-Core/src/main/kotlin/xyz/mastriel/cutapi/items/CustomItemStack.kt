@@ -3,14 +3,15 @@ package xyz.mastriel.cutapi.items
 import org.bukkit.enchantments.Enchantment
 import org.bukkit.inventory.ItemStack
 import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.items.components.ComponentSerializer
 import xyz.mastriel.cutapi.items.components.ItemComponent
 import xyz.mastriel.cutapi.nbt.edit
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.descriptors.DescriptionBuilder
+import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.registry.idOrNull
 import xyz.mastriel.cutapi.registry.unknownID
 import xyz.mastriel.cutapi.utils.nbt
+import kotlin.reflect.full.createInstance
 import kotlin.system.measureNanoTime
 
 
@@ -113,13 +114,7 @@ class CustomItemStack(val customMaterial: CustomMaterial, var quantity: Int) {
 
             compound("CuTAPIComponents") {
                 components.forEach {
-                    val serializer = ComponentSerializer.getOrNull(it::class)
-                    if (serializer == null) {
-                        Plugin.warn("ComponentSerializer not found for ${it::class.qualifiedName}, skipping it in toBukkitItemStack!")
-                        return@forEach
-                    }
-                    val compound = serializer.toCompound(it)
-                    compound(it.id.toString(), compound)
+                    compound("${it.id}", it.container)
                 }
             }
         }
@@ -169,21 +164,14 @@ class CustomItemStack(val customMaterial: CustomMaterial, var quantity: Int) {
             // loop through each component as NBT
             for (stringId in container.keys) {
                 Plugin.warn(stringId)
-                val identifier = idOrNull(stringId) ?: continue
 
-                // get the serializer from the identifier
-                val serializer = ComponentSerializer.getOrNull(identifier) ?: continue
+                val compound = container.getCompound(stringId)
+                val id = id(stringId)
+                val componentClass = ItemComponent.get(id)
 
-                // try to deserialize the ItemComponent, warn and skip if it can't.
-                val component = try {
-                    val nbtComponent = container.getCompound(stringId)
-                    serializer.fromCompound(nbtComponent)
-                } catch (ex: Exception) {
-                    Plugin.warn("Unable to deserialize ItemComponent $identifier, ignoring it.")
-                    ex.printStackTrace()
-                    continue
-                }
-                customItemStack.addComponent(component)
+                val componentInstance = componentClass.createInstance()
+
+                customItemStack.addComponent(componentInstance)
             }
         }
 

@@ -4,7 +4,6 @@ import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.items.CustomMaterial
-import xyz.mastriel.cutapi.items.components.ComponentSerializer
 import xyz.mastriel.exampleplugin.components.Soulbound
 import xyz.mastriel.exampleplugin.items.RubySword
 

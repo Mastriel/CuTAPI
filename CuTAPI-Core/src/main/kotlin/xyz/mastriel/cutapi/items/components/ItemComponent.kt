@@ -1,9 +1,11 @@
 package xyz.mastriel.cutapi.items.components
 
+import de.tr7zw.changeme.nbtapi.NBTContainer
 import net.kyori.adventure.text.Component
 import xyz.mastriel.cutapi.items.CustomItemStack
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.Identifier
+import xyz.mastriel.cutapi.registry.ReferenceRegistry
 
 /**
  * A class for all Item Components.
@@ -12,15 +14,10 @@ import xyz.mastriel.cutapi.registry.Identifier
  * their CustomMaterial's onCreate functions that can alter behavior without having a ton of boilerplate
  * code to do so. An example is shown below:
  *
- * See the Example Plugin for examples.
  */
-abstract class ItemComponent : Identifiable {
-
-    /**
-     * The identifier, which is automatically fetched from the [ComponentSerializer] associated with this component.
-     */
+abstract class ItemComponent(
     override val id: Identifier
-        get() = ComponentSerializer.kclassToId[this::class] ?: error("Item component serializer for ${this::class} not found!")
+) : Identifiable {
 
     /**
      * The lore which this component shows when applied to a [CustomItemStack].
@@ -36,4 +33,8 @@ abstract class ItemComponent : Identifiable {
      */
     open fun onApply(item: CustomItemStack) {}
 
+    open val container = NBTContainer()
+
+
+    companion object : ReferenceRegistry<ItemComponent>()
 }
