@@ -1,5 +1,6 @@
 package xyz.mastriel.cutapi.utils
 
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import xyz.mastriel.cutapi.items.CustomItemStack
 
@@ -13,3 +14,9 @@ fun Player.updateCustomItems() {
     }
     inventory.setContents(modifiedContents.filterNotNull().toTypedArray())
 }
+
+fun onlinePlayers() = Bukkit.getOnlinePlayers()
+    .filterNotNull()
+    .toList()
+
+fun playerNameList() = onlinePlayers().map(Player::getName)

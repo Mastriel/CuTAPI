@@ -5,7 +5,7 @@ import net.kyori.adventure.text.Component
 import xyz.mastriel.cutapi.items.CustomItemStack
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.ReferenceRegistry
+import xyz.mastriel.cutapi.registry.IdentifierMap
 
 /**
  * A class for all Item Components.
@@ -36,5 +36,5 @@ abstract class ItemComponent(
     open val container = NBTContainer()
 
 
-    companion object : ReferenceRegistry<ItemComponent>()
+    companion object : IdentifierMap<ItemComponent>()
 }

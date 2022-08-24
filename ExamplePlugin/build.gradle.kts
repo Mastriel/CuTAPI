@@ -1,10 +1,10 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    kotlin("jvm") version "1.7.0"
+    kotlin("jvm")
 
-    id("com.github.johnrengelman.shadow") version "7.1.0"
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.5.31"
+    id("com.github.johnrengelman.shadow")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 group = "xyz.mastriel"
@@ -26,20 +26,21 @@ repositories {
         url = uri("https://repo.codemc.org/repository/maven-public/")
     }
     maven {
-        name = "lunari"
-        url = uri("https://repo.lunari.studio/repository/maven-public/")
+        name = "protocol-lib"
+        url = uri("https://repo.dmulloy2.net/repository/public/")
     }
+
 }
 
 dependencies {
     compileOnly(projects.cuTAPICore)
-    compileOnly("io.papermc.paper:paper-api:1.17.1-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")
 
     compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.0")
     compileOnly("org.jetbrains.kotlin:kotlin-reflect:1.7.0")
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.3.3")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.2")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.2")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
 
     // controversial choice, i know
     compileOnly("de.tr7zw:item-nbt-api:2.10.0")

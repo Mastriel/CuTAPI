@@ -8,8 +8,6 @@ description: An example CuTAPI plugin.
 website: mastriel.xyz
 depend:
   - CuTAPI
-
-
 commands:
   test:
     description: A test command.

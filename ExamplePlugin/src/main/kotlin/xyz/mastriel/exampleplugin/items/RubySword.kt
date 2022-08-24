@@ -26,7 +26,7 @@ object RubySword : CustomMaterial(id(Plugin, "ruby_sword"), Material.DIAMOND_SWO
     }
 
     override fun onCreate(item: CustomItemStack) {
-        item.addComponent(Soulbound())
+        item.addComponent(Soulbound(null))
 
     }
 

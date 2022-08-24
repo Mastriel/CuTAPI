@@ -33,7 +33,7 @@ open class MaterialDescriptor internal constructor(
      * */
     open val container: NBTContainer? = null,
     /**
-     * The default NBT values applied to this custom material.
+     * The texture that this custom material should use, by default.
      * */
     open val texture: Texture? = null,
     open val loreFormatter: (DescriptionBuilder.() -> Unit)? = null

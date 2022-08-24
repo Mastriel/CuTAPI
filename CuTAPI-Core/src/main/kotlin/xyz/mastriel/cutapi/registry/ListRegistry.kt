@@ -10,8 +10,10 @@ open class ListRegistry <T: Any> : Iterable<T> {
      *
      * @param item The object which the association is being made for.
      */
-    open fun register(item: T) {
+    open fun register(vararg item: T) {
         values += item
+
+        // fixme probably doesnt print right
         Plugin.info("[REGISTRY] ${item::class.qualifiedName} added to a ListRegistry.")
     }
 

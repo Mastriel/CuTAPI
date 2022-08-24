@@ -1,6 +1,7 @@
 package xyz.mastriel.cutapi
 
 import org.bukkit.plugin.Plugin
+import xyz.mastriel.cutapi.packets.PacketManager
 
 
 /**
@@ -15,6 +16,9 @@ object CuTAPI {
      * A map of all plugins registered, along with their plugin descriptors.
      */
     private val plugins = mutableMapOf<Plugin, PluginDescriptor>()
+
+    internal val packetManager = PacketManager(Plugin)
+    internal val packetEventController = packetManager.eventManager
 
     /**
      * Register a plugin with CuTAPI. This is used to namespace any items registered with the API, and
@@ -40,7 +44,7 @@ object CuTAPI {
 
     /**
      * Deregister a plugin with CuTAPI. This should be done when a plugin is disabled. A plugin *probably* should
-     * not unregister other plugins, although there are no automatic safeguards to prevent this.
+     * not unregister other plugins.
      *
      * @param plugin The plugin being unregistered.
      * @throws IllegalStateException If the plugin is not registered.
