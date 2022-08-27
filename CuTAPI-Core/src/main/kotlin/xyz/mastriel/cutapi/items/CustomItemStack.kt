@@ -11,13 +11,12 @@ import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.registry.idOrNull
 import xyz.mastriel.cutapi.registry.unknownID
 import xyz.mastriel.cutapi.utils.nbt
+import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.system.measureNanoTime
 
 
 class CustomItemStack(val customMaterial: CustomMaterial, var quantity: Int) {
-
-
 
     val descriptor get() = customMaterial.materialDescriptor
 
@@ -29,8 +28,7 @@ class CustomItemStack(val customMaterial: CustomMaterial, var quantity: Int) {
 
     var enchantments = mutableMapOf<Enchantment, Int>()
 
-    @PublishedApi
-    internal val _components = mutableSetOf<ItemComponent>()
+    private val _components = mutableSetOf<ItemComponent>()
     val components get() = _components.toSet()
 
 
@@ -41,17 +39,34 @@ class CustomItemStack(val customMaterial: CustomMaterial, var quantity: Int) {
      * @see getComponentOrNull
      * @throws IllegalStateException If the component doesn't exist on this item.
      */
-    inline fun <reified T: ItemComponent> getComponent() =
-        components.find { it is T } as? T ?: error("Component ${T::class.qualifiedName} not found!")
+    inline fun <reified T: ItemComponent> getComponent() = getComponent(T::class)
+
+    /**
+     * Get a component based on its type from this item stack.
+     *
+     * @param T The type being fetched.
+     * @see getComponentOrNull
+     * @throws IllegalStateException If the component doesn't exist on this item.
+     */
+    fun <T: ItemComponent> getComponent(kClass: KClass<T>) =
+        getComponentOrNull(kClass) ?: error("Component ${kClass.qualifiedName} not found!")
 
     /**
      * Get a component based on its type from this item stack, or null if it doesn't exist.
      *
-     * @param T The component
+     * @param T The component type.
      * @see getComponent
      */
-    inline fun <reified T: ItemComponent> getComponentOrNull() =
-        components.find { it is T } as? T
+    inline fun <reified T: ItemComponent> getComponentOrNull() = getComponentOrNull(T::class)
+
+    /**
+     * Get a component based on its type from this item stack, or null if it doesn't exist.
+     *
+     * @param kClass The component class.
+     * @see getComponent
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun <T: ItemComponent> getComponentOrNull(kClass: KClass<T>) = components.find { it::class == kClass } as? T
 
     /**
      * Add a component to this ItemStack.
@@ -61,9 +76,12 @@ class CustomItemStack(val customMaterial: CustomMaterial, var quantity: Int) {
      *
      * @return true if the component was added, false otherwise.
      */
-    inline fun <reified T: ItemComponent> addComponent(component: T) : Boolean {
-        if (getComponentOrNull<T>()?.id == component.id) return false
-        return _components.add(component)
+    fun <T: ItemComponent> addComponent(component: T) : Boolean {
+        if (getComponentOrNull(component::class)?.id == component.id) return false
+        val wasAdded = _components.add(component)
+        if (!wasAdded) return false
+        components.forEach { it.onApply(this) }
+        return true
     }
 
     /**
@@ -162,11 +180,9 @@ class CustomItemStack(val customMaterial: CustomMaterial, var quantity: Int) {
             val container = itemStack.nbt.getCompound("CuTAPIComponents") ?: return
 
             // loop through each component as NBT
-            for (stringId in container.keys) {
-                Plugin.warn(stringId)
+            for (id in container.keys.map(::id)) {
 
-                val compound = container.getCompound(stringId)
-                val id = id(stringId)
+                val compound = container.getCompound(id.toString())
                 val componentClass = ItemComponent.get(id)
 
                 val componentInstance = componentClass.createInstance()

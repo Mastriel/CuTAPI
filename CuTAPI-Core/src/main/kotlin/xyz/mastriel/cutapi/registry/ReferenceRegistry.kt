@@ -2,6 +2,7 @@ package xyz.mastriel.cutapi.registry
 
 import xyz.mastriel.cutapi.Plugin
 import kotlin.reflect.KClass
+import kotlin.reflect.full.companionObjectInstance
 
 open class ReferenceRegistry <T: Any> {
     protected val values = mutableMapOf<Identifier, KClass<T>>()
@@ -11,8 +12,12 @@ open class ReferenceRegistry <T: Any> {
      *
      * @param item The object which the association is being made for.
      */
-    open fun register(id: Identifier, item: KClass<T>) {
-        values[id] = item
+    open fun register(item: KClass<T>) {
+        val identifiable = item.companionObjectInstance
+        require(identifiable != null) { "${item.simpleName} must have a companion object that implements Identifiable." }
+        require(identifiable !is Identifiable) { "${item.simpleName}'s companion object does not implement Identifiable." }
+        identifiable as Identifiable
+        values[identifiable.id] = item
         Plugin.info("[REGISTRY] ${item.qualifiedName} added to a registry.")
     }
 

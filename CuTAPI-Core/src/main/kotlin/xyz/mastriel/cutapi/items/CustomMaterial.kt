@@ -29,10 +29,5 @@ open class CustomMaterial(override val id: Identifier, val type: Material) : Ide
     open fun onCreate(item: CustomItemStack) {}
 
 
-    companion object : IdentifierMap<CustomMaterial>() {
-        override fun register(item: CustomMaterial) {
-            super.register(item)
-
-        }
-    }
+    companion object : IdentifierMap<CustomMaterial>()
 }

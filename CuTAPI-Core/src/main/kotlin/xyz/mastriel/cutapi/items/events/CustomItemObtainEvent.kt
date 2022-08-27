@@ -6,8 +6,6 @@ import xyz.mastriel.cutapi.items.CustomItemStack
 
 data class CustomItemObtainEvent(override val item: CustomItemStack, val player: Player) : CustomItemEvent(item) {
 
-
-
     override fun getHandlers(): HandlerList {
         return HANDLERS
     }

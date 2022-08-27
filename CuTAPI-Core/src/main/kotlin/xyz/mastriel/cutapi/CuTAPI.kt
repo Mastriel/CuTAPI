@@ -18,7 +18,7 @@ object CuTAPI {
     private val plugins = mutableMapOf<Plugin, PluginDescriptor>()
 
     internal val packetManager = PacketManager(Plugin)
-    internal val packetEventController = packetManager.eventManager
+    internal val packetEventManager = packetManager.eventManager
 
     /**
      * Register a plugin with CuTAPI. This is used to namespace any items registered with the API, and
@@ -146,15 +146,4 @@ object CuTAPI {
 data class PluginDescriptor internal constructor(
     val plugin: Plugin,
     val namespace: String
-) {
-
-    /**
-     * A very human-readable way of displaying the descriptor.
-     */
-    override fun toString(): String {
-        return """
-            Plugin ${plugin.name} descriptor:
-              namespace: $namespace
-        """.trimIndent()
-    }
-}
+)

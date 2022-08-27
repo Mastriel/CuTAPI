@@ -8,8 +8,12 @@ import xyz.mastriel.cutapi.registry.identifiable
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.exampleplugin.Plugin
 
-class Soulbound(var player: OfflinePlayer?) : ItemComponent(id) {
+class Soulbound : ItemComponent(id) {
     companion object : Identifiable by identifiable(Plugin, "soulbound")
+
+
+    val player by nullablePlayerTag("Owner", null)
+
 
     override val lore : Component get() {
         if (player == null) {

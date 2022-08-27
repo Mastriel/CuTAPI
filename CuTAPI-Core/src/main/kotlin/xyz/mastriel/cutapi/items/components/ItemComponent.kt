@@ -1,11 +1,21 @@
 package xyz.mastriel.cutapi.items.components
 
+import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent
 import de.tr7zw.changeme.nbtapi.NBTContainer
 import net.kyori.adventure.text.Component
+import org.bukkit.event.player.PlayerInteractEvent
+import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.items.CustomItemStack
+import xyz.mastriel.cutapi.items.events.CustomItemObtainEvent
+import xyz.mastriel.cutapi.nbt.tags.TagHolder
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.IdentifierMap
+import xyz.mastriel.cutapi.registry.ReferenceRegistry
+import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+import kotlin.reflect.full.companionObjectInstance
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.jvm.isAccessible
 
 /**
  * A class for all Item Components.
@@ -17,7 +27,7 @@ import xyz.mastriel.cutapi.registry.IdentifierMap
  */
 abstract class ItemComponent(
     override val id: Identifier
-) : Identifiable {
+) : Identifiable, TagHolder(container = NBTContainer()) {
 
     /**
      * The lore which this component shows when applied to a [CustomItemStack].
@@ -26,15 +36,51 @@ abstract class ItemComponent(
 
     /**
      * Called whenever this [ItemComponent] is applied to a [CustomItemStack].
-     *
-     * Events should be registered here.
-     *
      * @param item The [CustomItemStack] involved.
      */
     open fun onApply(item: CustomItemStack) {}
 
-    open val container = NBTContainer()
+    /**
+     * Called whenever this [ItemComponent] is obtained, through any means (chest, picked up, given, etc.)
+     * @param event The [CustomItemObtainEvent].
+     */
+    open fun onObtain(event: CustomItemObtainEvent) {}
+
+    /**
+     * Called a [PlayerInteractEvent] is called on a [CustomItemStack] with this [ItemComponent]
+     * @param item The [CustomItemStack] involved.
+     */
+    open fun onInteract(item: CustomItemStack, event: PlayerInteractEvent) {}
+
+    companion object : ReferenceRegistry<ItemComponent>() {
+
+        internal fun getConstructor(kClass: KClass<ItemComponent>) : KFunction<ItemComponent> {
+            val constructor = kClass.constructors
+                .find { it.parameters.isEmpty() } ?: error("ItemComponent does not have a no-args constructor.")
+            return constructor
+        }
+
+        internal fun create(kClass: KClass<ItemComponent>) : ItemComponent {
+            val constructor = getConstructor(kClass)
+            constructor.isAccessible = true
+            val component = constructor.call()
+            constructor.isAccessible = false
+            return component
+        }
+
+        override fun register(item: KClass<ItemComponent>) {
+            val hasProperties = item.declaredMemberProperties.isNotEmpty()
+            if (hasProperties) {
+                val plugin = (item.companionObjectInstance as? Identifiable)?.id?.plugin?.name
+                Plugin.warn("${item.simpleName} has member properties with backing fields. " +
+                        "Components will not automatically serialize to an ItemStack, so this will probably lead to " +
+                        "unexpected behavior. (fault of ${plugin ?: "not CuTAPI"})")
+            }
+            getConstructor(item)
+            super.register(item)
+        }
+    }
 
 
-    companion object : IdentifierMap<ItemComponent>()
+
 }
