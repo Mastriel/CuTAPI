@@ -28,7 +28,7 @@ class CustomItemStack(val customMaterial: CustomMaterial, var quantity: Int) {
 
     var enchantments = mutableMapOf<Enchantment, Int>()
 
-    private val _components = mutableSetOf<ItemComponent>()
+    private val _components = descriptor.components.toMutableSet()
     val components get() = _components.toSet()
 
 
@@ -108,8 +108,6 @@ class CustomItemStack(val customMaterial: CustomMaterial, var quantity: Int) {
             setNBT(bukkitItemStack)
         })
 
-        customMaterial.onCreate(this)
-
         bukkitItemStack.editMeta {
             it.displayName(name)
         }
@@ -179,14 +177,17 @@ class CustomItemStack(val customMaterial: CustomMaterial, var quantity: Int) {
         private fun setComponents(itemStack: ItemStack, customItemStack: CustomItemStack) {
             val container = itemStack.nbt.getCompound("CuTAPIComponents") ?: return
 
+            customItemStack._components.clear()
+
             // loop through each component as NBT
             for (id in container.keys.map(::id)) {
 
                 val compound = container.getCompound(id.toString())
                 val componentClass = ItemComponent.get(id)
 
-                val componentInstance = componentClass.createInstance()
+                val componentInstance = ItemComponent.create(componentClass)
 
+                componentInstance.mergeWithCompound(compound)
                 customItemStack.addComponent(componentInstance)
             }
         }

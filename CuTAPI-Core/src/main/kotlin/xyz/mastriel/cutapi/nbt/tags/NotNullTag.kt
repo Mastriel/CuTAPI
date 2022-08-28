@@ -5,13 +5,13 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 open class NotNullTag<T: Any>(val key: String, val nbtContainer: NBTContainer, val kclass: KClass<T>, val default: T)
-    : ComponentTag<T> {
+    : NBTTag<T> {
 
-    override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
         return get()
     }
 
-    override operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
         store(value)
     }
 

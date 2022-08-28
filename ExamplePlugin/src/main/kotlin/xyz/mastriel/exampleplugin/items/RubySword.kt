@@ -18,19 +18,12 @@ object RubySword : CustomMaterial(id(Plugin, "ruby_sword"), Material.DIAMOND_SWO
         name = "&fRuby Sword".colored
         texture = Texture(Plugin, "textures/ruby_sword.png")
 
+        component(Soulbound(null))
+
         description {
             textComponent("&7A sword, charged from &eDragon's Breath&7.".colored)
             emptyLine()
             itemComponents(Color.Blue)
         }
-    }
-
-    override fun onCreate(item: CustomItemStack) {
-        item.addComponent(Soulbound(null))
-
-    }
-
-    fun onObtain(event: CustomItemObtainEvent) {
-        event.player
     }
 }

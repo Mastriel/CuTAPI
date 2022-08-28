@@ -36,7 +36,8 @@ open class MaterialDescriptor internal constructor(
      * The texture that this custom material should use, by default.
      * */
     open val texture: Texture? = null,
-    open val loreFormatter: (DescriptionBuilder.() -> Unit)? = null
+    open val loreFormatter: (DescriptionBuilder.() -> Unit)? = null,
+    open val components: Set<ItemComponent> = setOf()
 )
 
 /**
@@ -54,13 +55,20 @@ open class MaterialDescriptorBuilder internal constructor() : HasNBT {
         itemComponents(Color.Blue)
     }
 
+    val components = mutableSetOf<ItemComponent>()
+
+    fun component(component: ItemComponent) {
+        if (components.find { it.id == component.id } != null) return
+        components += component
+    }
 
     fun build() : MaterialDescriptor {
         return MaterialDescriptor(
             name = name,
             loreFormatter = formatter,
             container = nbtContainer,
-            texture = texture
+            texture = texture,
+            components = components
         )
     }
 

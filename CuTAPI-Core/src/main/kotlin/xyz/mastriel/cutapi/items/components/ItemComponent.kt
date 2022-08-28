@@ -1,6 +1,7 @@
 package xyz.mastriel.cutapi.items.components
 
 import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent
+import de.tr7zw.changeme.nbtapi.NBTCompound
 import de.tr7zw.changeme.nbtapi.NBTContainer
 import net.kyori.adventure.text.Component
 import org.bukkit.event.player.PlayerInteractEvent
@@ -28,6 +29,10 @@ import kotlin.reflect.jvm.isAccessible
 abstract class ItemComponent(
     override val id: Identifier
 ) : Identifiable, TagHolder(container = NBTContainer()) {
+
+    fun mergeWithCompound(container: NBTCompound) {
+        this.container.mergeCompound(container)
+    }
 
     /**
      * The lore which this component shows when applied to a [CustomItemStack].
