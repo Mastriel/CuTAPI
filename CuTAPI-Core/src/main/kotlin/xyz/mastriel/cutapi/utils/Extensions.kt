@@ -47,4 +47,4 @@ fun ItemStack.appendLore(vararg lore: Component) : ItemStack {
 
 internal fun <T> list(list: MutableList<T>.() -> Unit) = mutableListOf<T>().apply(list).toList()
 
-val ItemStack.nbt get() = NBTItem(this)
+val ItemStack.nbt get() = NBTItem(this, true)

@@ -3,9 +3,9 @@ package xyz.mastriel.cutapi.utils
 import net.kyori.adventure.text.format.TextColor
 
 class Color private constructor(
-    private var red : UByte,
-    private var green : UByte,
-    private var blue : UByte,
+    private val red : UByte,
+    private val green : UByte,
+    private val blue : UByte,
 ) {
 
     override fun toString(): String {

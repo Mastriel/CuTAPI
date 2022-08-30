@@ -3,9 +3,8 @@ package xyz.mastriel.cutapi.registry.descriptors
 import de.tr7zw.changeme.nbtapi.NBTContainer
 import net.kyori.adventure.text.Component
 import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.items.CustomItemStack
+import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.items.components.ItemComponent
-import xyz.mastriel.cutapi.nbt.HasNBT
 import xyz.mastriel.cutapi.nbt.NBTBuilder
 import xyz.mastriel.cutapi.resourcepack.Texture
 import xyz.mastriel.cutapi.utils.Color
@@ -37,7 +36,7 @@ open class MaterialDescriptor internal constructor(
      * */
     open val texture: Texture? = null,
     open val loreFormatter: (DescriptionBuilder.() -> Unit)? = null,
-    open val components: Set<ItemComponent> = setOf()
+    open val components: Set<() -> ItemComponent> = setOf()
 )
 
 /**
@@ -46,19 +45,18 @@ open class MaterialDescriptor internal constructor(
  *
  * @see MaterialDescriptor
  */
-open class MaterialDescriptorBuilder internal constructor() : HasNBT {
+open class MaterialDescriptorBuilder internal constructor() {
     var name : Component? = null
-    override val nbtContainer = NBTContainer()
+    val nbtContainer = NBTContainer()
     var texture : Texture? = null
     private var formatter : (DescriptionBuilder.() -> Unit)? = {
         emptyLine()
         itemComponents(Color.Blue)
     }
 
-    val components = mutableSetOf<ItemComponent>()
+    val components = mutableSetOf<() -> ItemComponent>()
 
-    fun component(component: ItemComponent) {
-        if (components.find { it.id == component.id } != null) return
+    fun component(component: () -> ItemComponent) {
         components += component
     }
 
@@ -104,11 +102,11 @@ open class MaterialDescriptorBuilder internal constructor() : HasNBT {
 }
 
 /**
- * A class for creating dynamic descriptions for [CustomItemStack]s.
+ * A class for creating dynamic descriptions for [CustomItemStackOld]s.
  * This is stored in the [MaterialDescriptor] and re-runs every time
  * the item is turned into a Bukkit [ItemStack].
  */
-class DescriptionBuilder(val itemStack: CustomItemStack) {
+class DescriptionBuilder(val itemStack: CuTItemStack) {
 
     val customMaterial get() = itemStack.customMaterial
 
@@ -133,11 +131,11 @@ class DescriptionBuilder(val itemStack: CustomItemStack) {
     /**
      * Adds any lore that any [ItemComponent] would want to implement.
      */
-    fun itemComponents(color: Color) {
+    fun itemComponents(mainColor: Color) {
         for (itemComponent in itemStack.components.distinct()) {
             val lore = itemComponent.lore
             if (lore != null) {
-                lines.add(lore.color(color.textColor))
+                lines.add(lore.color(mainColor.textColor))
             }
         }
     }

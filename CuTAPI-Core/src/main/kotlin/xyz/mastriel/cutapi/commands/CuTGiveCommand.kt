@@ -68,11 +68,11 @@ object CuTGiveCommand : TabExecutor {
             return true
         }
 
-        val bukkitItemStack = customMaterial.createItemStack(quantity).toBukkitItemStack()
-        target.inventory.addItem(bukkitItemStack)
+        val cutItem = customMaterial.createItemStack(quantity)
+        target.inventory.addItem(cutItem.handle)
         sender.sendMessage(
-            "&aSuccessfully sent $target ${quantity}x ".colored
-                .append(bukkitItemStack.chatTooltip)
+            "&aSuccessfully sent ${target.name} ${quantity}x ".colored
+                .append(cutItem.handle.chatTooltip)
                 .append("&a!".colored)
         )
 

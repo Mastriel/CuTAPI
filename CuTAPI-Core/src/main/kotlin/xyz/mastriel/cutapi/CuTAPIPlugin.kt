@@ -5,8 +5,11 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.plugin.java.JavaPluginLoader
 import xyz.mastriel.cutapi.commands.CuTGiveCommand
 import xyz.mastriel.cutapi.commands.TestCommand
+import xyz.mastriel.cutapi.items.CustomMaterial
 import xyz.mastriel.cutapi.items.PacketItems
 import xyz.mastriel.cutapi.items.bukkitevents.PlayerItemEvents
+import xyz.mastriel.cutapi.items.components.ItemComponentEvents
+import xyz.mastriel.cutapi.items.events.CustomItemEvents
 import java.io.File
 
 
@@ -29,6 +32,10 @@ class CuTAPIPlugin : JavaPlugin {
         getCommand("test")?.tabCompleter = TestCommand
 
         server.pluginManager.registerEvents(PlayerItemEvents, this)
+        server.pluginManager.registerEvents(CustomItemEvents(), this)
+        server.pluginManager.registerEvents(ItemComponentEvents(), this)
+
+        CustomMaterial.register(CustomMaterial.Unknown)
 
         registerPacketListeners()
     }
@@ -37,7 +44,7 @@ class CuTAPIPlugin : JavaPlugin {
         val packetManager = CuTAPI.packetManager
         val eventManager = packetManager.eventManager
 
-        eventManager.registerListener(PacketItems)
+        // eventManager.registerListener(PacketItems)
     }
     override fun onDisable() {
 

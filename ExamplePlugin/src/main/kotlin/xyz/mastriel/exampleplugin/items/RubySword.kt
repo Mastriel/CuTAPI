@@ -1,9 +1,7 @@
 package xyz.mastriel.exampleplugin.items
 
 import org.bukkit.Material
-import xyz.mastriel.cutapi.items.CustomItemStack
 import xyz.mastriel.cutapi.items.CustomMaterial
-import xyz.mastriel.cutapi.items.events.CustomItemObtainEvent
 import xyz.mastriel.cutapi.registry.descriptors.materialDescriptor
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.resourcepack.Texture
@@ -18,7 +16,7 @@ object RubySword : CustomMaterial(id(Plugin, "ruby_sword"), Material.DIAMOND_SWO
         name = "&fRuby Sword".colored
         texture = Texture(Plugin, "textures/ruby_sword.png")
 
-        component(Soulbound(null))
+        component { Soulbound(null) }
 
         description {
             textComponent("&7A sword, charged from &eDragon's Breath&7.".colored)

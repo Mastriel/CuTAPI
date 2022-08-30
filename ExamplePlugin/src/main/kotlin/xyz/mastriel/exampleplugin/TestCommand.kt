@@ -4,7 +4,7 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.items.CustomItemStack
+import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.exampleplugin.items.RubySword
 import kotlin.random.Random
@@ -16,33 +16,21 @@ object TestCommand : CommandExecutor {
 
         val amount = args.getOrNull(0)?.toIntOrNull() ?: return false
         sender.sendMessage("&ePreparing...")
-        val customItems = mutableListOf<CustomItemStack>()
         val bukkitItems = mutableListOf<ItemStack>()
+
         for (i in 0..amount) {
-            customItems.add(CustomItemStack(RubySword, Random.nextInt(1, 64)))
-        }
-        for (i in 0..amount) {
-            bukkitItems.add(CustomItemStack(RubySword, Random.nextInt(1, 64)).toBukkitItemStack())
+            bukkitItems.add(CuTItemStack(RubySword, Random.nextInt(1, 64)).handle)
         }
 
 
-        val serializeTime = measureNanoTime {
-            for (item in customItems) {
-                item.toBukkitItemStack()
-            }
-        }
-
-        val deserializeTime = measureNanoTime {
+        val wrapTime = measureNanoTime {
             for (item in bukkitItems) {
-                CustomItemStack.fromVanillaOrNull(item)
+                CuTItemStack(item)
             }
         }
 
         sender.sendMessage("""
-            &e- Serialize ($amount items): &a${serializeTime}ns (${serializeTime/1000000}ms)
-            &e- Deserialize ($amount items): &a${deserializeTime}ns (${deserializeTime/1000000}ms)
-            &e- Serialize (per item): &a${serializeTime/amount}ns (${serializeTime/1000000/amount}ms)
-            &e- Deserialize (per item): &a${deserializeTime/amount}ns (${deserializeTime/1000000/amount}ms)
+            &e- Wrapping ($amount items): &a${wrapTime}ns (${wrapTime/1000000}ms)
         """.trimIndent().colored)
 
         return true

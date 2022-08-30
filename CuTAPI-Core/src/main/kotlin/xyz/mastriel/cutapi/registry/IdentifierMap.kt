@@ -27,7 +27,7 @@ open class IdentifierMap<T: Identifiable> {
      * @return The object
      * @throws IllegalStateException If this could not be found.
      */
-    fun get(id: Identifier) : T {
+    open fun get(id: Identifier) : T {
         return getOrNull(id) ?: error("Identifier points to no available identifiable object.")
     }
 
@@ -37,7 +37,7 @@ open class IdentifierMap<T: Identifiable> {
      * @param id The [Identifier] associated with this [T]
      * @return The object, or null if it could not be found.
      */
-    fun getOrNull(id: Identifier) : T? {
+    open fun getOrNull(id: Identifier) : T? {
         return values[id]
     }
 

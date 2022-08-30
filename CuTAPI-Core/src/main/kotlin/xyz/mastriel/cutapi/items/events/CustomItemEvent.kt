@@ -2,10 +2,10 @@ package xyz.mastriel.cutapi.items.events
 
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
-import xyz.mastriel.cutapi.items.CustomItemStack
+import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.items.components.ItemComponent
 
-abstract class CustomItemEvent(open val item: CustomItemStack) : Event() {
+abstract class CustomItemEvent(open val item: CuTItemStack) : Event() {
     val components get() = item.components
     inline fun <reified T : ItemComponent> getComponent() = item.getComponent<T>()
     inline fun <reified T : ItemComponent> getComponentOrNull() = item.getComponentOrNull<T>()

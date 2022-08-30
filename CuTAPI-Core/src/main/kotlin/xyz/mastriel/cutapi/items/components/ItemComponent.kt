@@ -1,14 +1,12 @@
 package xyz.mastriel.cutapi.items.components
 
-import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent
-import de.tr7zw.changeme.nbtapi.NBTCompound
 import de.tr7zw.changeme.nbtapi.NBTContainer
 import net.kyori.adventure.text.Component
 import org.bukkit.event.player.PlayerInteractEvent
 import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.items.CustomItemStack
+import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.items.events.CustomItemObtainEvent
-import xyz.mastriel.cutapi.nbt.tags.TagHolder
+import xyz.mastriel.cutapi.nbt.tags.TagContainer
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.ReferenceRegistry
@@ -21,29 +19,30 @@ import kotlin.reflect.jvm.isAccessible
 /**
  * A class for all Item Components.
  *
- * An Item Component is essentially a small bit of data that can be attached to any [CustomItemStack] in
+ * An Item Component is essentially a small bit of data that can be attached to any [CustomItemStackOld] in
  * their CustomMaterial's onCreate functions that can alter behavior without having a ton of boilerplate
  * code to do so. An example is shown below:
  *
  */
 abstract class ItemComponent(
     override val id: Identifier
-) : Identifiable, TagHolder(container = NBTContainer()) {
+) : Identifiable, Cloneable, TagContainer(container = NBTContainer()) {
 
-    fun mergeWithCompound(container: NBTCompound) {
-        this.container.mergeCompound(container)
+    init {
+        require(isRegistered(this::class)) { "An ItemComponent must be registered before it is constructed. " +
+                "Is this registered before a CustomMaterial that uses it?" }
     }
 
     /**
-     * The lore which this component shows when applied to a [CustomItemStack].
+     * The lore which this component shows when applied to a [CustomItemStackOld].
      */
-    open val lore : Component? = null
+    open val lore: Component? = null
 
     /**
-     * Called whenever this [ItemComponent] is applied to a [CustomItemStack].
-     * @param item The [CustomItemStack] involved.
+     * Called whenever this [ItemComponent] is applied to a [CustomItemStackOld].
+     * @param item The [CustomItemStackOld] involved.
      */
-    open fun onApply(item: CustomItemStack) {}
+    open fun onApply(item: CuTItemStack) {}
 
     /**
      * Called whenever this [ItemComponent] is obtained, through any means (chest, picked up, given, etc.)
@@ -52,20 +51,20 @@ abstract class ItemComponent(
     open fun onObtain(event: CustomItemObtainEvent) {}
 
     /**
-     * Called a [PlayerInteractEvent] is called on a [CustomItemStack] with this [ItemComponent]
-     * @param item The [CustomItemStack] involved.
+     * Called a [PlayerInteractEvent] is called on a [CustomItemStackOld] with this [ItemComponent]
+     * @param item The [CustomItemStackOld] involved.
      */
-    open fun onInteract(item: CustomItemStack, event: PlayerInteractEvent) {}
+    open fun onInteract(item: CuTItemStack, event: PlayerInteractEvent) {}
 
     companion object : ReferenceRegistry<ItemComponent>() {
 
-        internal fun getConstructor(kClass: KClass<ItemComponent>) : KFunction<ItemComponent> {
+        internal fun getConstructor(kClass: KClass<out ItemComponent>): KFunction<ItemComponent> {
             val constructor = kClass.constructors
                 .find { it.parameters.isEmpty() } ?: error("ItemComponent does not have a no-args constructor.")
             return constructor
         }
 
-        internal fun create(kClass: KClass<ItemComponent>) : ItemComponent {
+        internal fun create(kClass: KClass<out ItemComponent>): ItemComponent {
             val constructor = getConstructor(kClass)
             constructor.isAccessible = true
             val component = constructor.call()
@@ -73,19 +72,18 @@ abstract class ItemComponent(
             return component
         }
 
-        override fun register(item: KClass<ItemComponent>) {
+        override fun register(item: KClass<out ItemComponent>) {
             val hasProperties = item.declaredMemberProperties.isNotEmpty()
             if (hasProperties) {
                 val plugin = (item.companionObjectInstance as? Identifiable)?.id?.plugin?.name
-                Plugin.warn("${item.simpleName} has member properties with backing fields. " +
-                        "Components will not automatically serialize to an ItemStack, so this will probably lead to " +
-                        "unexpected behavior. (fault of ${plugin ?: "not CuTAPI"})")
+                Plugin.warn(
+                    "${item.simpleName} has member properties with backing fields. " +
+                            "Components will not automatically serialize to an ItemStack, so this will probably lead to " +
+                            "unexpected behavior. (fault of ${plugin ?: "not CuTAPI"})"
+                )
             }
             getConstructor(item)
             super.register(item)
         }
     }
-
-
-
 }

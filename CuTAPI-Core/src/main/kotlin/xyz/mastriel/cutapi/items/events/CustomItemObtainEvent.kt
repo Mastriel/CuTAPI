@@ -2,9 +2,9 @@ package xyz.mastriel.cutapi.items.events
 
 import org.bukkit.entity.Player
 import org.bukkit.event.HandlerList
-import xyz.mastriel.cutapi.items.CustomItemStack
+import xyz.mastriel.cutapi.items.CuTItemStack
 
-data class CustomItemObtainEvent(override val item: CustomItemStack, val player: Player) : CustomItemEvent(item) {
+data class CustomItemObtainEvent(override val item: CuTItemStack, val player: Player) : CustomItemEvent(item) {
 
     override fun getHandlers(): HandlerList {
         return HANDLERS

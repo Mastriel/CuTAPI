@@ -28,15 +28,19 @@ object CuTAPI {
      * @param namespace The namespace being used for the plugin. By default, this is just the plugin's name
      * in all lowercase. A namespace must follow Regex `[a-z0-9_]+`, must be between 3 and 64 characters, and must
      * not start or end with an underscore (_). Also, namespaces must be unique between plugins, and cannot be shared.
+     * @param options The additional (optional) options that this plugin can have to alter behavior.
      * @throws IllegalArgumentException If the namespace is invalid.
      * @throws IllegalStateException If the namespace is already in use.
      * @throws IllegalStateException If the plugin is already registered.
      */
-    fun registerPlugin(plugin: Plugin, namespace: String=plugin.name.lowercase()) {
+    fun registerPlugin(plugin: Plugin, namespace: String=plugin.name.lowercase(), options: (PluginOptionsBuilder.() -> Unit)? = null) {
         requireNotRegistered(plugin)
         requireValidNamespace(namespace)
 
-        val descriptor = PluginDescriptor(plugin, namespace)
+        val optionsBuilder = PluginOptionsBuilder()
+        val pluginOptions = if (options != null) optionsBuilder.apply(options).build() else defaultPluginOptions()
+
+        val descriptor = PluginDescriptor(plugin, namespace, pluginOptions)
         plugins[plugin] = descriptor
 
         Plugin.info("Plugin $plugin registered!")
@@ -78,12 +82,13 @@ object CuTAPI {
     }
 
     /**
-     * Gets a plugin from its namespace. This only tests for exact matches, and is CaSe-Sensitive.
+     * Gets a plugin from its namespace. This only tests for exact matches, and is not CaSe-Sensitive,
+     * because namespaces must all be lowercase anyway.
      *
      * @throws IllegalStateException If no plugin exists with this namespace.
      */
     fun getPluginFromNamespace(namespace: String) : Plugin {
-        return plugins.values.find { it.namespace == namespace }?.plugin
+        return plugins.values.find { it.namespace.lowercase() == namespace.lowercase() }?.plugin
             ?: error("Namespace $namespace not found.")
     }
 
@@ -137,13 +142,3 @@ object CuTAPI {
 }
 
 
-/**
- * A data class holding useful information about a plugin, pertaining to CuTAPI.
- *
- * @see Plugin
- * @see CuTAPI
- * */
-data class PluginDescriptor internal constructor(
-    val plugin: Plugin,
-    val namespace: String
-)
