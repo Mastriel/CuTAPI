@@ -20,6 +20,6 @@ class ItemComponentEvents : Listener {
         if (!item.isCustom) return
         val customItem = CuTItemStack(item)
 
-        customItem.components.forEach { it.onInteract(customItem, e) }
+        customItem.getAllComponents().forEach { it.onInteract(customItem, e) }
     }
 }

@@ -6,28 +6,23 @@ import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerInteractEvent
 import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.items.components.ItemComponent
+import xyz.mastriel.cutapi.items.components.removeComponent
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.identifiable
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.exampleplugin.Plugin
 
-class Soulbound private constructor() : ItemComponent(id) {
-    companion object : Identifiable by identifiable(Plugin, "soulbound")
-
-    constructor(player: OfflinePlayer? = null) : this() {
-        owner = player
-    }
-
-    var owner by nullablePlayerTag("Owner")
+class BindOnUse : ItemComponent(id) {
+    companion object : Identifiable by identifiable(Plugin, "bind_on_use")
 
     override fun getLore(cuTItemStack: CuTItemStack, viewer: Player): Component {
-        if (owner == null) return "Soulbound (???)".colored
-        return "Soulbound (${owner?.name})".colored
+        return "Bind On Use".colored
     }
 
     override fun onInteract(item: CuTItemStack, event: PlayerInteractEvent) {
-        event.player.sendMessage("This item has bound itself to you!".colored)
-        owner = event.player
+        event.player.sendMessage("&aYou interacted with a BindOnUse item!".colored)
+        item.addComponent(Soulbound(event.player))
+        item.removeComponent<BindOnUse>()
     }
 
 

@@ -2,6 +2,7 @@ package xyz.mastriel.cutapi.items.components
 
 import de.tr7zw.changeme.nbtapi.NBTContainer
 import net.kyori.adventure.text.Component
+import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerInteractEvent
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.items.CuTItemStack
@@ -19,7 +20,7 @@ import kotlin.reflect.jvm.isAccessible
 /**
  * A class for all Item Components.
  *
- * An Item Component is essentially a small bit of data that can be attached to any [CustomItemStackOld] in
+ * An Item Component is essentially a small bit of data that can be attached to any [CuTItemStack] in
  * their CustomMaterial's onCreate functions that can alter behavior without having a ton of boilerplate
  * code to do so. An example is shown below:
  *
@@ -34,13 +35,13 @@ abstract class ItemComponent(
     }
 
     /**
-     * The lore which this component shows when applied to a [CustomItemStackOld].
+     * The lore which this component shows when applied to a [CuTItemStack].
      */
-    open val lore: Component? = null
+    open fun getLore(cuTItemStack: CuTItemStack, viewer: Player) : Component? { return null }
 
     /**
-     * Called whenever this [ItemComponent] is applied to a [CustomItemStackOld].
-     * @param item The [CustomItemStackOld] involved.
+     * Called whenever this [ItemComponent] is applied to a [CuTItemStack].
+     * @param item The [CuTItemStack] involved.
      */
     open fun onApply(item: CuTItemStack) {}
 
@@ -51,8 +52,8 @@ abstract class ItemComponent(
     open fun onObtain(event: CustomItemObtainEvent) {}
 
     /**
-     * Called a [PlayerInteractEvent] is called on a [CustomItemStackOld] with this [ItemComponent]
-     * @param item The [CustomItemStackOld] involved.
+     * Called a [PlayerInteractEvent] is called on a [CuTItemStack] with this [ItemComponent]
+     * @param item The [CuTItemStack] involved.
      */
     open fun onInteract(item: CuTItemStack, event: PlayerInteractEvent) {}
 

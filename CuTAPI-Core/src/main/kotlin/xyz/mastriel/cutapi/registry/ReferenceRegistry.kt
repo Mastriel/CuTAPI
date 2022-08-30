@@ -16,6 +16,7 @@ open class ReferenceRegistry <T: Any> {
         val identifiable = item.companionObjectInstance
         require(identifiable != null) { "${item.simpleName} must have a companion object that implements Identifiable." }
         require(identifiable is Identifiable) { "${item.simpleName}'s companion object does not implement Identifiable." }
+        require(!values.containsKey(identifiable.id)) { "Two Identifiables cannot have the same ID in the same registry." }
         values[identifiable.id] = item
         Plugin.info("[REGISTRY] ${item.qualifiedName} added to a registry.")
     }
@@ -28,7 +29,7 @@ open class ReferenceRegistry <T: Any> {
      * @throws IllegalStateException If this could not be found.
      */
     fun get(id: Identifier) : KClass<out T> {
-        return getOrNull(id) ?: error("Identifier points to no available identifiable object.")
+        return getOrNull(id) ?: error("Identifier points to nothing.")
     }
 
     /**

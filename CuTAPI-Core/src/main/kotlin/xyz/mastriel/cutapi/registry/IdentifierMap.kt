@@ -16,6 +16,7 @@ open class IdentifierMap<T: Identifiable> {
      * @param item The object which the association is being made for.
      */
     open fun register(item: T) {
+        if (values.containsKey(item.id)) error("Two Identifiables cannot have the same ID in the same registry.")
         values[item.id] = item
         Plugin.info("[REGISTRY] ${item.id} added to a registry.")
     }
@@ -28,7 +29,7 @@ open class IdentifierMap<T: Identifiable> {
      * @throws IllegalStateException If this could not be found.
      */
     open fun get(id: Identifier) : T {
-        return getOrNull(id) ?: error("Identifier points to no available identifiable object.")
+        return getOrNull(id) ?: error("Identifier points to nothing.")
     }
 
     /**

@@ -8,7 +8,7 @@ import xyz.mastriel.cutapi.resourcepack.Texture
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.exampleplugin.Plugin
-import xyz.mastriel.exampleplugin.components.Soulbound
+import xyz.mastriel.exampleplugin.components.BindOnUse
 
 object RubySword : CustomMaterial(id(Plugin, "ruby_sword"), Material.DIAMOND_SWORD) {
 
@@ -16,7 +16,7 @@ object RubySword : CustomMaterial(id(Plugin, "ruby_sword"), Material.DIAMOND_SWO
         name = "&fRuby Sword".colored
         texture = Texture(Plugin, "textures/ruby_sword.png")
 
-        component { Soulbound(null) }
+        component { BindOnUse() }
 
         description {
             textComponent("&7A sword, charged from &eDragon's Breath&7.".colored)

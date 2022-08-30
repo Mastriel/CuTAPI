@@ -2,6 +2,7 @@ package xyz.mastriel.cutapi.registry.descriptors
 
 import de.tr7zw.changeme.nbtapi.NBTContainer
 import net.kyori.adventure.text.Component
+import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.items.components.ItemComponent
@@ -102,11 +103,11 @@ open class MaterialDescriptorBuilder internal constructor() {
 }
 
 /**
- * A class for creating dynamic descriptions for [CustomItemStackOld]s.
+ * A class for creating dynamic descriptions for [CuTItemStack]s.
  * This is stored in the [MaterialDescriptor] and re-runs every time
  * the item is turned into a Bukkit [ItemStack].
  */
-class DescriptionBuilder(val itemStack: CuTItemStack) {
+class DescriptionBuilder(val itemStack: CuTItemStack, val viewer: Player) {
 
     val customMaterial get() = itemStack.customMaterial
 
@@ -132,8 +133,8 @@ class DescriptionBuilder(val itemStack: CuTItemStack) {
      * Adds any lore that any [ItemComponent] would want to implement.
      */
     fun itemComponents(mainColor: Color) {
-        for (itemComponent in itemStack.components.distinct()) {
-            val lore = itemComponent.lore
+        for (itemComponent in itemStack.getAllComponents()) {
+            val lore = itemComponent.getLore(itemStack, viewer)
             if (lore != null) {
                 lines.add(lore.color(mainColor.textColor))
             }
