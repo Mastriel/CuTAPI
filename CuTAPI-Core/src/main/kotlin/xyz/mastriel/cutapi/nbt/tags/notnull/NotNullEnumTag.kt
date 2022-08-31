@@ -3,7 +3,7 @@ package xyz.mastriel.cutapi.nbt.tags.notnull
 import de.tr7zw.changeme.nbtapi.NBTCompound
 import kotlin.reflect.KClass
 
-class NotNullEnumTag<T : Enum<T>>(key: String, compound: NBTCompound, default: T, kClass: KClass<T>) :
+class NotNullEnumTag<T : Enum<T>>(key: String, compound: NBTCompound, kClass: KClass<T>, default: T) :
     NotNullTag<T>(key, compound, kClass, default) {
 
     override fun get(): T {

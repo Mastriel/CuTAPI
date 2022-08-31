@@ -14,14 +14,19 @@ open class NullableTag<T : Any>(
     final override val default: T?
 ) : NBTTag<T?> {
 
+    private var cachedValue : T? = null
+
     operator fun getValue(thisRef: Any?, property: KProperty<*>): T? {
         if (!compound.hasKey(key)) try { store(default) } catch (_: Exception) {}
         if (isNull()) return null
-        return get()
+
+        if (cachedValue != null) return cachedValue
+        return get().also { cachedValue = it }
     }
 
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T?) {
         if (value == null) return storeNull()
+        cachedValue = value
         store(value)
     }
 

@@ -12,12 +12,17 @@ open class NotNullTag<T : Any>(
     override val default: T
 ) : NBTTag<T> {
 
+    private var cachedValue : T? = null
+
     operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
         if (!compound.hasKey(key)) try { store(default); println("Stored default!") } catch (_: Exception) {}
-        return get()
+
+        if (cachedValue != null) return cachedValue!!
+        return get().also { cachedValue = it }
     }
 
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+        cachedValue = value
         store(value)
     }
 

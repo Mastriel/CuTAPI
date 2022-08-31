@@ -2,7 +2,6 @@ package xyz.mastriel.cutapi.items.components
 
 import de.tr7zw.changeme.nbtapi.NBTCompound
 import xyz.mastriel.cutapi.items.CuTItemStack
-import xyz.mastriel.cutapi.items.CuTItemStack.Companion.bind
 import xyz.mastriel.cutapi.registry.idOrNull
 import xyz.mastriel.cutapi.utils.nbt
 import kotlin.reflect.KClass

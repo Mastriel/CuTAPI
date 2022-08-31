@@ -91,12 +91,5 @@ class CuTItemStack(val handle: ItemStack) : TagContainer(NBTItem(handle, true)),
             nbt.setString("CuTID", customMaterial.id.toString())
             return this
         }
-
-        internal fun ItemComponent.bind(container: NBTCompound) {
-            val previousContainer = this.compound
-
-            this.compound = container
-            this.compound.mergeCompound(previousContainer)
-        }
     }
 }

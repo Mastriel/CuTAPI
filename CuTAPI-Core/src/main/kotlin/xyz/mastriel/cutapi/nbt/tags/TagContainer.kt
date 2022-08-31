@@ -1,14 +1,18 @@
 package xyz.mastriel.cutapi.nbt.tags
 
 import de.tr7zw.changeme.nbtapi.NBTCompound
+import de.tr7zw.changeme.nbtapi.NBTContainer
+import kotlinx.serialization.KSerializer
 import org.bukkit.OfflinePlayer
 import xyz.mastriel.cutapi.items.CustomMaterial
 import xyz.mastriel.cutapi.nbt.tags.notnull.*
 import xyz.mastriel.cutapi.nbt.tags.nullable.*
 import xyz.mastriel.cutapi.registry.Identifier
 import java.util.*
+import kotlin.reflect.KProperty0
+import kotlin.reflect.jvm.isAccessible
 
-open class TagContainer(container: NBTCompound) {
+open class TagContainer(container: NBTCompound = NBTContainer()) {
 
     var compound: NBTCompound = container
         internal set(value) {
@@ -20,25 +24,25 @@ open class TagContainer(container: NBTCompound) {
 
     internal val tags = mutableSetOf<NBTTag<*>>()
 
-    open fun playerTag(key: String, default: OfflinePlayer): NotNullTag<OfflinePlayer> =
+    fun playerTag(key: String, default: OfflinePlayer): NotNullTag<OfflinePlayer> =
         NotNullPlayerTag(key, this.compound, default).addedToTags()
 
-    open fun nullablePlayerTag(key: String, default: OfflinePlayer? = null): NullableTag<OfflinePlayer> =
+    fun nullablePlayerTag(key: String, default: OfflinePlayer? = null): NullableTag<OfflinePlayer> =
         NullablePlayerTag(key, this.compound, default).addedToTags()
 
-    open fun identifierTag(key: String, default: Identifier): NotNullTag<Identifier> =
+    fun identifierTag(key: String, default: Identifier): NotNullTag<Identifier> =
         NotNullIdentifierTag(key, this.compound, default).addedToTags()
 
-    open fun nullableIdentifierTag(key: String, default: Identifier? = null): NullableTag<Identifier> =
+    fun nullableIdentifierTag(key: String, default: Identifier? = null): NullableTag<Identifier> =
         NullableIdentifierTag(key, this.compound, default).addedToTags()
 
-    open fun customMaterialTag(key: String, default: CustomMaterial): NotNullTag<CustomMaterial> =
+    fun customMaterialTag(key: String, default: CustomMaterial): NotNullTag<CustomMaterial> =
         NotNullCustomMaterialTag(key, this.compound, default).addedToTags()
 
-    open fun nullableCustomMaterialTag(key: String, default: CustomMaterial? = null): NullableTag<CustomMaterial> =
+    fun nullableCustomMaterialTag(key: String, default: CustomMaterial? = null): NullableTag<CustomMaterial> =
         NullableCustomMaterialTag(key, this.compound, default).addedToTags()
 
-    open fun stringTag(key: String, default: String) =
+    fun stringTag(key: String, default: String) =
         NotNullPrimitiveTag(
             key,
             this.compound,
@@ -49,7 +53,7 @@ open class TagContainer(container: NBTCompound) {
         ).addedToTags()
 
 
-    open fun nullableStringTag(key: String, default: String? = null) =
+    fun nullableStringTag(key: String, default: String? = null) =
         NullablePrimitiveTag(
             key,
             this.compound,
@@ -59,7 +63,7 @@ open class TagContainer(container: NBTCompound) {
             NBTCompound::setString
         ).addedToTags()
 
-    open fun doubleTag(key: String, default: Double) =
+    fun doubleTag(key: String, default: Double) =
         NotNullPrimitiveTag(
             key,
             this.compound,
@@ -69,7 +73,7 @@ open class TagContainer(container: NBTCompound) {
             NBTCompound::setDouble
         ).addedToTags()
 
-    open fun nullableDoubleTag(key: String, default: Double? = null) =
+    fun nullableDoubleTag(key: String, default: Double? = null) =
         NullablePrimitiveTag(
             key,
             this.compound,
@@ -79,7 +83,7 @@ open class TagContainer(container: NBTCompound) {
             NBTCompound::setDouble
         ).addedToTags()
 
-    open fun longTag(key: String, default: Long) =
+    fun longTag(key: String, default: Long) =
         NotNullPrimitiveTag(
             key,
             this.compound,
@@ -89,7 +93,7 @@ open class TagContainer(container: NBTCompound) {
             NBTCompound::setLong
         ).addedToTags()
 
-    open fun nullableLongTag(key: String, default: Long? = null) =
+    fun nullableLongTag(key: String, default: Long? = null) =
         NullablePrimitiveTag(
             key,
             this.compound,
@@ -99,7 +103,7 @@ open class TagContainer(container: NBTCompound) {
             NBTCompound::setLong
         ).addedToTags()
 
-    open fun intTag(key: String, default: Int) =
+    fun intTag(key: String, default: Int) =
         NotNullPrimitiveTag(
             key,
             this.compound,
@@ -109,7 +113,7 @@ open class TagContainer(container: NBTCompound) {
             NBTCompound::setInteger
         ).addedToTags()
 
-    open fun nullableIntTag(key: String, default: Int? = null) =
+    fun nullableIntTag(key: String, default: Int? = null) =
         NullablePrimitiveTag(
             key,
             this.compound,
@@ -119,22 +123,35 @@ open class TagContainer(container: NBTCompound) {
             NBTCompound::setInteger
         ).addedToTags()
 
-    open fun uuidTag(key: String, default: UUID) =
+    fun uuidTag(key: String, default: UUID) =
         NotNullTag(key, this.compound, UUID::class, default).addedToTags()
 
-    open fun nullableUuidTag(key: String, default: UUID? = null) =
+    fun nullableUuidTag(key: String, default: UUID? = null) =
         NullableTag(key, this.compound, UUID::class, default).addedToTags()
 
-    inline fun <reified T : Enum<T>> nullableEnumTag(key: String, default: T? = null) =
-        NullableEnumTag(key, this.compound, default, T::class).addedToTags()
+    inline fun <reified T : Enum<T>> enumTag(key: String, default: T) : NotNullTag<T> =
+        NotNullEnumTag(key, this.compound, T::class, default).addedToTags()
 
-    inline fun <reified T : Enum<T>> enumTag(key: String, default: T) =
-        NotNullEnumTag(key, this.compound, default, T::class).addedToTags()
+    inline fun <reified T : Enum<T>> nullableEnumTag(key: String, default: T? = null) : NullableTag<T> =
+        NullableEnumTag(key, this.compound, T::class, default).addedToTags()
 
+    inline fun <reified T : Any> objectTag(key: String, default: T, serializer: KSerializer<T>) =
+        NotNullObjectTag(key, this.compound, T::class, default, serializer).addedToTags()
+
+    inline fun <reified T : Any> objectTag(key: String, default: T?, serializer: KSerializer<T>) =
+        NullableObjectTag(key, this.compound, T::class, default, serializer).addedToTags()
 
     fun <T : NBTTag<V>, V> T.addedToTags(): T {
         tags.add(this)
         return this
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <V> saveTag(tag: KProperty0<V>) {
+        tag.isAccessible = true
+        val delegate = (tag.getDelegate() as? NBTTag<V>) ?: error("Tried to save value that is not a tag.")
+        delegate.store(tag.get())
+        tag.isAccessible = false
     }
 
 

@@ -1,5 +1,8 @@
 package xyz.mastriel.cutapi
 
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.cbor.Cbor
+import kotlinx.serialization.modules.SerializersModule
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.packets.PacketManager
 
@@ -139,6 +142,11 @@ object CuTAPI {
         }
     }
 
+
+    @OptIn(ExperimentalSerializationApi::class)
+    internal val cbor = Cbor {
+        this.ignoreUnknownKeys = true
+    }
 }
 
 

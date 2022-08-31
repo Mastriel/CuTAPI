@@ -39,7 +39,7 @@ dependencies {
 
     compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.0")
     compileOnly("org.jetbrains.kotlin:kotlin-reflect:1.7.0")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.3.3")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.0")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
     compileOnly("com.comphenix.protocol:ProtocolLib:5.0.0-SNAPSHOT")

@@ -1,11 +1,13 @@
 package xyz.mastriel.cutapi.items.components
 
+import de.tr7zw.changeme.nbtapi.NBTCompound
 import de.tr7zw.changeme.nbtapi.NBTContainer
 import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerInteractEvent
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.items.CuTItemStack
+import xyz.mastriel.cutapi.items.CustomMaterial
 import xyz.mastriel.cutapi.items.events.CustomItemObtainEvent
 import xyz.mastriel.cutapi.nbt.tags.TagContainer
 import xyz.mastriel.cutapi.registry.Identifiable
@@ -27,7 +29,7 @@ import kotlin.reflect.jvm.isAccessible
  */
 abstract class ItemComponent(
     override val id: Identifier
-) : Identifiable, Cloneable, TagContainer(container = NBTContainer()) {
+) : Identifiable, TagContainer(container = NBTContainer()) {
 
     init {
         require(isRegistered(this::class)) { "An ItemComponent must be registered before it is constructed. " +
@@ -37,7 +39,7 @@ abstract class ItemComponent(
     /**
      * The lore which this component shows when applied to a [CuTItemStack].
      */
-    open fun getLore(cuTItemStack: CuTItemStack, viewer: Player) : Component? { return null }
+    open fun getLore(cuTItemStack: CuTItemStack, viewer: Player) : Component? = null
 
     /**
      * Called whenever this [ItemComponent] is applied to a [CuTItemStack].
@@ -86,5 +88,17 @@ abstract class ItemComponent(
             getConstructor(item)
             super.register(item)
         }
+    }
+
+    /**
+     * Sets this component's NBT compound to the supplied compound, then merges the previous compound's data.
+     * This is done to ensure that the parent tree is set up correctly for CuTItemStacks, so that it can
+     * direct apply.
+     */
+    internal fun bind(container: NBTCompound) {
+        val previousContainer = this.compound
+
+        this.compound = container
+        this.compound.mergeCompound(previousContainer)
     }
 }

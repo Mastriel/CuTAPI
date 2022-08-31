@@ -4,7 +4,7 @@ import de.tr7zw.changeme.nbtapi.NBTCompound
 import org.bukkit.OfflinePlayer
 import kotlin.reflect.KClass
 
-class NullableEnumTag<T : Enum<T>>(key: String, compound: NBTCompound, default: T?, kClass: KClass<T>) :
+class NullableEnumTag<T : Enum<T>>(key: String, compound: NBTCompound, kClass: KClass<T>, default: T?) :
     NullableTag<T>(key, compound, kClass, default) {
 
     init {

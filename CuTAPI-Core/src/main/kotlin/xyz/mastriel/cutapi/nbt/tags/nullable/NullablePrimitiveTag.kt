@@ -21,7 +21,6 @@ class NullablePrimitiveTag<T : Any>(
 
     override fun store(value: T?) {
         if (value == null) return storeNull()
-        return compound.setter(key, value)
-
+        compound.setter(key, value)
     }
 }

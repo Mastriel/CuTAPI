@@ -1,7 +1,9 @@
 package xyz.mastriel.cutapi.items
 
 import kotlinx.serialization.Serializable
+import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.event.Listener
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.registry.descriptors.defaultMaterialDescriptor
 import xyz.mastriel.cutapi.registry.descriptors.materialDescriptor
@@ -11,7 +13,7 @@ import xyz.mastriel.cutapi.utils.colored
 private object CustomMaterialSerializer : IdentifiableSerializer<CustomMaterial>("customMaterial", CustomMaterial)
 
 @Serializable(with = CustomMaterialSerializer::class)
-open class CustomMaterial(override val id: Identifier, val type: Material) : Identifiable {
+open class CustomMaterial(override val id: Identifier, val type: Material) : Identifiable, Listener {
 
 
     /**
@@ -41,6 +43,13 @@ open class CustomMaterial(override val id: Identifier, val type: Material) : Ide
 
         override fun get(id: Identifier): CustomMaterial {
             return super.getOrNull(id) ?: return Unknown
+        }
+
+        override fun register(item: CustomMaterial) {
+            val plugin = item.id.plugin
+
+            if (plugin != null) Bukkit.getServer().pluginManager.registerEvents(item, plugin)
+            super.register(item)
         }
 
 
