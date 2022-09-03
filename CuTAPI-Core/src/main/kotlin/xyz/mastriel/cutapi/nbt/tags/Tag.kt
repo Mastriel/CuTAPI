@@ -28,7 +28,7 @@ interface Tag<T> {
                 Int::class -> compound.setInteger(key, value as Int)
                 Long::class -> compound.setLong(key, value as Long)
                 Byte::class -> compound.setByte(key, value as Byte)
-                Boolean::class -> { compound.setBoolean(key, value as Boolean) }
+                Boolean::class -> compound.setBoolean(key, value as Boolean)
                 IntArray::class -> compound.setIntArray(key, value as IntArray)
                 Float::class -> compound.setFloat(key, value as Float)
                 Double::class -> compound.setDouble(key, value as Double)

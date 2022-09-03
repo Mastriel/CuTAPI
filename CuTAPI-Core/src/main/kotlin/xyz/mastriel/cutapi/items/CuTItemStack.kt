@@ -1,11 +1,15 @@
 package xyz.mastriel.cutapi.items
 
+import de.tr7zw.changeme.nbtapi.NBTContainer
+import de.tr7zw.changeme.nbtapi.NBTItem
 import net.kyori.adventure.text.Component
 import org.bukkit.enchantments.Enchantment
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import xyz.mastriel.cutapi.ShinyKnifeDamager
 import xyz.mastriel.cutapi.items.components.ComponentHolder
 import xyz.mastriel.cutapi.items.components.MaterialComponent
+import xyz.mastriel.cutapi.items.components.getComponent
 import xyz.mastriel.cutapi.items.components.materialComponentList
 import xyz.mastriel.cutapi.nbt.MetapreservingNBTItem
 import xyz.mastriel.cutapi.nbt.tags.TagContainer
@@ -16,19 +20,24 @@ import xyz.mastriel.cutapi.registry.unknownID
 import xyz.mastriel.cutapi.utils.nbt
 import kotlin.reflect.KClass
 
-class CuTItemStack(val handle: ItemStack) : TagContainer(MetapreservingNBTItem(handle)), ComponentHolder {
+class CuTItemStack(val handle: ItemStack) : TagContainer(NBTItem(handle, true)), ComponentHolder {
     
     var name: Component
         get() = handle.displayName()
         set(value) {
             nameHasChanged = true
-            handle.editMeta { meta ->
-                meta.displayName(value)
-            }
+            val meta = handle.itemMeta
+            meta.displayName(value)
+            handle.itemMeta = meta
         }
 
     var customMaterial by customMaterialTag("CuTID", CustomMaterial.Unknown)
-    var nameHasChanged by booleanTag("NameHasChanged", false)
+    var nameHasChanged : Boolean
+        get() = compound.getOrCreateCompound("CuTData").getBoolean("NameHasChanged") ?: false
+        set(value) {
+            compound.getOrCreateCompound("CuTData")
+                .setBoolean("NameHasChanged", value)
+        }
     val descriptor get() = customMaterial.descriptor
     var texture = descriptor.texture
 
