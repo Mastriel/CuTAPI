@@ -1,17 +1,18 @@
 package xyz.mastriel.cutapi.packets
 
 import com.comphenix.protocol.reflect.StructureModifier
+import org.bukkit.inventory.ItemStack
 import kotlin.reflect.KProperty
 
 
 internal fun WrappedPacket.intField(fieldIndex: Int) =
-    PacketField(handle.integers, fieldIndex)
+    PacketField<Int>(handle.integers, fieldIndex)
 
 internal fun WrappedPacket.byteField(fieldIndex: Int) =
-    PacketField(handle.bytes, fieldIndex)
+    PacketField<Byte>(handle.bytes, fieldIndex)
 
 internal fun WrappedPacket.itemField(fieldIndex: Int) =
-    PacketField(handle.itemModifier, fieldIndex)
+    PacketField<ItemStack>(handle.itemModifier, fieldIndex)
 
 
 class PacketField<T>(val structureModifier: StructureModifier<T>, val index: Int) {

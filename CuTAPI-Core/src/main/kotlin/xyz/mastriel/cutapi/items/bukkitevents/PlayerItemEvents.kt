@@ -4,7 +4,6 @@ import org.bukkit.Bukkit
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent
-import org.bukkit.event.player.PlayerJoinEvent
 import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.items.CuTItemStack.Companion.isCustom
 import xyz.mastriel.cutapi.items.events.CustomItemObtainEvent

@@ -33,7 +33,7 @@ repositories {
 
 
 dependencies {
-    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.106.0")
+    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.117.1")
     testImplementation(kotlin("test"))
     compileOnly("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")
 
@@ -45,6 +45,9 @@ dependencies {
     compileOnly("com.comphenix.protocol:ProtocolLib:5.0.0-SNAPSHOT")
     // controversial choice, i know
     shadow("de.tr7zw:item-nbt-api:2.10.0")
+
+    implementation("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.4.0")
+    implementation("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.4.0")
 }
 
 

@@ -8,7 +8,7 @@ import xyz.mastriel.cutapi.commands.TestCommand
 import xyz.mastriel.cutapi.items.CustomMaterial
 import xyz.mastriel.cutapi.items.PacketItems
 import xyz.mastriel.cutapi.items.bukkitevents.PlayerItemEvents
-import xyz.mastriel.cutapi.items.components.ItemComponentEvents
+import xyz.mastriel.cutapi.items.components.MaterialComponentEvents
 import xyz.mastriel.cutapi.items.events.CustomItemEvents
 import java.io.File
 
@@ -33,7 +33,7 @@ class CuTAPIPlugin : JavaPlugin {
 
         server.pluginManager.registerEvents(PlayerItemEvents, this)
         server.pluginManager.registerEvents(CustomItemEvents(), this)
-        server.pluginManager.registerEvents(ItemComponentEvents(), this)
+        server.pluginManager.registerEvents(MaterialComponentEvents(), this)
 
         CustomMaterial.register(CustomMaterial.Unknown)
 
@@ -44,8 +44,9 @@ class CuTAPIPlugin : JavaPlugin {
         val packetManager = CuTAPI.packetManager
         val eventManager = packetManager.eventManager
 
-        // eventManager.registerListener(PacketItems)
+        eventManager.registerListener(PacketItems)
     }
+
     override fun onDisable() {
 
     }

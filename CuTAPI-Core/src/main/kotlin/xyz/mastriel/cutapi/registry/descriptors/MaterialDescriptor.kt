@@ -5,7 +5,7 @@ import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import xyz.mastriel.cutapi.items.CuTItemStack
-import xyz.mastriel.cutapi.items.components.ItemComponent
+import xyz.mastriel.cutapi.items.components.MaterialComponent
 import xyz.mastriel.cutapi.nbt.NBTBuilder
 import xyz.mastriel.cutapi.resourcepack.Texture
 import xyz.mastriel.cutapi.utils.Color
@@ -37,7 +37,7 @@ open class MaterialDescriptor internal constructor(
      * */
     open val texture: Texture? = null,
     open val loreFormatter: (DescriptionBuilder.() -> Unit)? = null,
-    open val components: Set<() -> ItemComponent> = setOf()
+    open val components: Set<MaterialComponent> = setOf()
 )
 
 /**
@@ -52,12 +52,12 @@ open class MaterialDescriptorBuilder internal constructor() {
     var texture : Texture? = null
     private var formatter : (DescriptionBuilder.() -> Unit)? = {
         emptyLine()
-        itemComponents(Color.Blue)
+        components(Color.Blue)
     }
 
-    val components = mutableSetOf<() -> ItemComponent>()
+    val components = mutableSetOf<MaterialComponent>()
 
-    fun component(component: () -> ItemComponent) {
+    fun component(component: MaterialComponent) {
         components += component
     }
 
@@ -130,11 +130,11 @@ class DescriptionBuilder(val itemStack: CuTItemStack, val viewer: Player) {
     }
 
     /**
-     * Adds any lore that any [ItemComponent] would want to implement.
+     * Adds any lore that any [MaterialComponent] would want to implement.
      */
-    fun itemComponents(mainColor: Color) {
-        for (itemComponent in itemStack.getAllComponents()) {
-            val lore = itemComponent.getLore(itemStack, viewer)
+    fun components(mainColor: Color) {
+        for (component in itemStack.getAllComponents()) {
+            val lore = component.getLore(itemStack, viewer)
             if (lore != null) {
                 lines.add(lore.color(mainColor.textColor))
             }

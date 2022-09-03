@@ -1,18 +1,17 @@
 package xyz.mastriel.exampleplugin
 
+import org.bukkit.plugin.PluginDescriptionFile
 import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.plugin.java.JavaPluginLoader
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.items.CustomMaterial
-import xyz.mastriel.cutapi.items.components.ItemComponent
-import xyz.mastriel.exampleplugin.components.BindOnUse
-import xyz.mastriel.exampleplugin.components.Charged
-import xyz.mastriel.exampleplugin.components.Soulbound
-import xyz.mastriel.exampleplugin.items.RubySword
+import xyz.mastriel.exampleplugin.items.ShinyKnife
+import java.io.File
 
 internal lateinit var Plugin : ExamplePlugin
     private set
 
-class ExamplePlugin : JavaPlugin() {
+class ExamplePlugin : JavaPlugin {
 
     override fun onEnable() {
         Plugin = this
@@ -20,17 +19,24 @@ class ExamplePlugin : JavaPlugin() {
             strictRegistries = true
         }
 
-        ItemComponent.register(BindOnUse::class)
-        ItemComponent.register(Soulbound::class)
-        ItemComponent.register(Charged::class)
-
-        CustomMaterial.register(RubySword)
+        CustomMaterial.register(ShinyKnife)
         getCommand("test")?.setExecutor(TestCommand)
     }
 
     override fun onDisable() {
         CuTAPI.unregisterPlugin(this)
     }
+
+    @Suppress("UNUSED")
+    constructor() : super()
+
+    @Suppress("UNUSED")
+    constructor(
+        loader: JavaPluginLoader,
+        descriptionFile: PluginDescriptionFile,
+        dataFolder: File,
+        file: File
+    ) : super(loader, descriptionFile, dataFolder, file)
 }
 
 

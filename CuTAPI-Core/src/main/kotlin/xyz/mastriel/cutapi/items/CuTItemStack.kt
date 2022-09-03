@@ -1,11 +1,13 @@
 package xyz.mastriel.cutapi.items
 
-import de.tr7zw.changeme.nbtapi.NBTCompound
-import de.tr7zw.changeme.nbtapi.NBTItem
 import net.kyori.adventure.text.Component
+import org.bukkit.enchantments.Enchantment
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.items.components.*
+import xyz.mastriel.cutapi.items.components.ComponentHolder
+import xyz.mastriel.cutapi.items.components.MaterialComponent
+import xyz.mastriel.cutapi.items.components.materialComponentList
+import xyz.mastriel.cutapi.nbt.MetapreservingNBTItem
 import xyz.mastriel.cutapi.nbt.tags.TagContainer
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.descriptors.DescriptionBuilder
@@ -14,19 +16,20 @@ import xyz.mastriel.cutapi.registry.unknownID
 import xyz.mastriel.cutapi.utils.nbt
 import kotlin.reflect.KClass
 
-class CuTItemStack(val handle: ItemStack) : TagContainer(NBTItem(handle, true)),
-    ComponentHandler {
+class CuTItemStack(val handle: ItemStack) : TagContainer(MetapreservingNBTItem(handle)), ComponentHolder {
     
     var name: Component
         get() = handle.displayName()
         set(value) {
-            val meta = handle.itemMeta
-            meta.displayName(value)
-            handle.itemMeta = meta
+            nameHasChanged = true
+            handle.editMeta { meta ->
+                meta.displayName(value)
+            }
         }
 
     var customMaterial by customMaterialTag("CuTID", CustomMaterial.Unknown)
-    val descriptor get() = customMaterial.materialDescriptor
+    var nameHasChanged by booleanTag("NameHasChanged", false)
+    val descriptor get() = customMaterial.descriptor
     var texture = descriptor.texture
 
     var bukkitMaterial
@@ -34,7 +37,8 @@ class CuTItemStack(val handle: ItemStack) : TagContainer(NBTItem(handle, true)),
         set(value) {
             handle.type = value
         }
-    val enchantments
+
+    val enchantments: MutableMap<Enchantment, Int>
         get() = handle.enchantments
 
     fun getLore(viewer: Player): List<Component> {
@@ -49,43 +53,48 @@ class CuTItemStack(val handle: ItemStack) : TagContainer(NBTItem(handle, true)),
     init {
         require(handle.customIdOrNull != null) { "ItemStack not wrappable into a CuTItemStack." }
 
-        name = descriptor.name ?: handle.displayName()
+        if (!nameHasChanged) {
+            val meta = handle.itemMeta
+            meta.displayName(descriptor.name)
+            handle.itemMeta = meta
+        }
     }
 
     constructor(customMaterial: CustomMaterial, quantity: Int) : this(
         ItemStack(customMaterial.type, quantity).withMaterialId(customMaterial)
-    ) {
-        for (component in descriptor.components) {
-            val componentInstance = component()
-            addComponent(componentInstance)
-        }
-    }
+    )
 
-    private val componentHandler = itemComponentHandler(this)
-    
-    override fun addComponent(component: ItemComponent) = componentHandler.addComponent(component)
-    override fun removeComponent(component: KClass<out ItemComponent>) = componentHandler.removeComponent(component)
-    override fun hasComponent(component: KClass<out ItemComponent>) = componentHandler.hasComponent(component)
-    override fun <T: ItemComponent> getComponent(component: KClass<T>) = componentHandler.getComponent(component)
-    override fun <T: ItemComponent> getComponentOrNull(component: KClass<T>) = componentHandler.getComponentOrNull(component)
-    override fun getAllComponents() : Set<ItemComponent> = componentHandler.getAllComponents()
+    private val componentHandler = materialComponentList(this.customMaterial)
+
+    override fun hasComponent(component: KClass<out MaterialComponent>) = componentHandler.hasComponent(component)
+    override fun <T : MaterialComponent> getComponent(component: KClass<T>) = componentHandler.getComponent(component)
+    override fun <T : MaterialComponent> getComponentOrNull(component: KClass<T>) = componentHandler.getComponentOrNull(component)
+    override fun getAllComponents(): Set<MaterialComponent> = componentHandler.getAllComponents()
 
 
     companion object {
         val ItemStack.customId: Identifier
             get() {
+                if (this.type.isAir) return unknownID()
                 return idOrNull(nbt.getString("CuTID")) ?: unknownID()
             }
 
         val ItemStack.customIdOrNull: Identifier?
             get() {
+                if (this.type.isAir) return null
                 return idOrNull(nbt.getString("CuTID"))
             }
 
         val ItemStack.isCustom: Boolean
             get() {
-                return customId != unknownID()
+                if (this.type.isAir) return false
+                return customIdOrNull != null
             }
+
+        fun ItemStack.wrap() : CuTItemStack? {
+            if (!isCustom || type.isAir) return null
+            return CuTItemStack(this)
+        }
 
         private fun ItemStack.withMaterialId(customMaterial: CustomMaterial): ItemStack {
             nbt.setString("CuTID", customMaterial.id.toString())

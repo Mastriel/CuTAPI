@@ -1,45 +1,41 @@
 package xyz.mastriel.exampleplugin.components
 
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.descriptors.mapSerialDescriptor
 import net.kyori.adventure.text.Component
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
-import org.bukkit.event.player.PlayerInteractEvent
 import xyz.mastriel.cutapi.items.CuTItemStack
-import xyz.mastriel.cutapi.items.components.ItemComponent
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.identifiable
+import xyz.mastriel.cutapi.items.components.MaterialComponent
+import xyz.mastriel.cutapi.items.events.CustomItemObtainEvent
+import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.utils.colored
-import xyz.mastriel.cutapi.utils.serializers.UUIDSerializer
 import xyz.mastriel.exampleplugin.Plugin
-import java.util.UUID
 
-class Soulbound private constructor() : ItemComponent(id) {
-    companion object : Identifiable by identifiable(Plugin, "soulbound")
+class Soulbound : MaterialComponent(id(Plugin, "soulbound")) {
 
-    constructor(player: OfflinePlayer? = null) : this() {
-        owner = player
+    private val ownerKey = "Owner"
+
+    override fun getLore(item: CuTItemStack, viewer: Player): Component {
+        val owner = getOwner(item)?.name ?: "???"
+        return "Soulbound (${owner})".colored
     }
 
-    var owner by nullablePlayerTag("Owner")
-
-    val uuidToStringSerializer = MapSerializer(UUIDSerializer, String.serializer())
-    var complex by objectTag("ComplexTest", mutableMapOf(), uuidToStringSerializer)
-
-    override fun getLore(cuTItemStack: CuTItemStack, viewer: Player): Component {
-        if (owner == null) return "Soulbound (???)".colored
-        return "Soulbound (${owner?.name})".colored
+    fun setOwner(item: CuTItemStack, player: OfflinePlayer) {
+        val data = getData(item)
+        data.setPlayer(ownerKey, player)
     }
 
-    override fun onInteract(item: CuTItemStack, event: PlayerInteractEvent) {
-        event.player.sendMessage("This item has bound itself to you!".colored)
-        owner = event.player
-        val copy = complex.toMutableMap()
-        copy.put(UUID.randomUUID(), "String")
-        complex = copy
+    fun getOwner(item: CuTItemStack) : OfflinePlayer? {
+        val data = getData(item)
+        return data.getPlayer(ownerKey)
     }
 
+    override fun onObtain(player: Player, item: CuTItemStack, event: CustomItemObtainEvent) {
+        val owner = getOwner(item)
+        if (owner != null && player.uniqueId != owner.uniqueId) {
+            event.isCancelled = true
+            return
+        }
+        setOwner(item, player)
+    }
 
 }
