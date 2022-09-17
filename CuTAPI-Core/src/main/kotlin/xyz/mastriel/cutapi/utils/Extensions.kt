@@ -1,6 +1,5 @@
 package xyz.mastriel.cutapi.utils
 
-import de.tr7zw.changeme.nbtapi.NBTItem
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
@@ -46,5 +45,3 @@ fun ItemStack.appendLore(vararg lore: Component) : ItemStack {
 }
 
 internal fun <T> list(list: MutableList<T>.() -> Unit) = mutableListOf<T>().apply(list).toList()
-
-val ItemStack.nbt get() = NBTItem(this, true)

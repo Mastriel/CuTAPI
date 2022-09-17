@@ -7,6 +7,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+val kotlinVersion : String by properties
 group = "xyz.mastriel"
 version = "1.0"
 
@@ -33,33 +34,29 @@ repositories {
 
 
 dependencies {
-    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.117.1")
+    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
     testImplementation(kotlin("test"))
     compileOnly("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")
 
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.0")
-    compileOnly("org.jetbrains.kotlin:kotlin-reflect:1.7.0")
+    compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
+    compileOnly("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.0")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
     compileOnly("com.comphenix.protocol:ProtocolLib:5.0.0-SNAPSHOT")
-    // controversial choice, i know
-    shadow("de.tr7zw:item-nbt-api:2.10.0")
 
-    implementation("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.4.0")
-    implementation("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.4.0")
+    implementation("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.5.0")
+    implementation("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.5.0")
 }
 
 
 tasks.withType<ShadowJar> {
     configurations = listOf(project.configurations.shadow.get())
-
-    relocate("de.tr7zw.changeme.nbtapi", "cutapi.shadow.nbtapi")
 }
 
 
 tasks.withType<ProcessResources> {
-    val props = mapOf("version" to "$version")
+    val props = mapOf("version" to "$version", "kotlinVersion" to kotlinVersion)
     inputs.properties(props)
     filesMatching("plugin.yml") {
         expand(props)

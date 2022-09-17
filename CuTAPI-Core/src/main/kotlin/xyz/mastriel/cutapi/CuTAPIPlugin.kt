@@ -8,7 +8,7 @@ import xyz.mastriel.cutapi.commands.TestCommand
 import xyz.mastriel.cutapi.items.CustomMaterial
 import xyz.mastriel.cutapi.items.PacketItems
 import xyz.mastriel.cutapi.items.bukkitevents.PlayerItemEvents
-import xyz.mastriel.cutapi.items.components.MaterialComponentEvents
+import xyz.mastriel.cutapi.items.behaviors.MaterialBehaviorEvents
 import xyz.mastriel.cutapi.items.events.CustomItemEvents
 import java.io.File
 
@@ -33,7 +33,7 @@ class CuTAPIPlugin : JavaPlugin {
 
         server.pluginManager.registerEvents(PlayerItemEvents, this)
         server.pluginManager.registerEvents(CustomItemEvents(), this)
-        server.pluginManager.registerEvents(MaterialComponentEvents(), this)
+        server.pluginManager.registerEvents(MaterialBehaviorEvents(), this)
 
         CustomMaterial.register(CustomMaterial.Unknown)
 

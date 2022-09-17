@@ -1,5 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
+
 plugins {
     kotlin("jvm")
 
@@ -7,6 +8,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+val kotlinVersion : String by properties
 group = "xyz.mastriel"
 version = "1.0"
 
@@ -38,19 +40,14 @@ dependencies {
     compileOnly(projects.cuTAPICore)
     compileOnly("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")
 
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.0")
-    compileOnly("org.jetbrains.kotlin:kotlin-reflect:1.7.0")
+    compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
+    compileOnly("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.0")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
-
-    // controversial choice, i know
-    compileOnly("de.tr7zw:item-nbt-api:2.10.0")
 }
 
 
 tasks.withType<ShadowJar> {
     configurations = listOf(project.configurations.shadow.get())
-
-    relocate("de.tr7zw.changeme.nbtapi", "cutapi.shadow.nbtapi")
 }

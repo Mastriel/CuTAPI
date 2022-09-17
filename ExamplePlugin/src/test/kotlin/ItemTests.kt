@@ -1,8 +1,8 @@
 import be.seeseemelk.mockbukkit.MockBukkit
-import xyz.mastriel.exampleplugin.ExamplePlugin
+import xyz.mastriel.brazil.BrazilPlugin
 
 class ItemTests {
     val server = MockBukkit.mock()
-    val plugin = MockBukkit.load(ExamplePlugin::class.java)
+    val plugin = MockBukkit.load(BrazilPlugin::class.java)
 
 }

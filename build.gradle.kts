@@ -1,8 +1,10 @@
 group = "xyz.mastriel"
 version = "1.0"
 
+val kotlinVersion : String by properties
+
 plugins {
-    kotlin("jvm") version "1.7.0"
+    kotlin("jvm") version "1.7.20-RC"
 
     id("com.github.johnrengelman.shadow") version "7.1.0"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.5.31"

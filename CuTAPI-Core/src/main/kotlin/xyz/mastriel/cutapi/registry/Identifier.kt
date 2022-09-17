@@ -30,6 +30,13 @@ data class Identifier internal constructor(val namespace: String, val id: String
         return "$namespace:$id"
     }
 
+    fun append(string: String) : Identifier {
+        return Identifier(namespace, id+string)
+    }
+
+    fun appendSubId(string: String) : Identifier {
+        return Identifier(namespace, "$id/$string")
+    }
 }
 
 /**

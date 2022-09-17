@@ -4,16 +4,14 @@ import kotlinx.serialization.Serializable
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.event.Listener
-import xyz.mastriel.cutapi.items.components.ComponentHolder
-import xyz.mastriel.cutapi.items.components.MaterialComponent
-import xyz.mastriel.cutapi.items.components.materialComponentList
-import xyz.mastriel.cutapi.nbt.tags.TagContainer
+import xyz.mastriel.cutapi.behavior.BehaviorHolder
+import xyz.mastriel.cutapi.items.behaviors.MaterialBehavior
+import xyz.mastriel.cutapi.items.behaviors.StaticLore
+import xyz.mastriel.cutapi.items.behaviors.materialBehaviorHolder
+import xyz.mastriel.cutapi.pdc.tags.MaterialBehaviorTagContainer
+import xyz.mastriel.cutapi.pdc.tags.TagContainer
 import xyz.mastriel.cutapi.registry.*
-import xyz.mastriel.cutapi.registry.descriptors.MaterialDescriptorBuilder
-import xyz.mastriel.cutapi.registry.descriptors.defaultMaterialDescriptor
-import xyz.mastriel.cutapi.registry.descriptors.materialDescriptor
 import xyz.mastriel.cutapi.utils.colored
-import xyz.mastriel.cutapi.utils.nbt
 import kotlin.reflect.KClass
 
 
@@ -23,16 +21,15 @@ private object CustomMaterialSerializer : IdentifiableSerializer<CustomMaterial>
 open class CustomMaterial(
     override val id: Identifier,
     val type: Material,
-    descriptor: MaterialDescriptorBuilder? = null
-) : Identifiable, Listener, ComponentHolder {
+    descriptor: MaterialDescriptor? = null
+) : Identifiable, Listener, BehaviorHolder<MaterialBehavior> {
 
 
     /**
      * The descriptor that describes the custom material's default values, such
-     * as a default name, default lore, default NBT values, etc. These can be modified
-     * dynamically in [onCreate].
+     * as a default name, default lore, behaviors, etc.
      */
-    open val descriptor = descriptor?.build() ?: defaultMaterialDescriptor()
+    open val descriptor = descriptor ?: defaultMaterialDescriptor()
 
 
     fun createItemStack(quantity: Int) =
@@ -40,30 +37,31 @@ open class CustomMaterial(
 
     open fun onCreate(item: CuTItemStack) {}
 
-    private val componentHolder by lazy { materialComponentList(this) }
+    private val behaviorHolder by lazy { materialBehaviorHolder(this) }
 
-    override fun hasComponent(component: KClass<out MaterialComponent>) = componentHolder.hasComponent(component)
-    override fun <T : MaterialComponent> getComponent(component: KClass<T>) = componentHolder.getComponent(component)
-    override fun <T : MaterialComponent> getComponentOrNull(component: KClass<T>) = componentHolder.getComponentOrNull(component)
-    override fun getAllComponents(): Set<MaterialComponent> = componentHolder.getAllComponents()
+    override fun hasBehavior(behavior: KClass<out MaterialBehavior>) = behaviorHolder.hasBehavior(behavior)
+    override fun <T : MaterialBehavior> getBehavior(behavior: KClass<T>) = behaviorHolder.getBehavior(behavior)
+    override fun <T : MaterialBehavior> getBehaviorOrNull(behavior: KClass<T>) =
+        behaviorHolder.getBehaviorOrNull(behavior)
 
-    protected fun getData(item: CuTItemStack) : TagContainer {
-        val compound = item.handle.nbt
-            .getOrCreateCompound("$id/data")
-        return TagContainer(compound)
+    override fun getAllBehaviors(): Set<MaterialBehavior> = behaviorHolder.getAllBehaviors()
+
+    inline fun <reified B : MaterialBehavior> hasBehavior() = hasBehavior(B::class)
+    inline fun <reified B : MaterialBehavior> getBehavior() = getBehavior(B::class)
+    inline fun <reified B : MaterialBehavior> getBehaviorOrNull() = getBehaviorOrNull(B::class)
+
+    protected fun getData(item: CuTItemStack): TagContainer {
+        return MaterialBehaviorTagContainer(item.handle, id.copy(namespace = id.namespace, id = id.id + "/data"))
     }
 
 
-    companion object : IdentifierMap<CustomMaterial>() {
-        val Unknown = object : CustomMaterial(unknownID(), Material.ANVIL) {
-            override val descriptor = materialDescriptor {
-                name = "&cUnknown".colored
-                description {
-                    emptyLine()
-                    textComponent("&7You probably shouldn't have this.".colored)
-                }
-            }
-        }
+    companion object : IdentifierRegistry<CustomMaterial>() {
+        val Unknown = customMaterial(
+            unknownID(),
+            Material.ANVIL,
+            "Unknown".colored,
+            listOf(StaticLore("&cYou probably shouldn't have this...".colored))
+        )
 
         override fun get(id: Identifier): CustomMaterial {
             return super.getOrNull(id) ?: return Unknown

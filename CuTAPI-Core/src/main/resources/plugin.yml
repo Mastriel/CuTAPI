@@ -8,8 +8,8 @@ description: An API designed to make creating cool things in plugins possible!
 website: mastriel.xyz
 depend: [ ProtocolLib ]
 libraries:
-  - org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.0
-  - org.jetbrains.kotlin:kotlin-reflect:1.7.0
+  - org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}
+  - org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}
   - org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4
   - org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4
   - org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.0
