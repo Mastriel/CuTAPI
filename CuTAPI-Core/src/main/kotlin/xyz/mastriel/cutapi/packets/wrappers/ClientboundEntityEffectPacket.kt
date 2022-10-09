@@ -32,11 +32,11 @@ internal class ClientboundEntityEffectPacket(handle: PacketContainer) : WrappedP
             // amplifier
             handle.bytes.write(1, value.amplifier.toByte())
 
-            // duration
-            handle.integers.write(0, value.duration)
-
             // hide particles
             handle.bytes.write(2, if (value.hasParticles()) 0 else 1)
+
+            // duration
+            handle.integers.write(0, value.duration)
         }
 
     constructor(entityId: Int, effect: PotionEffect) : this(PacketContainer(PacketType.Play.Server.ENTITY_EFFECT)) {

@@ -4,7 +4,7 @@ import org.bukkit.Bukkit
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabExecutor
-import xyz.mastriel.cutapi.items.CustomMaterial
+import xyz.mastriel.cutapi.items.CustomItem
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.idOrNull
 import xyz.mastriel.cutapi.utils.chatTooltip
@@ -24,7 +24,7 @@ object CuTGiveCommand : TabExecutor {
         }
 
         if (position == 2) {
-            return CustomMaterial.getAllIds().map(Identifier::toString).toMutableList()
+            return CustomItem.getAllIds().map(Identifier::toString).toMutableList()
         }
 
         return mutableListOf()
@@ -62,13 +62,13 @@ object CuTGiveCommand : TabExecutor {
             sender.sendMessage("&cInvalid namespace! $namespacedItemArg could not be found.".colored)
             return true
         }
-        val customMaterial = CustomMaterial.getOrNull(identifier)
-        if (customMaterial == null) {
+        val customItem = CustomItem.getOrNull(identifier)
+        if (customItem == null) {
             sender.sendMessage("&cInvalid item identifier! $namespacedItemArg could not be found.".colored)
             return true
         }
 
-        val cutItem = customMaterial.createItemStack(quantity)
+        val cutItem = customItem.createItemStack(quantity)
         target.inventory.addItem(cutItem.handle)
         sender.sendMessage(
             "&aSuccessfully sent ${target.name} ${quantity}x ".colored

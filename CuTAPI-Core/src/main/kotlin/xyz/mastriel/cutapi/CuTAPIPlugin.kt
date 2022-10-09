@@ -5,7 +5,7 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.plugin.java.JavaPluginLoader
 import xyz.mastriel.cutapi.commands.CuTGiveCommand
 import xyz.mastriel.cutapi.commands.TestCommand
-import xyz.mastriel.cutapi.items.CustomMaterial
+import xyz.mastriel.cutapi.items.CustomItem
 import xyz.mastriel.cutapi.items.PacketItems
 import xyz.mastriel.cutapi.items.bukkitevents.PlayerItemEvents
 import xyz.mastriel.cutapi.items.behaviors.MaterialBehaviorEvents
@@ -25,19 +25,26 @@ class CuTAPIPlugin : JavaPlugin {
 
         CuTAPI.registerPlugin(this, "cutapi")
 
+        registerCommands()
+        registerEvents()
+        CustomItem.register(CustomItem.Unknown)
+
+        registerPacketListeners()
+    }
+
+
+    private fun registerEvents() {
+        server.pluginManager.registerEvents(PlayerItemEvents, this)
+        server.pluginManager.registerEvents(CustomItemEvents(), this)
+        server.pluginManager.registerEvents(MaterialBehaviorEvents(), this)
+    }
+
+    private fun registerCommands() {
         getCommand("cutgive")?.setExecutor(CuTGiveCommand)
         getCommand("cutgive")?.tabCompleter = CuTGiveCommand
 
         getCommand("test")?.setExecutor(TestCommand)
         getCommand("test")?.tabCompleter = TestCommand
-
-        server.pluginManager.registerEvents(PlayerItemEvents, this)
-        server.pluginManager.registerEvents(CustomItemEvents(), this)
-        server.pluginManager.registerEvents(MaterialBehaviorEvents(), this)
-
-        CustomMaterial.register(CustomMaterial.Unknown)
-
-        registerPacketListeners()
     }
 
     private fun registerPacketListeners() {

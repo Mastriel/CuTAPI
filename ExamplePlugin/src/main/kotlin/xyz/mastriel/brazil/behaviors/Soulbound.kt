@@ -4,13 +4,13 @@ import net.kyori.adventure.text.Component
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 import xyz.mastriel.cutapi.items.CuTItemStack
-import xyz.mastriel.cutapi.items.behaviors.MaterialBehavior
+import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.items.events.CustomItemObtainEvent
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.brazil.Plugin
 
-class Soulbound : MaterialBehavior(id(Plugin, "soulbound")) {
+class Soulbound : ItemBehavior(id(Plugin, "soulbound")) {
 
     private val ownerKey = "Owner"
 

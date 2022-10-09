@@ -12,7 +12,7 @@ import xyz.mastriel.cutapi.utils.colored
 
 open class SpellItem(
     material: Material, private val spell: Spell
-) : Spell by spell, CustomMaterial(spell.id, material) {
+) : Spell by spell, CustomItem(spell.id, material) {
 
     override val id: Identifier
         get() = spell.id
@@ -39,7 +39,7 @@ open class SpellItem(
     /**
      * Use `super.descriptor with {}` to add new behavior, lest you want weird things to happen.
      */
-    override val descriptor: MaterialDescriptor = materialDescriptor {
+    override val descriptor: ItemDescriptor = itemDescriptor {
         name = this@SpellItem.name.color(Color.Elethium.textColor)
 
         behavior(SpellBehavior(this@SpellItem))
@@ -64,24 +64,24 @@ open class SpellItem(
         }
     }
 
-    fun getSpellbook(): CustomMaterial {
+    fun getSpellbook(): CustomItem {
         return spellbooks.get(id.appendSubId("book"))
     }
 
     companion object : IdentifierRegistry<SpellItem>() {
 
-        private val spellbooks = IdentifierRegistry<CustomMaterial>()
+        private val spellbooks = IdentifierRegistry<CustomItem>()
 
         @Suppress("RemoveRedundantQualifierName")
         override fun register(item: SpellItem) {
-            CustomMaterial.register(item)
+            CustomItem.register(item)
             val spellbook = createSpellbookMaterial(item)
             spellbooks.register(spellbook)
-            CustomMaterial.register(spellbook)
+            CustomItem.register(spellbook)
         }
 
         private fun createSpellbookMaterial(spell: SpellItem) =
-            customMaterial(spell.id.appendSubId("book"), Material.BOOK) {
+            customItem(spell.id.appendSubId("book"), Material.BOOK) {
                 name = spell.name.color(Color.Elethium.textColor)
                 behavior(SpellbookLearnBehavior(spell))
 
@@ -94,15 +94,15 @@ open class SpellItem(
 fun spellItem(
     material: Material,
     spell: Spell,
-    block: MaterialDescriptorBuilder.() -> Unit
+    block: ItemDescriptorBuilder.() -> Unit
 ): SpellItem {
     return object : SpellItem(material, spell) {
-        override val descriptor: MaterialDescriptor = super.descriptor with block
+        override val descriptor: ItemDescriptor = super.descriptor with block
     }
 }
 
 fun registerSpellItem(
     material: Material,
     spell: Spell,
-    block: MaterialDescriptorBuilder.() -> Unit
+    block: ItemDescriptorBuilder.() -> Unit
 ) = spellItem(material, spell, block).also(SpellItem.Companion::register)

@@ -10,7 +10,7 @@ import org.bukkit.event.player.PlayerInteractEvent
 import xyz.mastriel.cutapi.behavior.Behavior
 import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.items.events.CustomItemObtainEvent
-import xyz.mastriel.cutapi.pdc.tags.MaterialBehaviorTagContainer
+import xyz.mastriel.cutapi.pdc.tags.ItemBehaviorTagContainer
 import xyz.mastriel.cutapi.pdc.tags.TagContainer
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.Identifier
@@ -18,7 +18,7 @@ import xyz.mastriel.cutapi.registry.Identifier
 /**
  * Alters the behavior of a material.
  */
-abstract class MaterialBehavior(
+abstract class ItemBehavior(
     override val id: Identifier
 ) : Identifiable, Behavior {
 
@@ -28,7 +28,7 @@ abstract class MaterialBehavior(
     open fun getLore(item: CuTItemStack, viewer: Player) : Component? = null
 
     protected fun getData(item: CuTItemStack) : TagContainer {
-        return MaterialBehaviorTagContainer(item.handle, this.id)
+        return ItemBehaviorTagContainer(item.handle, this.id)
     }
 
     open fun onLeftClick(player: Player, item: CuTItemStack, event: PlayerInteractEvent) {}

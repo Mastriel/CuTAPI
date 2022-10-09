@@ -8,7 +8,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.behavior.BehaviorHolder
-import xyz.mastriel.cutapi.items.behaviors.MaterialBehavior
+import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.pdc.tags.ItemTagContainer
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.idOrNull
@@ -19,7 +19,7 @@ import xyz.mastriel.cutapi.registry.unknownID
  * This **does not** contain behaviors! This only will show the behaviors that the custom material has.
  */
 class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
-    BehaviorHolder<MaterialBehavior> by handle.customMaterial {
+    BehaviorHolder<ItemBehavior> by handle.customItem {
     
     var name: Component
         get() = handle.displayName()
@@ -30,12 +30,12 @@ class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
             handle.itemMeta = meta
         }
 
-    var customMaterial by customMaterialTag("CuTID", CustomMaterial.Unknown)
+    var type by customItemTag("CuTID", CustomItem.Unknown)
     var nameHasChanged : Boolean by booleanTag("NameHasChanged", false)
-    val descriptor get() = customMaterial.descriptor
+    val descriptor get() = type.descriptor
     var texture = descriptor.texture
 
-    var bukkitMaterial
+    var material
         get() = handle.type
         set(value) {
             handle.type = value
@@ -53,10 +53,6 @@ class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
         return emptyList()
     }
 
-    inline fun <reified B: MaterialBehavior> hasBehavior() = hasBehavior(B::class)
-    inline fun <reified B: MaterialBehavior> getBehavior() = getBehavior(B::class)
-    inline fun <reified B: MaterialBehavior> getBehaviorOrNull() = getBehaviorOrNull(B::class)
-
     init {
         require(handle.customIdOrNull != null) { "ItemStack not wrappable into a CuTItemStack." }
 
@@ -67,8 +63,8 @@ class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
         }
     }
 
-    constructor(customMaterial: CustomMaterial, quantity: Int) : this(
-        ItemStack(customMaterial.type, quantity).withMaterialId(customMaterial)
+    constructor(customItem: CustomItem, quantity: Int) : this(
+        ItemStack(customItem.type, quantity).withMaterialId(customItem)
     )
 
     companion object {
@@ -82,9 +78,9 @@ class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
                 return idOrNull(pdc.get(CUT_ID_TAG, PersistentDataType.STRING)!!) ?: unknownID()
             }
 
-        val ItemStack.customMaterial: CustomMaterial
+        val ItemStack.customItem: CustomItem
             get() {
-                return CustomMaterial.get(customId)
+                return CustomItem.get(customId)
             }
 
         val ItemStack.customIdOrNull: Identifier?
@@ -106,9 +102,9 @@ class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
             return CuTItemStack(this)
         }
 
-        private fun ItemStack.withMaterialId(customMaterial: CustomMaterial): ItemStack {
+        private fun ItemStack.withMaterialId(customItem: CustomItem): ItemStack {
             val meta = itemMeta
-            meta.persistentDataContainer.set(CUT_ID_TAG, PersistentDataType.STRING, customMaterial.id.toString())
+            meta.persistentDataContainer.set(CUT_ID_TAG, PersistentDataType.STRING, customItem.id.toString())
             itemMeta = meta
             return this
         }

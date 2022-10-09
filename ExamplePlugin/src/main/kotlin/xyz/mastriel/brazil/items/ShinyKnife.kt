@@ -6,7 +6,7 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import xyz.mastriel.cutapi.items.CuTItemStack
-import xyz.mastriel.cutapi.items.behaviors.MaterialBehavior
+import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.resourcepack.Texture
 import xyz.mastriel.cutapi.utils.Color
@@ -16,10 +16,10 @@ import xyz.mastriel.brazil.Plugin
 import xyz.mastriel.brazil.behaviors.DisableOffhand
 import xyz.mastriel.brazil.behaviors.Soulbound
 import xyz.mastriel.cutapi.items.behaviors.StaticLore
-import xyz.mastriel.cutapi.items.customMaterial
+import xyz.mastriel.cutapi.items.customItem
 import kotlin.random.Random
 
-val ShinyKnife = customMaterial(id(Plugin, "shiny_knife"), Material.IRON_SWORD) {
+val ShinyKnife = customItem(id(Plugin, "shiny_knife"), Material.IRON_SWORD) {
     name = "&fShiny Knife".colored
     texture = Texture(Plugin, "textures/shiny_knife.png")
 
@@ -45,7 +45,7 @@ val ShinyKnife = customMaterial(id(Plugin, "shiny_knife"), Material.IRON_SWORD) 
     }
 }
 
-class ShinyKnifeDamager : MaterialBehavior(id(Plugin, "shiny_knife_damager")) {
+class ShinyKnifeDamager : ItemBehavior(id(Plugin, "shiny_knife_damager")) {
     private val defaultDeathChance = 0.25
 
     override fun onDamageEntity(

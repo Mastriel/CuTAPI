@@ -2,7 +2,7 @@ package xyz.mastriel.cutapi.pdc.tags
 
 import kotlinx.serialization.KSerializer
 import org.bukkit.OfflinePlayer
-import xyz.mastriel.cutapi.items.CustomMaterial
+import xyz.mastriel.cutapi.items.CustomItem
 import xyz.mastriel.cutapi.pdc.tags.converters.*
 import xyz.mastriel.cutapi.registry.Identifier
 import java.util.*
@@ -84,9 +84,6 @@ abstract class TagContainer {
     inline fun <reified T: Any> getObject(key: String, serializer: KSerializer<T>) =
         get(key, ObjectTagConverter(T::class, serializer))
 
-
-    internal val tags = mutableSetOf<Tag<*>>()
-
     fun playerTag(key: String, default: OfflinePlayer) =
         NotNullTag(key, this, default, PlayerTagConverter).addedToTags()
 
@@ -99,11 +96,11 @@ abstract class TagContainer {
     fun nullableIdentifierTag(key: String, default: Identifier? = null) =
         NullableTag(key, this, default, IdentifierTagConverter).addedToTags()
 
-    fun customMaterialTag(key: String, default: CustomMaterial) =
-        NotNullTag(key, this, default, CustomMaterialTagConverter).addedToTags()
+    fun customItemTag(key: String, default: CustomItem) =
+        NotNullTag(key, this, default, CustomItemTagConverter).addedToTags()
 
-    fun nullableCustomMaterialTag(key: String, default: CustomMaterial? = null) =
-        NullableTag(key, this, default, CustomMaterialTagConverter).addedToTags()
+    fun nullableCustomItemTag(key: String, default: CustomItem? = null) =
+        NullableTag(key, this, default, CustomItemTagConverter).addedToTags()
 
     fun stringTag(key: String, default: String) =
         NotNullTag(key, this, default, PrimitiveTagConverter.String).addedToTags()
@@ -152,6 +149,8 @@ abstract class TagContainer {
 
     inline fun <reified T : Any> nullableObjectTag(key: String, default: T?, serializer: KSerializer<T>) =
         NullableTag(key, this, default, ObjectTagConverter(T::class, serializer)).addedToTags()
+
+    internal val tags = mutableSetOf<Tag<*>>()
 
     fun <T : Tag<V>, V> T.addedToTags(): T {
         tags.add(this)

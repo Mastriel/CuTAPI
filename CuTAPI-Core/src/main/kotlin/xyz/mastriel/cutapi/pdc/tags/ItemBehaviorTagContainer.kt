@@ -9,7 +9,7 @@ import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
 import xyz.mastriel.cutapi.registry.Identifier
 
-class MaterialBehaviorTagContainer(private val itemStack: ItemStack, componentId: Identifier) : TagContainer() {
+class ItemBehaviorTagContainer(private val itemStack: ItemStack, componentId: Identifier) : TagContainer() {
 
     private val key = componentId.toString().replace(':', '.')
 

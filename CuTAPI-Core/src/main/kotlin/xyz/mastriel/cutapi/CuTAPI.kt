@@ -4,6 +4,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.packets.PacketManager
+import xyz.mastriel.cutapi.utils.ServiceManager
 
 
 /**
@@ -21,6 +22,7 @@ object CuTAPI {
 
     internal val packetManager = PacketManager(Plugin)
     internal val packetEventManager = packetManager.eventManager
+    internal val serviceManager = ServiceManager()
 
     /**
      * Register a plugin with CuTAPI. This is used to namespace any items registered with the API, and

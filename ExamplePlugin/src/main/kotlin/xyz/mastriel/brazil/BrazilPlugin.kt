@@ -5,7 +5,7 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.plugin.java.JavaPluginLoader
 import xyz.mastriel.brazil.items.RedHandsSpellItem
 import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.items.CustomMaterial
+import xyz.mastriel.cutapi.items.CustomItem
 import xyz.mastriel.brazil.items.ShinyKnife
 import xyz.mastriel.brazil.spells.SpellItem
 import java.io.File
@@ -22,7 +22,7 @@ class BrazilPlugin : JavaPlugin {
             strictRegistries = true
         }
 
-        CustomMaterial.register(ShinyKnife)
+        CustomItem.register(ShinyKnife)
         SpellItem.register(RedHandsSpellItem)
         getCommand("test")?.setExecutor(TestCommand)
     }

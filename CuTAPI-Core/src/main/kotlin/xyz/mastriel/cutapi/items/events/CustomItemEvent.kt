@@ -4,16 +4,16 @@ import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 import xyz.mastriel.cutapi.behavior.BehaviorHolder
 import xyz.mastriel.cutapi.items.CuTItemStack
-import xyz.mastriel.cutapi.items.behaviors.MaterialBehavior
+import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
 
 
 abstract class CustomItemEvent(open val item: CuTItemStack) : Event(),
-    BehaviorHolder<MaterialBehavior> by item.customMaterial {
+    BehaviorHolder<ItemBehavior> by item.type {
 
     val components get() = item.getAllBehaviors()
-    inline fun <reified T : MaterialBehavior> getBehavior() = item.getBehavior<T>()
-    inline fun <reified T : MaterialBehavior> getBehaviorOrNull() = item.getBehaviorOrNull<T>()
-    inline fun <reified T : MaterialBehavior> hasBehavior() = item.hasBehavior<T>()
+    inline fun <reified T : ItemBehavior> getBehavior() = item.getBehavior(T::class)
+    inline fun <reified T : ItemBehavior> getBehaviorOrNull() = item.getBehaviorOrNull(T::class)
+    inline fun <reified T : ItemBehavior> hasBehavior() = item.hasBehavior(T::class)
 
 
     override fun getHandlers(): HandlerList {

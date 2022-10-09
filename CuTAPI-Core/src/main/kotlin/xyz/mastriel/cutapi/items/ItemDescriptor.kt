@@ -3,24 +3,24 @@ package xyz.mastriel.cutapi.items
 import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
 import xyz.mastriel.cutapi.behavior.BehaviorHolder
-import xyz.mastriel.cutapi.items.behaviors.MaterialBehavior
+import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.items.behaviors.isRepeatable
-import xyz.mastriel.cutapi.items.behaviors.materialBehaviorHolder
+import xyz.mastriel.cutapi.items.behaviors.itemBehaviorHolder
 import xyz.mastriel.cutapi.resourcepack.Texture
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
 
 
 @DslMarker
-annotation class MaterialDescriptorDsl
+annotation class ItemDescriptorDsl
 
 /**
  * A class describing a CustomMaterial. Can be extended to provide additional info
  * to specific Bukkit Material types (such as armors having durability fields)
  *
- * @see MaterialDescriptorBuilder
+ * @see ItemDescriptorBuilder
  */
-open class MaterialDescriptor internal constructor(
+open class ItemDescriptor internal constructor(
     /**
      * The name of the custom material, by default.
      *
@@ -32,21 +32,21 @@ open class MaterialDescriptor internal constructor(
      * */
     open val texture: Texture? = null,
     open val description: (DescriptionBuilder.() -> Unit)? = null,
-    open val behaviors: List<MaterialBehavior> = listOf()
+    open val itemBehaviors: List<ItemBehavior> = listOf()
 ) {
-    infix fun with(block: MaterialDescriptorBuilder.() -> Unit) : MaterialDescriptor {
-        val other = MaterialDescriptorBuilder().apply(block).build()
-        return materialDescriptor {
-            name = other.name ?: this@MaterialDescriptor.name
-            texture = other.texture ?: this@MaterialDescriptor.texture
-            description = other.description ?: this@MaterialDescriptor.description
+    infix fun with(block: ItemDescriptorBuilder.() -> Unit) : ItemDescriptor {
+        val other = ItemDescriptorBuilder().apply(block).build()
+        return itemDescriptor {
+            name = other.name ?: this@ItemDescriptor.name
+            texture = other.texture ?: this@ItemDescriptor.texture
+            description = other.description ?: this@ItemDescriptor.description
 
-            behaviors.addAll(this@MaterialDescriptor.behaviors)
+            itemBehaviors.addAll(this@ItemDescriptor.itemBehaviors)
 
-            for (otherBehavior in other.behaviors) {
-                val behaviorCollision = behaviors.any { it.id == otherBehavior.id }
+            for (otherBehavior in other.itemBehaviors) {
+                val behaviorCollision = itemBehaviors.any { it.id == otherBehavior.id }
                 if (behaviorCollision) {
-                    behaviors.removeIf { it.id == otherBehavior.id }
+                    itemBehaviors.removeIf { it.id == otherBehavior.id }
                 }
                 behavior(otherBehavior)
             }
@@ -56,13 +56,13 @@ open class MaterialDescriptor internal constructor(
 }
 
 /**
- * A builder for the [MaterialDescriptor], containing some useful functions to make creating
+ * A builder for the [ItemDescriptor], containing some useful functions to make creating
  * resources much easier.
  *
- * @see MaterialDescriptor
+ * @see ItemDescriptor
  */
-@MaterialDescriptorDsl
-open class MaterialDescriptorBuilder internal constructor() {
+@ItemDescriptorDsl
+open class ItemDescriptorBuilder internal constructor() {
     var name: Component? = null
     var texture: Texture? = null
     var description: (DescriptionBuilder.() -> Unit)? = {
@@ -70,22 +70,22 @@ open class MaterialDescriptorBuilder internal constructor() {
         behaviorLore(Color.Blue)
     }
 
-    val behaviors = mutableListOf<MaterialBehavior>()
+    val itemBehaviors = mutableListOf<ItemBehavior>()
 
-    fun behavior(vararg behaviors: MaterialBehavior) {
+    fun behavior(vararg behaviors: ItemBehavior) {
         for (behavior in behaviors) {
-            if (this.behaviors.any { it.id == behavior.id } && !behavior.isRepeatable())
+            if (this.itemBehaviors.any { it.id == behavior.id } && !behavior.isRepeatable())
                 error("${behavior.id} lacks a RepeatableComponent annotation to be repeatable.")
-            this.behaviors += behavior
+            this.itemBehaviors += behavior
         }
     }
 
-    fun build(): MaterialDescriptor {
-        return MaterialDescriptor(
+    fun build(): ItemDescriptor {
+        return ItemDescriptor(
             name = name,
             description = description,
             texture = texture,
-            behaviors = behaviors
+            itemBehaviors = itemBehaviors
         )
     }
 
@@ -104,11 +104,11 @@ open class MaterialDescriptorBuilder internal constructor() {
  * Whenever the server sends an itemstack to the client for any reason, this will be
  * applied to it.
  */
-@MaterialDescriptorDsl
+@ItemDescriptorDsl
 class DescriptionBuilder(val itemStack: CuTItemStack, val viewer: Player) :
-    BehaviorHolder<MaterialBehavior> by materialBehaviorHolder(itemStack.customMaterial) {
+    BehaviorHolder<ItemBehavior> by itemBehaviorHolder(itemStack.type) {
 
-    val customMaterial get() = itemStack.customMaterial
+    val type get() = itemStack.type
 
     private val lines = mutableListOf<Component>()
 
@@ -129,7 +129,7 @@ class DescriptionBuilder(val itemStack: CuTItemStack, val viewer: Player) :
     }
 
     /**
-     * Adds any lore that any [MaterialBehavior] would want to implement.
+     * Adds any lore that any [ItemBehavior] would want to implement.
      */
     fun behaviorLore(mainColor: Color) {
         for (component in itemStack.getAllBehaviors()) {
@@ -144,23 +144,23 @@ class DescriptionBuilder(val itemStack: CuTItemStack, val viewer: Player) :
         return lines.toList()
     }
 
-    inline fun <reified B: MaterialBehavior> hasBehavior() = hasBehavior(B::class)
-    inline fun <reified B: MaterialBehavior> getBehavior() = getBehavior(B::class)
-    inline fun <reified B: MaterialBehavior> getBehaviorOrNull() = getBehaviorOrNull(B::class)
+    inline fun <reified B: ItemBehavior> hasBehavior() = hasBehavior(B::class)
+    inline fun <reified B: ItemBehavior> getBehavior() = getBehavior(B::class)
+    inline fun <reified B: ItemBehavior> getBehaviorOrNull() = getBehaviorOrNull(B::class)
 }
 
 
 /**
- * A descriptor for a [xyz.mastriel.cutapi.items.CustomMaterial], which contains useful info
+ * A descriptor for a [xyz.mastriel.cutapi.items.CustomItem], which contains useful info
  * such as a name, lore, NBT, etc.
  *
- * @param block The builder, used to create the final [MaterialDescriptor]
+ * @param block The builder, used to create the final [ItemDescriptor]
  */
-fun materialDescriptor(block: MaterialDescriptorBuilder.() -> Unit) =
-    MaterialDescriptorBuilder().apply(block).build()
+fun itemDescriptor(block: ItemDescriptorBuilder.() -> Unit) =
+    ItemDescriptorBuilder().apply(block).build()
 
 /**
- * A default descriptor for a [xyz.mastriel.cutapi.items.CustomMaterial].
+ * A default descriptor for a [xyz.mastriel.cutapi.items.CustomItem].
  */
-fun defaultMaterialDescriptor() =
-    MaterialDescriptorBuilder().build()
+fun defaultItemDescriptor() =
+    ItemDescriptorBuilder().build()

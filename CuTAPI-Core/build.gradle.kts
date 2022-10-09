@@ -5,6 +5,8 @@ plugins {
 
     id("com.github.johnrengelman.shadow")
     id("org.jetbrains.kotlin.plugin.serialization")
+
+    `maven-publish`
 }
 
 val kotlinVersion : String by properties
@@ -60,5 +62,17 @@ tasks.withType<ProcessResources> {
     inputs.properties(props)
     filesMatching("plugin.yml") {
         expand(props)
+    }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "com.developerlife"
+            artifactId = "color-console"
+            version = "1.0.1"
+
+            from(components["java"])
+        }
     }
 }

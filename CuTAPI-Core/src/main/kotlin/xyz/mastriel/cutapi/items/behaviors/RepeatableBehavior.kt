@@ -17,5 +17,5 @@ import kotlin.reflect.full.hasAnnotation
 @Target(AnnotationTarget.CLASS)
 annotation class RepeatableBehavior
 
-fun MaterialBehavior.isRepeatable() =
+fun ItemBehavior.isRepeatable() =
     this::class.hasAnnotation<RepeatableBehavior>()
