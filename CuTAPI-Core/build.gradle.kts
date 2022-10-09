@@ -64,15 +64,3 @@ tasks.withType<ProcessResources> {
         expand(props)
     }
 }
-
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            groupId = "com.developerlife"
-            artifactId = "color-console"
-            version = "1.0.1"
-
-            from(components["java"])
-        }
-    }
-}
