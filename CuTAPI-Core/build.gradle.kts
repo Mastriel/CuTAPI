@@ -35,6 +35,11 @@ repositories {
 }
 
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 dependencies {
     testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
     testImplementation(kotlin("test"))
