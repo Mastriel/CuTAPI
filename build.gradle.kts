@@ -5,6 +5,7 @@ val kotlinVersion : String by properties
 
 plugins {
     kotlin("jvm") version "1.7.20-RC"
+    java
 
     id("com.github.johnrengelman.shadow") version "7.1.0"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.5.31"
@@ -37,6 +38,7 @@ java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 }
+
 
 
 publishing {
