@@ -8,6 +8,8 @@ plugins {
 
     id("com.github.johnrengelman.shadow") version "7.1.0"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.5.31"
+
+    `maven-publish`
 }
 
 repositories {
@@ -28,5 +30,23 @@ repositories {
     maven {
         name = "lunari"
         url = uri("https://repo.lunari.studio/repository/maven-public/")
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "xyz.mastriel"
+            artifactId = "CuTAPI"
+            version = version
+
+            from(components["java"])
+        }
     }
 }
