@@ -40,7 +40,7 @@ dependencies {
     compileOnly(projects.cuTAPICore)
     compileOnly("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")
 
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
+    compileOnly("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
     compileOnly("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.0")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")

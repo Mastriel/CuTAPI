@@ -39,11 +39,10 @@ dependencies {
     testImplementation(kotlin("test"))
     compileOnly("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")
 
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
+    compileOnly("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
     compileOnly("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.0")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
     compileOnly("com.comphenix.protocol:ProtocolLib:5.0.0-SNAPSHOT")
 
     implementation("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.5.0")
