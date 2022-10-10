@@ -34,21 +34,3 @@ repositories {
     }
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-
-
-
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            groupId = "xyz.mastriel"
-            artifactId = "CuTAPI"
-            version = version
-
-            from(components["java"])
-        }
-    }
-}

@@ -2,6 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     kotlin("jvm")
+    java
 
     id("com.github.johnrengelman.shadow")
     id("org.jetbrains.kotlin.plugin.serialization")
@@ -60,5 +61,22 @@ tasks.withType<ProcessResources> {
     inputs.properties(props)
     filesMatching("plugin.yml") {
         expand(props)
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "xyz.mastriel"
+            artifactId = "CuTAPI"
+            version = version
+
+            from(components["java"])
+        }
     }
 }
