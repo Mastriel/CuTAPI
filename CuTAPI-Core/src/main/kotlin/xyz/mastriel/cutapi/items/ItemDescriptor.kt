@@ -20,7 +20,7 @@ annotation class ItemDescriptorDsl
  *
  * @see ItemDescriptorBuilder
  */
-open class ItemDescriptor internal constructor(
+open class ItemDescriptor(
     /**
      * The name of the custom material, by default.
      *
@@ -62,7 +62,7 @@ open class ItemDescriptor internal constructor(
  * @see ItemDescriptor
  */
 @ItemDescriptorDsl
-open class ItemDescriptorBuilder internal constructor() {
+open class ItemDescriptorBuilder {
     var name: Component? = null
     var texture: Texture? = null
     var description: (DescriptionBuilder.() -> Unit)? = {
@@ -105,7 +105,7 @@ open class ItemDescriptorBuilder internal constructor() {
  * applied to it.
  */
 @ItemDescriptorDsl
-class DescriptionBuilder(val itemStack: CuTItemStack, val viewer: Player) :
+open class DescriptionBuilder(val itemStack: CuTItemStack, val viewer: Player) :
     BehaviorHolder<ItemBehavior> by itemBehaviorHolder(itemStack.type) {
 
     val type get() = itemStack.type

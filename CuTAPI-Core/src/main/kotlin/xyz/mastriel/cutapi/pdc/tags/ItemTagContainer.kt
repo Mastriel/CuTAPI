@@ -3,6 +3,8 @@ package xyz.mastriel.cutapi.pdc.tags
 import org.bukkit.NamespacedKey
 import org.bukkit.inventory.ItemStack
 import xyz.mastriel.cutapi.Plugin
+import xyz.mastriel.cutapi.pdc.getPrimitiveValue
+import xyz.mastriel.cutapi.pdc.setPrimitiveValue
 import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
 
 open class ItemTagContainer(private val itemStack: ItemStack) : TagContainer() {
@@ -17,7 +19,7 @@ open class ItemTagContainer(private val itemStack: ItemStack) : TagContainer() {
 
         val primitiveValue = converter.toPrimitive(complexValue)
 
-        Tag.setPrimitiveValue(converter.primitiveClass, container, key, primitiveValue)
+        container.setPrimitiveValue(converter.primitiveClass, key, primitiveValue)
 
         itemStack.itemMeta = meta
     }
@@ -30,7 +32,7 @@ open class ItemTagContainer(private val itemStack: ItemStack) : TagContainer() {
         val namespacedKey = NamespacedKey(Plugin, key)
         if (!container.has(namespacedKey)) return null
 
-        val value = Tag.getPrimitiveValue(converter.primitiveClass, container, key)
+        val value = container.getPrimitiveValue(converter.primitiveClass, key)
         return converter.fromPrimitive(value!!)
     }
 

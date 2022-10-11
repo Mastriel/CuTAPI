@@ -7,6 +7,7 @@ import org.bukkit.block.Block
 import org.bukkit.persistence.PersistentDataContainer
 import org.bukkit.persistence.PersistentDataType
 import xyz.mastriel.cutapi.Plugin
+import xyz.mastriel.cutapi.pdc.getPrimitiveValue
 import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
 
 open class BlockTagContainer(val block : Block) : TagContainer() {
@@ -26,7 +27,7 @@ open class BlockTagContainer(val block : Block) : TagContainer() {
         if (isNull(key)) storeNull(key)
         if (!container.has(namespacedKey)) return null
 
-        val value = Tag.getPrimitiveValue(converter.primitiveClass, container, key)
+        val value = container.getPrimitiveValue(converter.primitiveClass, key)
         return converter.fromPrimitive(value!!)
     }
 

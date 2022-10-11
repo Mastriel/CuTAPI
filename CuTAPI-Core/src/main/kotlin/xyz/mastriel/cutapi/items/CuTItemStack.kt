@@ -18,7 +18,7 @@ import xyz.mastriel.cutapi.registry.unknownID
 /**
  * This **does not** contain behaviors! This only will show the behaviors that the custom material has.
  */
-class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
+open class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
     BehaviorHolder<ItemBehavior> by handle.customItem {
     
     var name: Component

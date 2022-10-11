@@ -22,7 +22,7 @@ object CuTAPI {
 
     internal val packetManager = PacketManager(Plugin)
     internal val packetEventManager = packetManager.eventManager
-    internal val serviceManager = ServiceManager()
+    val serviceManager = ServiceManager()
 
     /**
      * Register a plugin with CuTAPI. This is used to namespace any items registered with the API, and

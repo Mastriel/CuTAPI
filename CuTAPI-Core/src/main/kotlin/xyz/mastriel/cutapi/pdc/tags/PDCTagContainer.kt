@@ -4,6 +4,8 @@ import org.bukkit.NamespacedKey
 import org.bukkit.persistence.PersistentDataContainer
 import org.bukkit.persistence.PersistentDataType
 import xyz.mastriel.cutapi.Plugin
+import xyz.mastriel.cutapi.pdc.getPrimitiveValue
+import xyz.mastriel.cutapi.pdc.setPrimitiveValue
 import xyz.mastriel.cutapi.pdc.tags.converters.*
 
 open class PDCTagContainer(var container: PersistentDataContainer) : TagContainer() {
@@ -15,14 +17,14 @@ open class PDCTagContainer(var container: PersistentDataContainer) : TagContaine
 
         val primitiveValue = converter.toPrimitive(complexValue)
 
-        Tag.setPrimitiveValue(converter.primitiveClass, container, key, primitiveValue)
+        container.setPrimitiveValue(converter.primitiveClass, key, primitiveValue)
     }
 
     override fun <P: Any, C: Any> get(key: String, converter: TagConverter<P, C>) : C? {
         val namespacedKey = NamespacedKey(Plugin, key)
         if (!container.has(namespacedKey)) return null
 
-        val value = Tag.getPrimitiveValue(converter.primitiveClass, container, key)
+        val value = container.getPrimitiveValue(converter.primitiveClass, key)
         return converter.fromPrimitive(value!!)
     }
 
