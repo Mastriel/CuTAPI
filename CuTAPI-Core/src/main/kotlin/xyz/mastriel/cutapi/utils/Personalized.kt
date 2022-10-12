@@ -29,9 +29,10 @@ infix fun <T> Personalized<T>.or(constantValue: T) : PersonalizedWithDefault<T> 
     }
 }
 
-fun <T> personalized(constantValue: T) : Personalized<T> {
-    return object : Personalized<T> {
-        override fun withViewer(viewer: Player) =
+fun <T> personalized(constantValue: T) : PersonalizedWithDefault<T> {
+    return object : PersonalizedWithDefault<T> {
+        override fun getDefault(): T = constantValue
+        override fun withViewer(viewer: Player?) =
             constantValue
     }
 }
