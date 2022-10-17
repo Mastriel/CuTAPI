@@ -67,11 +67,11 @@ open class CustomItem(
             return super.getOrNull(id) ?: return Unknown
         }
 
-        override fun register(item: CustomItem) {
+        override fun register(item: CustomItem) : CustomItem {
             val plugin = item.id.plugin
 
             if (plugin != null) Bukkit.getServer().pluginManager.registerEvents(item, plugin)
-            super.register(item)
+            return super.register(item)
         }
 
 

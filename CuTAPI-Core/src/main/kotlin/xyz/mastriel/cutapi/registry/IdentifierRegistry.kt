@@ -7,7 +7,7 @@ import xyz.mastriel.cutapi.Plugin
  *
  * @param T The identifiable that is being tracked.
  */
-open class IdentifierRegistry<T: Identifiable> {
+open class IdentifierRegistry<T : Identifiable> {
     protected val values = mutableMapOf<Identifier, T>()
 
     /**
@@ -15,10 +15,11 @@ open class IdentifierRegistry<T: Identifiable> {
      *
      * @param item The object which the association is being made for.
      */
-    open fun register(item: T) {
+    open fun register(item: T): T {
         if (values.containsKey(item.id)) error("Two Identifiables cannot have the same ID in the same registry.")
         values[item.id] = item
         Plugin.info("[REGISTRY] ${item.id} added to a registry.")
+        return item
     }
 
     /**
@@ -28,7 +29,7 @@ open class IdentifierRegistry<T: Identifiable> {
      * @return The object
      * @throws IllegalStateException If this could not be found.
      */
-    open fun get(id: Identifier) : T {
+    open fun get(id: Identifier): T {
         return getOrNull(id) ?: error("Identifier points to nothing.")
     }
 
@@ -38,7 +39,7 @@ open class IdentifierRegistry<T: Identifiable> {
      * @param id The [Identifier] associated with this [T]
      * @return The object, or null if it could not be found.
      */
-    open fun getOrNull(id: Identifier) : T? {
+    open fun getOrNull(id: Identifier): T? {
         return values[id]
     }
 
@@ -47,7 +48,7 @@ open class IdentifierRegistry<T: Identifiable> {
      *
      * @return A set of the [Identifier]s.
      */
-    fun getAllIds() : Set<Identifier> {
+    fun getAllIds(): Set<Identifier> {
         return values.keys
     }
 }
