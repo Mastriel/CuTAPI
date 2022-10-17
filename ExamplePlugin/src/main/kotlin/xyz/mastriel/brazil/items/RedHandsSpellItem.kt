@@ -13,9 +13,10 @@ import xyz.mastriel.brazil.spells.CastContext
 import xyz.mastriel.brazil.spells.CastMethod
 import xyz.mastriel.brazil.spells.SpellItem
 import xyz.mastriel.brazil.utils.format
+import xyz.mastriel.cutapi.utils.personalized.personalized
 
 object RedHandsSpellItem : SpellItem(
-    name = "Red Hands".colored,
+    name = personalized("Red Hands".colored),
     material = Material.FIRE_CORAL_FAN,
     castTime = 20L,
     cooldown = 400L,

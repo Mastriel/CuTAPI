@@ -9,6 +9,10 @@ import xyz.mastriel.cutapi.items.*
 import xyz.mastriel.cutapi.registry.IdentifierRegistry
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
+import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
+import xyz.mastriel.cutapi.utils.personalized.or
+import xyz.mastriel.cutapi.utils.personalized.personalized
+import xyz.mastriel.cutapi.utils.personalized.withViewer
 
 open class SpellItem(
     material: Material, private val spell: Spell
@@ -18,7 +22,7 @@ open class SpellItem(
         get() = spell.id
 
     constructor(
-        name: Component,
+        name: PersonalizedWithDefault<Component>,
         material: Material,
         castTime: Long,
         cooldown: Long,
@@ -26,7 +30,7 @@ open class SpellItem(
         castMethod: CastMethod,
         id: Identifier
     ) : this(material, object : Spell {
-        override val name: Component = name
+        override val name: PersonalizedWithDefault<Component> = name
         override val castTime: Long = castTime
         override val cooldown: Long = cooldown
         override val flags: Collection<SpellFlag> = flags
@@ -40,7 +44,11 @@ open class SpellItem(
      * Use `super.descriptor with {}` to add new behavior, lest you want weird things to happen.
      */
     override val descriptor: ItemDescriptor = itemDescriptor {
-        name = this@SpellItem.name.color(Color.Elethium.textColor)
+        val color = Color.Elethium.textColor
+
+
+        name = personalized { this@SpellItem.name.withViewer(it).color(color) } or
+                spell.name.withViewer(null).color(color)
 
         behavior(SpellBehavior(this@SpellItem))
 
@@ -73,16 +81,21 @@ open class SpellItem(
         private val spellbooks = IdentifierRegistry<CustomItem>()
 
         @Suppress("RemoveRedundantQualifierName")
-        override fun register(item: SpellItem) {
+        override fun register(item: SpellItem): SpellItem {
             CustomItem.register(item)
             val spellbook = createSpellbookMaterial(item)
             spellbooks.register(spellbook)
             CustomItem.register(spellbook)
+            return super.register(item)
         }
 
         private fun createSpellbookMaterial(spell: SpellItem) =
             customItem(spell.id.appendSubId("book"), Material.BOOK) {
-                name = spell.name.color(Color.Elethium.textColor)
+                val color = Color.Elethium.textColor
+
+                name = personalized { player -> (spell.name withViewer player).color(color) } or
+                        spell.name.withViewer(null).color(color)
+
                 behavior(SpellbookLearnBehavior(spell))
 
                 description { spell.setLore(this, Color.Elethium) }

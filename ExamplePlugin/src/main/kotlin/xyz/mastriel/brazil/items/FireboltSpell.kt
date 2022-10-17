@@ -12,9 +12,12 @@ import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.utils.colored
+import xyz.mastriel.cutapi.utils.personalized.Personalized
+import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
+import xyz.mastriel.cutapi.utils.personalized.personalized
 
 class FireboltSpell(val damage: Double) : Spell {
-    override val name: Component = "Firebolt".colored
+    override val name: PersonalizedWithDefault<Component> = personalized("Firebolt".colored)
     override val castTime: Long = 5L
     override val cooldown: Long = 100L
     override val flags: Collection<SpellFlag> = listOf(SpellFlag.CAST_WHILE_MOVING)

@@ -5,9 +5,11 @@ import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerInteractEvent
 import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.registry.Identifiable
+import xyz.mastriel.cutapi.utils.personalized.Personalized
+import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 
 interface Spell : Identifiable {
-    val name: Component
+    val name: PersonalizedWithDefault<Component>
     val castTime: Long
     val cooldown: Long
     val flags: Collection<SpellFlag>

@@ -9,6 +9,9 @@ import xyz.mastriel.cutapi.items.behaviors.itemBehaviorHolder
 import xyz.mastriel.cutapi.resourcepack.Texture
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
+import xyz.mastriel.cutapi.utils.personalized.Personalized
+import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
+import xyz.mastriel.cutapi.utils.personalized.personalized
 
 
 @DslMarker
@@ -26,11 +29,11 @@ open class ItemDescriptor(
      *
      * @see Component
      */
-    open val name: Component? = null,
+    open val name: PersonalizedWithDefault<Component>? = null,
     /**
      * The texture that this custom material should use, by default.
      * */
-    open val texture: Texture? = null,
+    open val texture: Personalized<Texture>? = null,
     open val description: (DescriptionBuilder.() -> Unit)? = null,
     open val itemBehaviors: List<ItemBehavior> = listOf()
 ) {
@@ -63,8 +66,8 @@ open class ItemDescriptor(
  */
 @ItemDescriptorDsl
 open class ItemDescriptorBuilder {
-    var name: Component? = null
-    var texture: Texture? = null
+    var name: PersonalizedWithDefault<Component>? = null
+    var texture: Personalized<Texture>? = null
     var description: (DescriptionBuilder.() -> Unit)? = {
         emptyLine()
         behaviorLore(Color.Blue)

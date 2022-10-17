@@ -13,6 +13,7 @@ import xyz.mastriel.cutapi.pdc.tags.ItemTagContainer
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.idOrNull
 import xyz.mastriel.cutapi.registry.unknownID
+import xyz.mastriel.cutapi.utils.personalized.withViewer
 
 
 /**
@@ -58,7 +59,7 @@ open class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
 
         if (!nameHasChanged) {
             val meta = handle.itemMeta
-            meta.displayName(descriptor.name)
+            meta.displayName(descriptor.name?.withViewer(null))
             handle.itemMeta = meta
         }
     }

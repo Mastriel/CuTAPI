@@ -12,6 +12,7 @@ import xyz.mastriel.cutapi.pdc.tags.ItemBehaviorTagContainer
 import xyz.mastriel.cutapi.pdc.tags.TagContainer
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.utils.colored
+import xyz.mastriel.cutapi.utils.personalized.personalized
 import kotlin.reflect.KClass
 
 
@@ -59,7 +60,7 @@ open class CustomItem(
         val Unknown = customItem(
             unknownID(),
             Material.ANVIL,
-            "Unknown".colored,
+            personalized("Unknown".colored),
             listOf(StaticLore("&cYou probably shouldn't have this...".colored))
         )
 

@@ -4,6 +4,8 @@ import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.registry.Identifier
+import xyz.mastriel.cutapi.utils.personalized.Personalized
+import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 
 
 fun customItem(
@@ -20,7 +22,7 @@ fun customItem(
 fun customItem(
     id: Identifier,
     bukkitMaterial: Material,
-    name: Component
+    name: PersonalizedWithDefault<Component>
 ): CustomItem {
     return customItem(id, bukkitMaterial) {
         this.name = name
@@ -30,7 +32,7 @@ fun customItem(
 fun customItem(
     id: Identifier,
     bukkitMaterial: Material,
-    name: Component,
+    name: PersonalizedWithDefault<Component>,
     behaviors: Collection<ItemBehavior>
 ): CustomItem {
     return customItem(id, bukkitMaterial) {
@@ -52,7 +54,7 @@ fun registerCustomItem(
 fun registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
-    name: Component
+    name: PersonalizedWithDefault<Component>
 ): CustomItem {
     val material = customItem(id, bukkitMaterial, name)
     CustomItem.register(material)
@@ -62,7 +64,7 @@ fun registerCustomItem(
 fun registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
-    name: Component,
+    name: PersonalizedWithDefault<Component>,
     behaviors: Collection<ItemBehavior>
 ): CustomItem {
     val material = customItem(id, bukkitMaterial, name, behaviors)
