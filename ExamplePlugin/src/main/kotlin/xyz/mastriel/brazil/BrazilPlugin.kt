@@ -1,5 +1,8 @@
 package xyz.mastriel.brazil
 
+import com.github.shynixn.mccoroutine.bukkit.SuspendingJavaPlugin
+import com.github.shynixn.mccoroutine.bukkit.launch
+import kotlinx.coroutines.delay
 import org.bukkit.plugin.PluginDescriptionFile
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.plugin.java.JavaPluginLoader
@@ -13,11 +16,12 @@ import java.io.File
 internal lateinit var Plugin : BrazilPlugin
     private set
 
-class BrazilPlugin : JavaPlugin {
+class BrazilPlugin : SuspendingJavaPlugin() {
 
 
-    override fun onEnable() {
+    override suspend fun onEnableAsync() {
         Plugin = this
+
         CuTAPI.registerPlugin(this, "brazil") {
             strictRegistries = true
         }
@@ -27,20 +31,9 @@ class BrazilPlugin : JavaPlugin {
         getCommand("test")?.setExecutor(TestCommand)
     }
 
-    override fun onDisable() {
+    override suspend fun onDisableAsync() {
         CuTAPI.unregisterPlugin(this)
     }
-
-    @Suppress("UNUSED")
-    constructor() : super()
-
-    @Suppress("UNUSED")
-    constructor(
-        loader: JavaPluginLoader,
-        descriptionFile: PluginDescriptionFile,
-        dataFolder: File,
-        file: File
-    ) : super(loader, descriptionFile, dataFolder, file)
 }
 
 

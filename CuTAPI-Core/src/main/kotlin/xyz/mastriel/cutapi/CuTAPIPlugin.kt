@@ -7,8 +7,8 @@ import xyz.mastriel.cutapi.commands.CuTGiveCommand
 import xyz.mastriel.cutapi.commands.TestCommand
 import xyz.mastriel.cutapi.items.CustomItem
 import xyz.mastriel.cutapi.items.PacketItems
-import xyz.mastriel.cutapi.items.bukkitevents.PlayerItemEvents
 import xyz.mastriel.cutapi.items.behaviors.MaterialBehaviorEvents
+import xyz.mastriel.cutapi.items.bukkitevents.PlayerItemEvents
 import xyz.mastriel.cutapi.items.events.CustomItemEvents
 import java.io.File
 
