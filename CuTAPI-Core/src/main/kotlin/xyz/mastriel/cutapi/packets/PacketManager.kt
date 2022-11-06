@@ -5,6 +5,7 @@ import com.comphenix.protocol.ProtocolLibrary
 import com.comphenix.protocol.events.PacketContainer
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.packets.wrappers.ClientboundEntityEffectPacket
+import xyz.mastriel.cutapi.packets.wrappers.ClientboundSetContainerContentPacket
 import xyz.mastriel.cutapi.packets.wrappers.ClientboundSetSlotPacket
 import kotlin.reflect.KClass
 import kotlin.reflect.full.companionObjectInstance
@@ -19,6 +20,7 @@ internal class PacketManager(val plugin: Plugin) {
     init {
         packetTypes.add(ClientboundSetSlotPacket::class)
         packetTypes.add(ClientboundEntityEffectPacket::class)
+        packetTypes.add(ClientboundSetContainerContentPacket::class)
 
         ProtocolLibrary
             .getProtocolManager()
@@ -50,14 +52,16 @@ internal class PacketManager(val plugin: Plugin) {
             ?: throw IllegalStateException("WrappedPacket primary constructor must take in a PacketContainer and nothing else.")
 
         val handle = PacketContainer(packetInfo.packetType)
-        return wrappedPacket.primaryConstructor!!.call(handle)
+        handle.modifier.writeDefaults()
+        return constructor.call(handle)
     }
 
     internal fun createPacketFromClass(wrappedPacket: KClass<out WrappedPacket>, handle: PacketContainer) : WrappedPacket {
         val constructor = wrappedPacket.primaryConstructor
             ?: throw IllegalStateException("WrappedPacket primary constructor must take in a PacketContainer and nothing else.")
 
-        return wrappedPacket.primaryConstructor!!.call(handle)
+        handle.modifier.writeDefaults()
+        return constructor.call(handle)
     }
 
     @JvmName("wrapTo")

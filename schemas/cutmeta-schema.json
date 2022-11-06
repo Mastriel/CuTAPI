@@ -1,0 +1,28 @@
+{
+  "title": "cutmeta",
+  "description": "CuTAPI resource meta descriptions.",
+  "type": "object",
+  "properties": {
+    "resource_file": {
+      "type": "string",
+      "description": "The file that this .cutmeta points to. Relative paths are allowed, and $ indicates the beginning of your plugin's packFolder.\n\n__auto__ will set the file to any resource with the same name (minus extension) as this file."
+    },
+    "resource_type": {
+      "enum": [ "texture", "audio", "model" ],
+      "type": "string",
+      "description": "The type that this resource is. 'texture' (*.png), 'audio' (*.ogg), and 'model' (*.json) are allowed."
+    },
+    "used_for": {
+      "description": "The types of things that this texture will be used in. Only used for textures and models.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [ "items", "blocks" ]
+          }
+        }, { "type": "string", "enum": ["any"] }
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="CuTAPI.CuTAPI-Core.main:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/CuTAPI_CuTAPI_Core_main_jar</output-path>
+    <root id="archive" name="CuTAPI.CuTAPI-Core.main.jar">
+      <element id="module-output" name="CuTAPI.CuTAPI-Core.main" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.shynixn.mccoroutine/mccoroutine-bukkit-core/2.5.0/6a2b51ac9be0e09e3548bf9fc3165528e967514a/mccoroutine-bukkit-core-2.5.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.shynixn.mccoroutine/mccoroutine-bukkit-api/2.5.0/1110a84f56478308429621a155df6b17c5cab8a4/mccoroutine-bukkit-api-2.5.0.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

@@ -4,7 +4,7 @@ version = "1.0"
 val kotlinVersion : String by properties
 
 plugins {
-    kotlin("jvm") version "1.7.20-RC"
+    kotlin("jvm") version "1.7.20"
     java
 
     id("com.github.johnrengelman.shadow") version "7.1.0"

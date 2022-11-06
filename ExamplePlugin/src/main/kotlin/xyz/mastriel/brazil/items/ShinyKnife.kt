@@ -5,19 +5,19 @@ import org.bukkit.Material
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageByEntityEvent
+import xyz.mastriel.brazil.Plugin
+import xyz.mastriel.brazil.behaviors.DisableOffhand
+import xyz.mastriel.brazil.behaviors.Soulbound
 import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
+import xyz.mastriel.cutapi.items.behaviors.StaticLore
+import xyz.mastriel.cutapi.items.customItem
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.resourcepack.Texture
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
-import xyz.mastriel.cutapi.utils.playSound
-import xyz.mastriel.brazil.Plugin
-import xyz.mastriel.brazil.behaviors.DisableOffhand
-import xyz.mastriel.brazil.behaviors.Soulbound
-import xyz.mastriel.cutapi.items.behaviors.StaticLore
-import xyz.mastriel.cutapi.items.customItem
 import xyz.mastriel.cutapi.utils.personalized.personalized
+import xyz.mastriel.cutapi.utils.playSound
 import kotlin.random.Random
 
 val ShinyKnife = customItem(id(Plugin, "shiny_knife"), Material.IRON_SWORD) {

@@ -4,7 +4,6 @@ import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerInteractEvent
 import xyz.mastriel.cutapi.behavior.Behavior
 import xyz.mastriel.cutapi.block.TileEntity
-import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.Identifier
 

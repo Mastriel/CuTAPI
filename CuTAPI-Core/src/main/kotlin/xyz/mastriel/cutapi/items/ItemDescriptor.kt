@@ -11,7 +11,6 @@ import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.Personalized
 import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
-import xyz.mastriel.cutapi.utils.personalized.personalized
 
 
 @DslMarker
@@ -78,7 +77,15 @@ open class ItemDescriptorBuilder {
     fun behavior(vararg behaviors: ItemBehavior) {
         for (behavior in behaviors) {
             if (this.itemBehaviors.any { it.id == behavior.id } && !behavior.isRepeatable())
-                error("${behavior.id} lacks a RepeatableComponent annotation to be repeatable.")
+                error("${behavior.id} lacks a RepeatableBehavior annotation to be repeatable.")
+            this.itemBehaviors += behavior
+        }
+    }
+
+    fun behavior(behaviors: Collection<ItemBehavior>) {
+        for (behavior in behaviors) {
+            if (this.itemBehaviors.any { it.id == behavior.id } && !behavior.isRepeatable())
+                error("${behavior.id} lacks a RepeatableBehavior annotation to be repeatable.")
             this.itemBehaviors += behavior
         }
     }
@@ -104,11 +111,11 @@ open class ItemDescriptorBuilder {
 
 /**
  * A class for creating dynamic descriptions for [CuTItemStack]s.
- * Whenever the server sends an itemstack to the client for any reason, this will be
+ * Whenever the server sends an ItemStack to the client for any reason, this will be
  * applied to it.
  */
 @ItemDescriptorDsl
-open class DescriptionBuilder(val itemStack: CuTItemStack, val viewer: Player) :
+open class DescriptionBuilder(val itemStack: CuTItemStack, val viewer: Player?) :
     BehaviorHolder<ItemBehavior> by itemBehaviorHolder(itemStack.type) {
 
     val type get() = itemStack.type

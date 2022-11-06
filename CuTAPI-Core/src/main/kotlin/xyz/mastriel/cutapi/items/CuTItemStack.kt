@@ -13,6 +13,8 @@ import xyz.mastriel.cutapi.pdc.tags.ItemTagContainer
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.idOrNull
 import xyz.mastriel.cutapi.registry.unknownID
+import xyz.mastriel.cutapi.utils.colored
+import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 import xyz.mastriel.cutapi.utils.personalized.withViewer
 
 
@@ -20,7 +22,7 @@ import xyz.mastriel.cutapi.utils.personalized.withViewer
  * This **does not** contain behaviors! This only will show the behaviors that the custom material has.
  */
 open class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
-    BehaviorHolder<ItemBehavior> by handle.customItem {
+    BehaviorHolder<ItemBehavior> by handle.customItem, PersonalizedWithDefault<ItemStack> {
     
     var name: Component
         get() = handle.displayName()
@@ -45,13 +47,22 @@ open class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
     val enchantments: MutableMap<Enchantment, Int>
         get() = handle.enchantments
 
-    fun getLore(viewer: Player): List<Component> {
+    fun getLore(viewer: Player?): List<Component> {
         val loreFormatter = descriptor.description
         if (loreFormatter != null) {
             val descriptionBuilder = DescriptionBuilder(this, viewer)
             return descriptionBuilder.apply(loreFormatter).toTextComponents()
         }
         return emptyList()
+    }
+
+
+    final override fun getAllBehaviors(): Set<ItemBehavior> = handle.customItem.getAllBehaviors()
+
+    constructor(customItem: CustomItem, quantity: Int) : this(
+        ItemStack(customItem.type, quantity).withMaterialId(customItem)
+    ) {
+        getAllBehaviors().forEach { it.onCreate(this) }
     }
 
     init {
@@ -64,9 +75,36 @@ open class CuTItemStack(val handle: ItemStack) : ItemTagContainer(handle),
         }
     }
 
-    constructor(customItem: CustomItem, quantity: Int) : this(
-        ItemStack(customItem.type, quantity).withMaterialId(customItem)
-    )
+    override fun withViewer(viewer: Player): ItemStack {
+        return getRenderedItemStack(viewer)
+    }
+
+    override fun getDefault(): ItemStack {
+        return getRenderedItemStack(null)
+    }
+
+    fun getRenderedItemStack(viewer: Player?): ItemStack {
+        val itemStack = handle.clone()
+
+        getAllBehaviors().forEach { it.onRender(viewer, itemStack) }
+
+        itemStack.editMeta {
+            it.lore(getLore(viewer))
+
+            if (nameHasChanged) {
+                it.displayName(name)
+                return@editMeta
+            }
+
+            val typeName = descriptor.name
+            if (typeName == null) {
+                it.displayName("&c${type.id}".colored)
+                return@editMeta
+            }
+            it.displayName(typeName withViewer viewer)
+        }
+        return itemStack
+    }
 
     companion object {
         val CUT_ID_TAG = NamespacedKey(Plugin, "CuTID")

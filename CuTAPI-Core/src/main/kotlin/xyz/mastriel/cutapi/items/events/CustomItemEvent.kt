@@ -10,7 +10,7 @@ import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
 abstract class CustomItemEvent(open val item: CuTItemStack) : Event(),
     BehaviorHolder<ItemBehavior> by item.type {
 
-    val components get() = item.getAllBehaviors()
+    val behaviors get() = item.getAllBehaviors()
     inline fun <reified T : ItemBehavior> getBehavior() = item.getBehavior(T::class)
     inline fun <reified T : ItemBehavior> getBehaviorOrNull() = item.getBehaviorOrNull(T::class)
     inline fun <reified T : ItemBehavior> hasBehavior() = item.hasBehavior(T::class)

@@ -3,9 +3,9 @@ package xyz.mastriel.brazil.spells
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.entity.Player
-import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.brazil.utils.ticksToSeconds
 import xyz.mastriel.cutapi.items.*
+import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.IdentifierRegistry
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
@@ -38,7 +38,7 @@ open class SpellItem(
         override val id: Identifier = id
     })
 
-    open fun getLore(item: CuTItemStack, viewer: Player): List<Component>? = null
+    open fun getLore(item: CuTItemStack, viewer: Player?): List<Component>? = null
 
     /**
      * Use `super.descriptor with {}` to add new behavior, lest you want weird things to happen.

@@ -4,6 +4,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.packets.PacketManager
+import xyz.mastriel.cutapi.periodic.PeriodicManager
 import xyz.mastriel.cutapi.utils.ServiceManager
 
 
@@ -22,6 +23,7 @@ object CuTAPI {
 
     internal val packetManager = PacketManager(Plugin)
     internal val packetEventManager = packetManager.eventManager
+    val periodicManager = PeriodicManager()
     val serviceManager = ServiceManager()
 
     /**
@@ -92,7 +94,7 @@ object CuTAPI {
      * @throws IllegalStateException If no plugin exists with this namespace.
      */
     fun getPluginFromNamespace(namespace: String) : Plugin {
-        return plugins.values.find { it.namespace.lowercase() == namespace.lowercase() }?.plugin
+        return plugins.values.find { it.namespace.equals(namespace, true) }?.plugin
             ?: error("Namespace $namespace not found.")
     }
 

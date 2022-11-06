@@ -16,7 +16,7 @@ abstract class PluginResource(open val owner: Plugin, open val path: String) {
     fun getBytes() = owner::class.java.getResourceAsStream(path)!!.readAllBytes()!!
 
     /**
-     * Clones this texture to a specified path.
+     * Clones this resource to a specified path.
      *
      * @param file The file to clone to.
      */

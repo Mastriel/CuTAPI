@@ -6,16 +6,13 @@ import org.bukkit.inventory.ItemStack
 import xyz.mastriel.cutapi.packets.*
 
 internal class ClientboundSetContainerContentPacket(handle: PacketContainer) : WrappedPacket(handle) {
-    internal companion object : PacketInfo by packetInfo(PacketType.Play.Server.CUSTOM_PAYLOAD)
+    internal companion object : PacketInfo by packetInfo(PacketType.Play.Server.WINDOW_ITEMS)
 
     var windowId by intField(0)
-    var slotIndex by intField(1)
-    var itemStack by itemField(0)
+    var items by itemListField(0)
 
-    constructor(slotIndex: Int, windowId: Int, itemStack: ItemStack) : this(PacketContainer(PacketType.Play.Server.SET_SLOT)) {
-        this.slotIndex = slotIndex
+    constructor(windowId: Int = 0, items: List<ItemStack?>) : this(PacketContainer(PacketType.Play.Server.WINDOW_ITEMS)) {
         this.windowId = windowId
-        this.itemStack = itemStack
+        this.items = items
     }
 }
-

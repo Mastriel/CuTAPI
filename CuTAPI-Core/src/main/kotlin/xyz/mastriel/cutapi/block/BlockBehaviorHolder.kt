@@ -1,11 +1,5 @@
 package xyz.mastriel.cutapi.block
 
-import xyz.mastriel.cutapi.behavior.BehaviorHolder
-import xyz.mastriel.cutapi.block.behaviors.BlockBehavior
-import xyz.mastriel.cutapi.items.CustomItem
-import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
-import kotlin.reflect.KClass
-
 private class BlockBehaviorHolder(block: CustomBlock) /*: BehaviorHolder<BlockBehavior>*/ {
 
     /*

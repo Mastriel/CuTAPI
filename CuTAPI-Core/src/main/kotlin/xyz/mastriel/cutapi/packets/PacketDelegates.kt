@@ -11,8 +11,19 @@ internal fun WrappedPacket.intField(fieldIndex: Int) =
 internal fun WrappedPacket.byteField(fieldIndex: Int) =
     PacketField<Byte>(handle.bytes, fieldIndex)
 
+internal fun WrappedPacket.byteArrayField(fieldIndex: Int) =
+    PacketField<ByteArray>(handle.byteArrays, fieldIndex)
+
 internal fun WrappedPacket.itemField(fieldIndex: Int) =
     PacketField<ItemStack>(handle.itemModifier, fieldIndex)
+
+internal fun WrappedPacket.itemArrayField(fieldIndex: Int) =
+    PacketField<Array<ItemStack?>>(handle.itemArrayModifier, fieldIndex)
+
+internal fun WrappedPacket.itemListField(fieldIndex: Int) =
+    PacketField<List<ItemStack?>>(handle.itemListModifier, fieldIndex)
+
+
 
 
 class PacketField<T>(val structureModifier: StructureModifier<T>, val index: Int) {

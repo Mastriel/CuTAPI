@@ -16,7 +16,7 @@ interface Identifiable {
 }
 
 
-abstract class IdentifiableSerializer<T: Identifiable>(val serialName: String, val map: IdentifierRegistry<T>) : KSerializer<T> {
+open class IdentifiableSerializer<T: Identifiable>(val serialName: String, val map: IdentifierRegistry<T>) : KSerializer<T> {
     override val descriptor: SerialDescriptor
         get() = PrimitiveSerialDescriptor(serialName, PrimitiveKind.STRING)
 

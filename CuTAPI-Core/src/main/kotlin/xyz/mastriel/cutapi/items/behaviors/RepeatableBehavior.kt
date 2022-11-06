@@ -10,10 +10,9 @@ import kotlin.reflect.full.hasAnnotation
  * of the same component (with the same id), they both will have the same data, which could
  * lead to unpredictable behavior.
  *
- * An error will occur if you try to add 2 of the same component to a component holder without
- * this annotation.
+ * An [IllegalStateException](kotlin.IllegalStateException) will occur if you try to add 2 of
+ * the same component to a component holder without this annotation.
  */
-
 @Target(AnnotationTarget.CLASS)
 annotation class RepeatableBehavior
 

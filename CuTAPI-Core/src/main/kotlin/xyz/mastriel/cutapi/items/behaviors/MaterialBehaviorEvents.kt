@@ -16,7 +16,7 @@ class MaterialBehaviorEvents : Listener {
 
     @EventHandler
     fun onObtain(event: CustomItemObtainEvent) {
-        event.components.forEach {
+        event.behaviors.forEach {
             it.onObtain(event.player, event.item, event)
         }
     }

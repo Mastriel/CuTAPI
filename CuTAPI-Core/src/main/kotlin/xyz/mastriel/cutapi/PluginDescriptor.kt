@@ -15,22 +15,19 @@ data class PluginDescriptor internal constructor(
 )
 
 data class PluginOptions internal constructor(
-    val strictRegistries: Boolean = false
+    val packFolder: String = "pack"
 )
 
 class PluginOptionsBuilder {
-
     /**
-     * This will require most classes that should be registered to be registered in order to be constructed, or
-     * an error will be thrown. `false` will allow you to construct these classes either way, which could cause
-     * unpredictable behavior.
+     * The folder in `src/main/resources/` that will be used to generate a resource pack.
      *
-     * `true` by default.
+     * `pack` by default.
      */
-    var strictRegistries = true
+    var packFolder : String = "pack"
 
     fun build() : PluginOptions {
-        return PluginOptions(strictRegistries)
+        return PluginOptions(packFolder)
     }
 }
 

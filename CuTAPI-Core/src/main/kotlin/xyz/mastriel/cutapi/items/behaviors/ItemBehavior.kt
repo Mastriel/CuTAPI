@@ -7,6 +7,7 @@ import org.bukkit.event.Cancellable
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.inventory.ItemStack
 import xyz.mastriel.cutapi.behavior.Behavior
 import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.items.events.CustomItemObtainEvent
@@ -25,7 +26,7 @@ abstract class ItemBehavior(
     /**
      * The lore which this component shows when applied to a [CuTItemStack].
      */
-    open fun getLore(item: CuTItemStack, viewer: Player) : Component? = null
+    open fun getLore(item: CuTItemStack, viewer: Player?) : Component? = null
 
     protected fun getData(item: CuTItemStack) : TagContainer {
         return ItemBehaviorTagContainer(item.handle, this.id)
@@ -37,6 +38,8 @@ abstract class ItemBehavior(
 
     open fun onDrop(player: Player, item: CuTItemStack, event: PlayerDropItemEvent) {}
     open fun onObtain(player: Player, item: CuTItemStack, event: CustomItemObtainEvent) {}
+    open fun onCreate(item: CuTItemStack) {}
+    open fun onRender(viewer: Player?, item: ItemStack) {}
 
     open fun onTickInEitherHand(player: Player, item: CuTItemStack) {}
     open fun onTickInInventory(player: Player, item: CuTItemStack) {}

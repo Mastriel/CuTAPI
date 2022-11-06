@@ -1,0 +1,44 @@
+#
+#       _______     ___    _ ,---------.    ____    .-------. .-./`)
+#      /   __  \  .'   |  | |\          \ .'  __ `. \  _(`)_ \\ .-.')
+#     | ,_/  \__) |   .'  | | `--.  ,---'/   '  \  \| (_ o._)|/ `-' \
+#   ,-./  )       .'  '_  | |    |   \   |___|  /  ||  (_,_) / `-'`"`
+#   \  '_ '`)     '   ( \.-.|    :_ _:      _.-`   ||   '-.-'  .---.
+#    > (_)  )  __ ' (`. _` /|    (_I_)   .'   _    ||   |      |   |
+#   (  .  .-'_/  )| (_ (_) _)   (_(=)_)  |  _( )_  ||   |      |   |
+#    `-'`-'     /  \ /  . \ /    (_I_)   \ (_ o _) //   )      |   |
+#      `._____.'    ``-'`-''     '---'    '.(_,_).' `---'      '---'
+#
+# Primarily maintained by: Mastriel#0085
+#
+# Some plugins may prevent you from changing some of these values, so if a change isn't reflected in your server
+# (after a restart!!!), then it is probably the fault of another plugin developer.
+#
+
+
+
+# This specifies the image used for the generated resource pack.
+#
+# Type: string
+# Default: pack.png
+pack-png: "pack.png"
+
+# This is the name of the resource pack generated. This is always generated in plugins/CuTAPI/pack/
+#
+# Type: string
+# Default: pack.zip
+generated-pack-name: "pack.zip"
+
+# The description for the pack generated.
+#
+# Type: string
+# Default: CuTAPI Generated Resource Pack
+pack-description: "CuTAPI Generated Resource Pack"
+
+# The version of the pack generated. Currently supported: 9 (1.19-1.19.2)
+# "auto" will automatically choose the resource pack version based on the version the server is running.
+#
+# Type: integer | "auto"
+# Default: auto
+pack-version: auto
+

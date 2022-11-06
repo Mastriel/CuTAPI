@@ -12,7 +12,6 @@ import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.utils.colored
-import xyz.mastriel.cutapi.utils.personalized.Personalized
 import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 import xyz.mastriel.cutapi.utils.personalized.personalized
 

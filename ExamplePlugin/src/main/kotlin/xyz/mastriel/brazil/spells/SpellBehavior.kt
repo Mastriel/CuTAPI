@@ -10,7 +10,7 @@ import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
  */
 class SpellBehavior(val spell: Spell) : ItemBehavior(spell.id) {
 
-    override fun getLore(item: CuTItemStack, viewer: Player): Component? {
+    override fun getLore(item: CuTItemStack, viewer: Player?): Component? {
         return null
     }
 }

@@ -4,9 +4,9 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.inventory.ItemStack
+import xyz.mastriel.brazil.items.ShinyKnife
 import xyz.mastriel.cutapi.items.CuTItemStack
 import xyz.mastriel.cutapi.utils.colored
-import xyz.mastriel.brazil.items.ShinyKnife
 import kotlin.random.Random
 import kotlin.system.measureNanoTime
 

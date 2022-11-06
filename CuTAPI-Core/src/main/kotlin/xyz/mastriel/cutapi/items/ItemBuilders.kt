@@ -4,7 +4,6 @@ import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.utils.personalized.Personalized
 import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 
 

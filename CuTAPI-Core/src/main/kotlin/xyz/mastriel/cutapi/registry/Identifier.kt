@@ -65,7 +65,8 @@ fun id(plugin: Plugin, id: String) : Identifier {
  * @see CuTAPI.registerPlugin
  */
 fun id(stringRepresentation: String) : Identifier {
-    val (namespace, id) = stringRepresentation.split(":")
+    require(":" in stringRepresentation) { "String identifier $stringRepresentation does not follow namespace:id format." }
+    val (namespace, id) = stringRepresentation.split(":", limit = 1)
     return Identifier(namespace, id)
 }
 

@@ -18,25 +18,34 @@ internal lateinit var Plugin : CuTAPIPlugin
 
 class CuTAPIPlugin : JavaPlugin {
 
-
     override fun onEnable() {
         Plugin = this
         info("CuTAPI enabled!")
 
-        CuTAPI.registerPlugin(this, "cutapi")
+        saveDefaultConfig()
+        CuTAPI.registerPlugin(this, "cutapi") {
+            packFolder = "pack"
+        }
 
         registerCommands()
         registerEvents()
+        registerPeriodics()
         CustomItem.register(CustomItem.Unknown)
 
         registerPacketListeners()
     }
 
+    private fun registerPeriodics() {
+        val periodicManager = CuTAPI.periodicManager
+
+        periodicManager.register(PacketItems)
+    }
 
     private fun registerEvents() {
         server.pluginManager.registerEvents(PlayerItemEvents, this)
         server.pluginManager.registerEvents(CustomItemEvents(), this)
         server.pluginManager.registerEvents(MaterialBehaviorEvents(), this)
+        server.pluginManager.registerEvents(PacketItems, this)
     }
 
     private fun registerCommands() {
@@ -55,7 +64,7 @@ class CuTAPIPlugin : JavaPlugin {
     }
 
     override fun onDisable() {
-
+        CuTAPI.unregisterPlugin(this)
     }
 
     internal fun info(msg: Any?) = logger.info("$msg")

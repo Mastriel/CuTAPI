@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.event.Listener
+import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.behavior.BehaviorHolder
 import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.items.behaviors.StaticLore
@@ -11,6 +12,7 @@ import xyz.mastriel.cutapi.items.behaviors.itemBehaviorHolder
 import xyz.mastriel.cutapi.pdc.tags.ItemBehaviorTagContainer
 import xyz.mastriel.cutapi.pdc.tags.TagContainer
 import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resourcepack.Texture
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.personalized
 import kotlin.reflect.KClass
@@ -59,10 +61,12 @@ open class CustomItem(
     companion object : IdentifierRegistry<CustomItem>() {
         val Unknown = customItem(
             unknownID(),
-            Material.ANVIL,
-            personalized("Unknown".colored),
-            listOf(StaticLore("&cYou probably shouldn't have this...".colored))
-        )
+            Material.ANVIL) {
+            name = personalized("Unknown".colored)
+            texture = personalized( Texture(Plugin, "items/unknown_item") )
+
+            behavior(listOf(StaticLore("&cYou probably shouldn't have this...".colored)))
+        }
 
         override fun get(id: Identifier): CustomItem {
             return super.getOrNull(id) ?: return Unknown

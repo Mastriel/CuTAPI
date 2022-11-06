@@ -4,15 +4,15 @@ import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerInteractEvent
-import xyz.mastriel.cutapi.items.CuTItemStack
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.utils.chatTooltip
-import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.brazil.Plugin
 import xyz.mastriel.brazil.spells.CastContext
 import xyz.mastriel.brazil.spells.CastMethod
 import xyz.mastriel.brazil.spells.SpellItem
 import xyz.mastriel.brazil.utils.format
+import xyz.mastriel.cutapi.items.CuTItemStack
+import xyz.mastriel.cutapi.registry.id
+import xyz.mastriel.cutapi.utils.chatTooltip
+import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.personalized
 
 object RedHandsSpellItem : SpellItem(
@@ -30,8 +30,8 @@ object RedHandsSpellItem : SpellItem(
         return 5.0
     }
 
-    override fun getLore(item: CuTItemStack, viewer: Player): List<Component> {
-        val healingAmount = getHealingAmount(viewer).format("#.#")
+    override fun getLore(item: CuTItemStack, viewer: Player?): List<Component> {
+        val healingAmount = viewer?.let { getHealingAmount(it) }?.format("#.#") ?: "5.0"
         return listOf(
             "&7Carries you to your spawnpoint.".colored,
             "&7Heals you for &e${healingAmount}hp&7, based on".colored,

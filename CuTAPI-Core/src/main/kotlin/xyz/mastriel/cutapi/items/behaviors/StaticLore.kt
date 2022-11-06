@@ -8,7 +8,7 @@ import xyz.mastriel.cutapi.registry.id
 
 @RepeatableBehavior
 class StaticLore(val lore: Component) : ItemBehavior(id(Plugin, "lore_behavior")) {
-    override fun getLore(item: CuTItemStack, viewer: Player): Component {
+    override fun getLore(item: CuTItemStack, viewer: Player?): Component {
         return lore
     }
 }

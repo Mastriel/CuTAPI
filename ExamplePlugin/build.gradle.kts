@@ -31,7 +31,10 @@ repositories {
         name = "protocol-lib"
         url = uri("https://repo.dmulloy2.net/repository/public/")
     }
-
+    maven {
+        name = "jitpack"
+        url = uri("https://jitpack.io")
+    }
 }
 
 dependencies {
@@ -40,14 +43,15 @@ dependencies {
     implementation(projects.cuTAPICore)
     implementation("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")
 
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
+    compileOnly("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
+    compileOnly("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 
-    implementation("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.6.0")
-    implementation("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.6.0")
+    compileOnly("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.6.0")
+    compileOnly("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.6.0")
+
+    shadow("com.github.Trigary:AdvancementCreator:v2.0")
 }
 
 

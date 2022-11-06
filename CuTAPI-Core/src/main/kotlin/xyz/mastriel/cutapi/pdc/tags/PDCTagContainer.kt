@@ -6,7 +6,7 @@ import org.bukkit.persistence.PersistentDataType
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.pdc.getPrimitiveValue
 import xyz.mastriel.cutapi.pdc.setPrimitiveValue
-import xyz.mastriel.cutapi.pdc.tags.converters.*
+import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
 
 open class PDCTagContainer(var container: PersistentDataContainer) : TagContainer() {
 
