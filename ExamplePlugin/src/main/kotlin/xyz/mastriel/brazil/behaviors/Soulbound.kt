@@ -4,9 +4,11 @@ import net.kyori.adventure.text.Component
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 import xyz.mastriel.brazil.Plugin
-import xyz.mastriel.cutapi.items.CuTItemStack
-import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
-import xyz.mastriel.cutapi.items.events.CustomItemObtainEvent
+import xyz.mastriel.cutapi.item.CuTItemStack
+import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
+import xyz.mastriel.cutapi.item.events.CustomItemObtainEvent
+import xyz.mastriel.cutapi.pdc.tags.getPlayer
+import xyz.mastriel.cutapi.pdc.tags.setPlayer
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.utils.colored
 

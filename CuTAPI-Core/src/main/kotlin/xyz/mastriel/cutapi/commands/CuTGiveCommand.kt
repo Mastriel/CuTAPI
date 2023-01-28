@@ -4,7 +4,7 @@ import org.bukkit.Bukkit
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabExecutor
-import xyz.mastriel.cutapi.items.CustomItem
+import xyz.mastriel.cutapi.item.CustomItem
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.idOrNull
 import xyz.mastriel.cutapi.utils.chatTooltip

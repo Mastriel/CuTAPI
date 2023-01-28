@@ -1,4 +1,4 @@
-package xyz.mastriel.cutapi.packets.wrappers
+ package xyz.mastriel.cutapi.packets.wrappers
 
 import com.comphenix.protocol.PacketType
 import com.comphenix.protocol.events.PacketContainer

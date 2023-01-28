@@ -1,28 +1,110 @@
 {
   "title": "cutmeta",
-  "description": "CuTAPI resource meta descriptions.",
-  "type": "object",
-  "properties": {
-    "resource_file": {
-      "type": "string",
-      "description": "The file that this .cutmeta points to. Relative paths are allowed, and $ indicates the beginning of your plugin's packFolder.\n\n__auto__ will set the file to any resource with the same name (minus extension) as this file."
-    },
-    "resource_type": {
-      "enum": [ "texture", "audio", "model" ],
-      "type": "string",
-      "description": "The type that this resource is. 'texture' (*.png), 'audio' (*.ogg), and 'model' (*.json) are allowed."
-    },
-    "used_for": {
-      "description": "The types of things that this texture will be used in. Only used for textures and models.",
-      "anyOf": [
-        {
+  "$ref": "#/definitions/cutmeta",
+  "definitions": {
+    "cutmeta": {
+      "description": "CuTAPI resource meta descriptions.",
+      "type": "object",
+      "properties": {
+
+
+        "resource_file": {
+          "type": "string",
+          "description": "The file that this .cutmeta points to. Relative paths are allowed, and $ indicates the beginning of your plugin's packFolder.\n\n__auto__ will set the file to any resource with the same name (minus extension) as this file."
+        },
+
+        "recursive": {
+          "type": "boolean",
+          "description": "If this __folder__ file is recursive down the file tree."
+        },
+
+
+        "resource_type": {
+          "enum": [ "texture", "audio", "model" ],
+          "type": "string",
+          "description": "The type that this resource is. 'texture' (*.png), 'audio' (*.ogg), and 'model' (*.json) are allowed."
+        },
+
+
+        "applies_to": {
           "type": "array",
           "items": {
-            "type": "string",
-            "enum": [ "items", "blocks" ]
+            "type": "string"
+          },
+          "description": "The minecraft items that this applies to."
+        },
+
+
+        "used_for": {
+          "description": "The types of things that this texture will be used in. Only used for textures and models.",
+          "enum": [ "items", "blocks", "any" ],
+          "type": "string"
+        },
+
+
+        "post_process": {
+          "description": "Post-processing for this resource. Only used for textures.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "processor": {
+                "type": "string",
+                "description": "A TexturePostProcessor by ID."
+              },
+              "properties": {
+                "type": "object",
+                "description": "Additional number properties for this post-processor."
+              }
+            }
           }
-        }, { "type": "string", "enum": ["any"] }
-      ]
+        },
+
+
+        "generate": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "subfolder": {
+                "description": "The subfolder that this generated resource will be put in.",
+                "type": "string"
+              },
+              "meta": {
+                "description": "The meta for this new file.",
+                "$ref": "#/definitions/cutmeta"
+              }
+            }
+          }
+        },
+
+
+        "animation": {
+          "type": "object",
+          "properties": {
+            "interpolate": {
+              "description": " If true, Minecraft generates additional frames between frames with a frame time greater than 1 between them. Defaults to false.",
+              "type": "boolean"
+            },
+            "width": {
+              "description": "The width of each frame. Automatically inferred if left blank.",
+              "type": "integer"
+            },
+            "height": {
+              "description": "The height of each frame. Automatically inferred if left blank.",
+              "type": "integer"
+            },
+            "frametime": {
+              "description": "How long each frame lasts, in ticks.",
+              "type": "integer"
+            },
+            "frames": {
+              "description": "The order that the frames should be displayed in. Defaults to top to bottom, or [0, 1, 2, ...]",
+              "type": "array"
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -4,8 +4,8 @@ import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
 import org.bukkit.event.Cancellable
 import xyz.mastriel.brazil.Plugin
-import xyz.mastriel.cutapi.items.CuTItemStack
-import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
+import xyz.mastriel.cutapi.item.CuTItemStack
+import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.utils.colored
 

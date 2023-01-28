@@ -1,5 +1,6 @@
 package xyz.mastriel.cutapi
 
+import org.bukkit.Material
 import org.bukkit.plugin.Plugin
 
 /**
@@ -15,7 +16,8 @@ data class PluginDescriptor internal constructor(
 )
 
 data class PluginOptions internal constructor(
-    val packFolder: String = "pack"
+    val packFolder: String = "pack",
+    val autoDisplayAsForTexturedItems : Material? = null
 )
 
 class PluginOptionsBuilder {
@@ -26,8 +28,15 @@ class PluginOptionsBuilder {
      */
     var packFolder : String = "pack"
 
+    /**
+     * If not null, this will automatically add the [DisplayAs][xyz.mastriel.cutapi.item.behaviors.DisplayAs]
+     * component to any custom item with a texture specified. This will also add this Material to all textures
+     * .cutmeta files.
+     */
+    var autoDisplayAsForTexturedItems : Material? = null
+
     fun build() : PluginOptions {
-        return PluginOptions(packFolder)
+        return PluginOptions(packFolder, autoDisplayAsForTexturedItems)
     }
 }
 

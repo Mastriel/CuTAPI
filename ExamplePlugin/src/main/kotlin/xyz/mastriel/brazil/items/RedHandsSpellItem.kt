@@ -5,17 +5,17 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerInteractEvent
 import xyz.mastriel.brazil.Plugin
-import xyz.mastriel.brazil.spells.CastContext
-import xyz.mastriel.brazil.spells.CastMethod
-import xyz.mastriel.brazil.spells.SpellItem
+import xyz.mastriel.brazil.spells.active.CastContext
+import xyz.mastriel.brazil.spells.active.CastMethod
+import xyz.mastriel.brazil.spells.active.ActiveSpellItem
 import xyz.mastriel.brazil.utils.format
-import xyz.mastriel.cutapi.items.CuTItemStack
+import xyz.mastriel.cutapi.item.CuTItemStack
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.utils.chatTooltip
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.personalized
 
-object RedHandsSpellItem : SpellItem(
+object RedHandsSpellItem : ActiveSpellItem(
     name = personalized("Red Hands".colored),
     material = Material.FIRE_CORAL_FAN,
     castTime = 20L,
@@ -27,6 +27,7 @@ object RedHandsSpellItem : SpellItem(
 
     fun getHealingAmount(player: Player): Double {
         // todo make this calculate the contrast of the player's skin to determine the healing amount. hc = more
+        // nvm this algorithm is probably racist
         return 5.0
     }
 

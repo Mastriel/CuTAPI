@@ -1,6 +1,6 @@
 package xyz.mastriel.cutapi.pdc.tags.converters
 
-import xyz.mastriel.cutapi.items.CustomItem
+import xyz.mastriel.cutapi.item.CustomItem
 import xyz.mastriel.cutapi.registry.id
 
 object CustomItemTagConverter :

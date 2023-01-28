@@ -1,17 +1,16 @@
 package xyz.mastriel.cutapi.utils.personalized
 
 import org.bukkit.entity.Player
-import kotlin.reflect.KProperty
+import xyz.mastriel.cutapi.utils.computable.Computable
 
 
-interface Personalized<out T> {
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): (Player) -> T {
-        return ::withViewer
-    }
+interface Personalized<out T> : Computable<Player, T> {
 
     infix fun withViewer(viewer: Player): T
 
-    infix fun alterResult(block: (Player, T) -> @UnsafeVariance T) : Personalized<T> {
+    override fun withEntity(entity: Player): T = withEntity(entity)
+
+    override infix fun <R> alterResult(block: (Player, T) -> R) : Personalized<R> {
         return AlteredPersonalized(this, block)
     }
 }

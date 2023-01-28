@@ -1,22 +1,23 @@
 package xyz.mastriel.cutapi.utils
 
 import net.kyori.adventure.text.format.TextColor
+import kotlin.math.max
 
-class Color private constructor(
-    private val red : UByte,
-    private val green : UByte,
-    private val blue : UByte,
+open class Color protected constructor(
+    val red : UByte,
+    val green : UByte,
+    val blue : UByte,
 ) {
 
     override fun toString(): String {
         return "#" + red.stringMinSize() + green.stringMinSize() + blue.stringMinSize()
     }
 
-    fun toInt(): Int =
+    open fun toInt(): Int =
         (red.stringMinSize() + green.stringMinSize() + blue.stringMinSize()).toInt(16)
 
 
-    private fun UByte.stringMinSize() : String {
+    protected fun UByte.stringMinSize() : String {
         var value = this.toString(16)
         if (value.length == 1) value = "0$value"
         return value
@@ -36,6 +37,13 @@ class Color private constructor(
         return other.red == this.red &&
                 other.green == this.green &&
                 other.blue == this.blue
+    }
+
+    open operator fun times(double: Double) : Color {
+        val r = max((red.toInt() * double).toInt(), 255).toUByte()
+        val g = max((green.toInt() * double).toInt(), 255).toUByte()
+        val b = max((blue.toInt() * double).toInt(), 255).toUByte()
+        return Color(r, g, b)
     }
 
     override fun hashCode(): Int {

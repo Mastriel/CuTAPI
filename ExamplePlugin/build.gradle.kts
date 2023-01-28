@@ -51,6 +51,12 @@ dependencies {
     compileOnly("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.6.0")
     compileOnly("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.6.0")
 
+    compileOnly("org.mongodb:mongodb-driver-sync:4.7.2")
+    shadow("org.litote.kmongo:kmongo-coroutine-serialization:4.7.2") {
+        exclude(group = "org.jetbrains.kotlin")
+        exclude(group = "org.jetbrains.kotlinx")
+    }
+
     shadow("com.github.Trigary:AdvancementCreator:v2.0")
 }
 

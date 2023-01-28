@@ -8,12 +8,16 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent
 import xyz.mastriel.brazil.Plugin
 import xyz.mastriel.brazil.behaviors.DisableOffhand
 import xyz.mastriel.brazil.behaviors.Soulbound
-import xyz.mastriel.cutapi.items.CuTItemStack
-import xyz.mastriel.cutapi.items.behaviors.ItemBehavior
-import xyz.mastriel.cutapi.items.behaviors.StaticLore
-import xyz.mastriel.cutapi.items.customItem
+import xyz.mastriel.cutapi.item.CuTItemStack
+import xyz.mastriel.cutapi.item.ItemDescriptor
+import xyz.mastriel.cutapi.item.behaviors.DisplayAs
+import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
+import xyz.mastriel.cutapi.item.behaviors.StaticLore
+import xyz.mastriel.cutapi.item.customItem
+import xyz.mastriel.cutapi.pdc.tags.getDouble
+import xyz.mastriel.cutapi.pdc.tags.setDouble
 import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.resourcepack.Texture
+import xyz.mastriel.cutapi.resourcepack.management.ref
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.personalized
@@ -22,14 +26,15 @@ import kotlin.random.Random
 
 val ShinyKnife = customItem(id(Plugin, "shiny_knife"), Material.IRON_SWORD) {
     name = personalized("&fShiny Knife".colored)
-    texture = personalized { Texture(Plugin, "textures/shiny_knife.png") }
+    texture = personalized( ref(Plugin, "textures/rivers_of_blood.png") )
 
     behavior(
         StaticLore("I'm lore!".colored),
         Soulbound(),
         DisableOffhand(),
         ShinyKnifeDamager(),
-        StaticLore("I'm &oalso&r lore!".colored)
+        StaticLore("I'm &oalso&r lore!".colored),
+        DisplayAs(Material.GLISTERING_MELON_SLICE)
     )
 
     description {

@@ -5,7 +5,8 @@ import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.inventory.ItemStack
 import xyz.mastriel.brazil.items.ShinyKnife
-import xyz.mastriel.cutapi.items.CuTItemStack
+import xyz.mastriel.cutapi.item.CuTItemStack
+import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.utils.colored
 import kotlin.random.Random
 import kotlin.system.measureNanoTime
@@ -19,13 +20,13 @@ object TestCommand : CommandExecutor {
         val bukkitItems = mutableListOf<ItemStack>()
 
         for (i in 0..amount) {
-            bukkitItems.add(CuTItemStack(ShinyKnife, Random.nextInt(1, 64)).handle)
+            bukkitItems.add(CuTItemStack.create(ShinyKnife, Random.nextInt(1, 64)).handle)
         }
 
 
         val wrapTime = measureNanoTime {
             for (item in bukkitItems) {
-                CuTItemStack(item)
+                item.wrap()
             }
         }
 

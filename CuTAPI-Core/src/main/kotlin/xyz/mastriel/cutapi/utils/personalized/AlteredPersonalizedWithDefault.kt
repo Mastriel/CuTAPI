@@ -1,13 +1,23 @@
 package xyz.mastriel.cutapi.utils.personalized
 
 import org.bukkit.entity.Player
+import xyz.mastriel.cutapi.utils.computable.AlteredComputableWithDefault
 
-class AlteredPersonalizedWithDefault<T>(val previous: PersonalizedWithDefault<T>, val alter: (player: Player, value: T) -> T) : PersonalizedWithDefault<T> {
-    override fun withViewer(viewer: Player): T {
-        return alter(viewer, previous withViewer viewer)
+internal class AlteredPersonalizedWithDefault<T, R>(
+    previous: PersonalizedWithDefault<T>,
+    alter: (value: T) -> R
+) : AlteredComputableWithDefault<Player, T, R>(previous, alter),
+    PersonalizedWithDefault<R> {
+
+    override fun withEntity(entity: Player): R {
+        return alter(previous withEntity entity)
     }
 
-    override fun getDefault(): T {
-        return previous.getDefault()
+    override fun withViewer(viewer: Player): R {
+        return withEntity(viewer)
+    }
+
+    override fun getDefault(): R {
+        return alter(previous.getDefault())
     }
 }

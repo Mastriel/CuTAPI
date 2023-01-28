@@ -8,7 +8,7 @@ import xyz.mastriel.cutapi.pdc.getPrimitiveValue
 import xyz.mastriel.cutapi.pdc.setPrimitiveValue
 import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
 
-open class PDCTagContainer(var container: PersistentDataContainer) : TagContainer() {
+open class PDCTagContainer(var container: PersistentDataContainer) : TagContainer {
 
 
     override fun <P: Any, C: Any> set(key: String, complexValue: C?, converter: TagConverter<P, C>) {

@@ -2,9 +2,12 @@ package xyz.mastriel.cutapi
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
+import kotlinx.serialization.json.Json
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.packets.PacketManager
 import xyz.mastriel.cutapi.periodic.PeriodicManager
+import xyz.mastriel.cutapi.resourcepack.management.ResourceManager
+import xyz.mastriel.cutapi.resourcepack.management.ResourcePackManager
 import xyz.mastriel.cutapi.utils.ServiceManager
 
 
@@ -20,9 +23,14 @@ object CuTAPI {
      * A map of all plugins registered, along with their plugin descriptors.
      */
     private val plugins = mutableMapOf<Plugin, PluginDescriptor>()
+    val registedPlugins : Set<Plugin> get() = plugins.keys
 
     internal val packetManager = PacketManager(Plugin)
     internal val packetEventManager = packetManager.eventManager
+
+    val resourcePackManager = ResourcePackManager()
+    val resourceManager = ResourceManager()
+    val packGenerator = resourcePackManager.generator
     val periodicManager = PeriodicManager()
     val serviceManager = ServiceManager()
 
@@ -149,5 +157,11 @@ object CuTAPI {
     @OptIn(ExperimentalSerializationApi::class)
     internal val cbor = Cbor {
         this.ignoreUnknownKeys = true
+    }
+
+    internal val json = Json {
+        ignoreUnknownKeys = true
+        prettyPrint = true
+        encodeDefaults = true
     }
 }

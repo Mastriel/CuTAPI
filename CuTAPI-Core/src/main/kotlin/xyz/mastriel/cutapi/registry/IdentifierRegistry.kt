@@ -7,7 +7,7 @@ import xyz.mastriel.cutapi.Plugin
  *
  * @param T The identifiable that is being tracked.
  */
-open class IdentifierRegistry<T : Identifiable> {
+open class IdentifierRegistry<T : Identifiable>(val name: String) {
     protected val values = mutableMapOf<Identifier, T>()
 
     /**
@@ -18,7 +18,7 @@ open class IdentifierRegistry<T : Identifiable> {
     open fun register(item: T): T {
         if (values.containsKey(item.id)) error("Two Identifiables cannot have the same ID in the same registry.")
         values[item.id] = item
-        Plugin.info("[REGISTRY] ${item.id} added to a registry.")
+        Plugin.info("[REGISTRY] ${item.id} added to '$name'.")
         return item
     }
 

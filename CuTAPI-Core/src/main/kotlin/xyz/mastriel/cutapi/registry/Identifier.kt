@@ -13,7 +13,9 @@ import xyz.mastriel.cutapi.Plugin
 
 
 @Serializable(with = IdentifierSerializer::class)
-data class Identifier internal constructor(val namespace: String, val id: String) {
+data class Identifier internal constructor(val namespace: String, val key: String) : Identifiable {
+
+    override val id: Identifier get() = this
 
     /**
      * The plugin this [Identifier] points to, or null if it cannot be found.
@@ -27,15 +29,15 @@ data class Identifier internal constructor(val namespace: String, val id: String
     }
 
     override fun toString(): String {
-        return "$namespace:$id"
+        return "$namespace:$key"
     }
 
     fun append(string: String) : Identifier {
-        return Identifier(namespace, id+string)
+        return Identifier(namespace, key+string)
     }
 
     fun appendSubId(string: String) : Identifier {
-        return Identifier(namespace, "$id/$string")
+        return Identifier(namespace, "$key/$string")
     }
 }
 
@@ -66,7 +68,7 @@ fun id(plugin: Plugin, id: String) : Identifier {
  */
 fun id(stringRepresentation: String) : Identifier {
     require(":" in stringRepresentation) { "String identifier $stringRepresentation does not follow namespace:id format." }
-    val (namespace, id) = stringRepresentation.split(":", limit = 1)
+    val (namespace, id) = stringRepresentation.split(":", limit = 2)
     return Identifier(namespace, id)
 }
 

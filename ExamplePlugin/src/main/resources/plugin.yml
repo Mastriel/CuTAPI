@@ -3,10 +3,12 @@ version: 1.0
 main: xyz.mastriel.brazil.BrazilPlugin
 api-version: 1.19
 prefix: Brazil
-authors: [ Mastriel ]
+authors: [ Mastriel, Cyclespx ]
 description: An example CuTAPI plugin.
 website: mastriel.xyz
 depend: [ CuTAPI ]
+libraries:
+  - org.mongodb:mongodb-driver-sync:4.7.2
 commands:
   test:
     description: A test command.

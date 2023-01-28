@@ -1,7 +1,7 @@
 package xyz.mastriel.cutapi.block
 
 import org.bukkit.Material
-import xyz.mastriel.cutapi.items.CustomItem
+import xyz.mastriel.cutapi.item.CustomItem
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.Identifier
 

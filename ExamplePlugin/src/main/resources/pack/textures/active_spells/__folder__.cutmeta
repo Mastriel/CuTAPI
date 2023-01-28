@@ -1,0 +1,15 @@
+{
+  "applies_to": [ "glistering_melon_slice" ],
+  "generate": [
+    {
+      "subfolder": "gray",
+      "meta": {
+        "post_process": [
+          {
+            "processor": "brazil:locked_spell"
+          }
+        ]
+      }
+    }
+  ]
+}
