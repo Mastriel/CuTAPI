@@ -110,10 +110,10 @@ fun TagContainer.identifierTag(key: String, default: Identifier) =
 fun TagContainer.nullableIdentifierTag(key: String, default: Identifier? = null) =
     NullableTag(key, this, default, IdentifierTagConverter)
 
-fun TagContainer.customItemTag(key: String, default: CustomItem) =
+fun TagContainer.customItemTag(key: String, default: CustomItem<*>) =
     NotNullTag(key, this, default, CustomItemTagConverter)
 
-fun TagContainer.nullableCustomItemTag(key: String, default: CustomItem? = null) =
+fun TagContainer.nullableCustomItemTag(key: String, default: CustomItem<*>? = null) =
     NullableTag(key, this, default, CustomItemTagConverter)
 
 fun TagContainer.stringTag(key: String, default: String) =

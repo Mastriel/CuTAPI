@@ -47,39 +47,43 @@ open class ActiveSpellItem(
     override val descriptor: ItemDescriptor = itemDescriptor {
         val color = Color.Elethium.textColor
 
-
-        name = personalized { this@ActiveSpellItem.name.withViewer(it).color(color) } or
-                activeSpell.name.withViewer(null).color(color)
-
         behavior(SpellBehavior(this@ActiveSpellItem, castMethod))
 
-        description { setLore(this, Color.Solarium) }
+        display {
+            if (viewer != null) {
+                name = this@ActiveSpellItem.name.withViewer(viewer).color(color)
+            } else {
+                name = activeSpell.name.withViewer(null).color(color)
+            }
+
+            setLore(this, Color.Solarium)
+        }
     }
 
 
-    internal fun setLore(builder: DescriptionBuilder, color: Color) {
+    internal fun setLore(builder: DisplayBuilder, color: Color) {
         builder.apply {
             emptyLine()
             val lore = getLore(itemStack, viewer) ?: listOf("A basic spell.".colored)
             for (line in lore) {
-                textComponent(line.color(color.textColor))
+                text(line.color(color.textColor))
             }
             emptyLine()
-            textComponent("&8${ticksToSeconds(castTime)} cast time".colored)
-            textComponent("&8${ticksToSeconds(cooldown)} cooldown".colored)
+            text("&8${ticksToSeconds(castTime)} cast time".colored)
+            text("&8${ticksToSeconds(cooldown)} cooldown".colored)
             for (flag in flags.filter { it.displayLore != null }) {
-                textComponent(flag.displayLore!!.colored)
+                text(flag.displayLore!!.colored)
             }
         }
     }
 
-    fun getSpellbook(): CustomItem {
+    fun getSpellbook(): BasicCustomItem {
         return spellbooks.get(id.appendSubId("book"))
     }
 
     companion object : IdentifierRegistry<ActiveSpellItem>("Active Spell Items") {
 
-        private val spellbooks = IdentifierRegistry<CustomItem>("Spellbooks")
+        private val spellbooks = IdentifierRegistry<BasicCustomItem>("Spellbooks")
 
         @Suppress("RemoveRedundantQualifierName")
         override fun register(item: ActiveSpellItem): ActiveSpellItem {
@@ -93,13 +97,14 @@ open class ActiveSpellItem(
         private fun createSpellbookMaterial(spell: ActiveSpellItem) =
             customItem(spell.id.appendSubId("book"), Material.BOOK) {
                 val color = Color.Elethium.textColor
-
-                name = personalized { player -> (spell.name withViewer player).color(color) } or
-                        spell.name.withViewer(null).color(color)
-
                 behavior(SpellbookLearnBehavior(spell))
 
-                description { spell.setLore(this, Color.Elethium) }
+                display {
+                    name = spell.name.withViewer(viewer).color(color)
+
+                    spell.setLore(this, Color.Elethium)
+
+                }
             }
     }
 

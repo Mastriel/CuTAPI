@@ -5,7 +5,7 @@ import xyz.mastriel.cutapi.item.CustomItem
 import xyz.mastriel.cutapi.registry.Identifier
 import kotlin.reflect.KClass
 
-private class ItemBehaviorHolder(item: CustomItem) : BehaviorHolder<ItemBehavior> {
+private class ItemBehaviorHolder(item: CustomItem<*>) : BehaviorHolder<ItemBehavior> {
 
     private val behaviors = item.descriptor.itemBehaviors
 
@@ -40,4 +40,4 @@ private class ItemBehaviorHolder(item: CustomItem) : BehaviorHolder<ItemBehavior
     }
 }
 
-fun itemBehaviorHolder(item: CustomItem) : BehaviorHolder<ItemBehavior> = ItemBehaviorHolder(item)
+fun itemBehaviorHolder(item: CustomItem<*>) : BehaviorHolder<ItemBehavior> = ItemBehaviorHolder(item)

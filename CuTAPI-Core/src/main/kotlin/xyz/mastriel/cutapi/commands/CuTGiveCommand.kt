@@ -72,7 +72,7 @@ object CuTGiveCommand : TabExecutor {
         target.inventory.addItem(cutItem.handle)
         sender.sendMessage(
             "&aSuccessfully sent ${target.name} ${quantity}x ".colored
-                .append(cutItem.handle.chatTooltip)
+                .append(cutItem.getRenderedItemStack(target).chatTooltip)
                 .append("&a!".colored)
         )
 

@@ -27,6 +27,7 @@ internal object PacketItemHandler : PacketListener, Listener {
         val itemStack = CuTItemStack.wrap(event.packet.itemStack.clone()) withViewer event.player
 
         event.packet.itemStack = itemStack
+
     }
 
 

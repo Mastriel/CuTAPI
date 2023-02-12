@@ -39,7 +39,7 @@ class ImageOpPropertyMap<B : AbstractBufferedImageOp> internal constructor() {
      * @param properties the map of properties from a texture's post process properties for B.
      */
     @OptIn(ExperimentalReflectionOnLambdas::class)
-    fun setValues(reciever: B, properties: Map<String, JsonElement>) {
+    internal fun setValues(reciever: B, properties: Map<String, JsonElement>) {
         for ((name, element) in properties) {
             val setterType = getSetter<Any>(name)?.reflect()?.parameters?.first()?.type?.classifier ?: continue
             if (element is JsonPrimitive) {

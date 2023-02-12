@@ -22,6 +22,6 @@ interface BehaviorHolder<B : Behavior> {
     fun getAllBehaviors() : Set<B>
 }
 
-inline fun <reified B: ItemBehavior, H: BehaviorHolder<B>> H.hasBehavior() = hasBehavior(B::class)
-inline fun <reified B: ItemBehavior, H: BehaviorHolder<B>> H.getBehavior() = getBehavior(B::class)
-inline fun <reified B: ItemBehavior, H: BehaviorHolder<B>> H.getBehaviorOrNull() = getBehaviorOrNull(B::class)
+inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.hasBehavior() = hasBehavior(B::class)
+inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.getBehavior() = getBehavior(B::class)
+inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.getBehaviorOrNull() = getBehaviorOrNull(B::class)

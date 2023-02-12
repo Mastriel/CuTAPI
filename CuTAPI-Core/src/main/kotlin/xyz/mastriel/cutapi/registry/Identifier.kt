@@ -7,6 +7,7 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import org.bukkit.NamespacedKey
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.Plugin
@@ -39,7 +40,16 @@ data class Identifier internal constructor(val namespace: String, val key: Strin
     fun appendSubId(string: String) : Identifier {
         return Identifier(namespace, "$key/$string")
     }
+
+    fun toNamespacedKey() : NamespacedKey {
+        if (plugin != null) {
+            return NamespacedKey(plugin!!, key)
+        }
+        return NamespacedKey(namespace, key)
+    }
 }
+
+fun NamespacedKey.toIdentifier() = id("$namespace:$key")
 
 /**
  * An identifier, for any type of registrable object.

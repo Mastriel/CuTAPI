@@ -20,12 +20,20 @@ import xyz.mastriel.cutapi.utils.personalized.personalized
 import kotlin.reflect.KClass
 
 
-object CustomItemSerializer : IdentifiableSerializer<CustomItem>("customMaterial", CustomItem)
+object CustomItemSerializer : IdentifiableSerializer<CustomItem<*>>("customMaterial", CustomItem)
+
+/**
+ * An alias for a [CustomItem<*>](CustomItem). This has a CuTItemStack as its stack type.
+ *
+ * @see CustomItem
+ */
+typealias BasicCustomItem = CustomItem<*>
 
 @Serializable(with = CustomItemSerializer::class)
-open class CustomItem(
+open class CustomItem<TStack: CuTItemStack>(
     override val id: Identifier,
     val type: Material,
+    val stackTypeClass: KClass<out TStack>,
     descriptor: ItemDescriptor? = null
 ) : Identifiable, Listener, BehaviorHolder<ItemBehavior> {
 
@@ -52,8 +60,8 @@ open class CustomItem(
         behaviors.add(DisplayAs(autoDisplayAs))
     }
 
-    fun createItemStack(quantity: Int) =
-        CuTItemStack.create(this, quantity)
+    fun createItemStack(quantity: Int = 1) =
+        CuTItemStack.create<TStack>(this, quantity)
 
     open fun onCreate(item: CuTItemStack) {}
 
@@ -80,28 +88,26 @@ open class CustomItem(
     }
 
 
-    companion object : IdentifierRegistry<CustomItem>("Custom Items") {
+    companion object : IdentifierRegistry<CustomItem<*>>("Custom Items") {
         val Unknown = customItem(
             unknownID(),
-            Material.ANVIL) {
-            name = personalized("Unknown".colored)
+            Material.ANVIL
+        ) {
             texture = personalized { ref(Plugin, "items/unknown_item.png") }
 
             behavior(StaticLore("&cYou probably shouldn't have this...".colored))
             behavior(DisplayAs(Material.GLISTERING_MELON_SLICE))
         }
 
-        override fun get(id: Identifier): CustomItem {
+        override fun get(id: Identifier): CustomItem<*> {
             return super.getOrNull(id) ?: return Unknown
         }
 
-        override fun register(item: CustomItem) : CustomItem {
+        override fun register(item: CustomItem<*>) : CustomItem<*> {
             val plugin = item.id.plugin
 
             if (plugin != null) Bukkit.getServer().pluginManager.registerEvents(item, plugin)
             return super.register(item)
         }
-
-
     }
 }

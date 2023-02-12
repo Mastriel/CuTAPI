@@ -4,6 +4,7 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import xyz.mastriel.cutapi.Plugin
+import xyz.mastriel.cutapi.item.CuTItemStack
 import xyz.mastriel.cutapi.registry.id
 
 /**
@@ -13,7 +14,7 @@ import xyz.mastriel.cutapi.registry.id
  */
 class DisplayAs(val material: Material) : ItemBehavior(id(Plugin, "display_as")) {
 
-    override fun onRender(viewer: Player?, item: ItemStack) {
-        item.type = material
+    override fun onRender(viewer: Player?, item: CuTItemStack) {
+        item.handle.type = material
     }
 }

@@ -128,7 +128,7 @@ object CuTAPI {
     }
 
 
-    private val namespaceRegex = "[a-z0-9_]+".toRegex()
+    private val namespaceRegex = "[a-zA-Z0-9/_]+".toRegex()
     /**
      * Validate a namespace string, to ensure that it won't cause problems. See [registerPlugin]
      * for more info about namespace requirements
@@ -139,7 +139,7 @@ object CuTAPI {
      * @throws IllegalStateException If the namespace is already in use.
      * */
     internal fun requireValidNamespace(namespace: String) {
-        if (namespace.length !in 3..64) throw IllegalArgumentException("Namespace $namespace is not valid! (not within 3-64 chars)")
+        if (namespace.length !in 1..64) throw IllegalArgumentException("Namespace $namespace is not valid! (not within 1-64 chars)")
 
         if (!namespaceRegex.matches(namespace)) {
             throw IllegalArgumentException("Namespace $namespace is not valid! (does not match ${namespaceRegex.pattern})")

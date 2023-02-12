@@ -12,7 +12,7 @@ plugins {
 
 val kotlinVersion : String by properties
 group = "xyz.mastriel"
-version = "1.0"
+version = "0.0.1a"
 
 repositories {
     mavenCentral()
@@ -36,6 +36,9 @@ repositories {
 }
 
 dependencies {
+    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
+    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
+    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
     testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
     testImplementation(kotlin("test"))
     implementation("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")

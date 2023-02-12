@@ -7,7 +7,9 @@ import org.bukkit.plugin.java.JavaPluginLoader
 import org.bukkit.scheduler.BukkitRunnable
 import xyz.mastriel.cutapi.commands.CuTGiveCommand
 import xyz.mastriel.cutapi.commands.TestCommand
+import xyz.mastriel.cutapi.item.CuTItemStack
 import xyz.mastriel.cutapi.item.CustomItem
+import xyz.mastriel.cutapi.item.ItemStackUtility
 import xyz.mastriel.cutapi.item.PacketItemHandler
 import xyz.mastriel.cutapi.item.behaviors.ItemBehaviorEvents
 import xyz.mastriel.cutapi.item.bukkitevents.PlayerItemEvents
@@ -39,6 +41,11 @@ class CuTAPIPlugin : JavaPlugin {
         registerCommands()
         registerEvents()
         registerPeriodics()
+        CuTItemStack.registerType(
+            id = ItemStackUtility.DEFAULT_ITEMSTACK_TYPE_ID,
+            kClass = CuTItemStack::class,
+            constructor = CuTItemStack.CONSTRUCTOR
+        )
         CustomItem.register(CustomItem.Unknown)
         TexturePostProcessor.register(GrayscalePostProcessor)
         TexturePostProcessor.registerBuiltins()

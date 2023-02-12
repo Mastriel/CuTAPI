@@ -24,30 +24,23 @@ annotation class ItemDescriptorDsl
  */
 class ItemDescriptor internal constructor(
     /**
-     * The name of the custom material, by default.
-     *
-     * @see Component
-     */
-    val name: PersonalizedWithDefault<Component>? = null,
-    /**
      * The texture that this custom material should use, by default.
      * */
     val texture: Personalized<TextureRef>? = null,
-    val description: (DescriptionBuilder.() -> Unit)? = null,
+    val display: (DisplayBuilder.() -> Unit)? = null,
 
     /**
      * This is always actually a MutableList<ItemBehavior>, however you should
      * not modify this unless you know what you're doing.
      */
-    val itemBehaviors: List<ItemBehavior> = mutableListOf<ItemBehavior>()
+    val itemBehaviors: List<ItemBehavior> = mutableListOf()
 ) {
 
     infix fun with(block: ItemDescriptorBuilder.() -> Unit) : ItemDescriptor {
         val other = ItemDescriptorBuilder().apply(block).build()
         return itemDescriptor {
-            name = other.name ?: this@ItemDescriptor.name
             texture = other.texture ?: this@ItemDescriptor.texture
-            description = other.description ?: this@ItemDescriptor.description
+            display = other.display ?: this@ItemDescriptor.display
 
             itemBehaviors.addAll(this@ItemDescriptor.itemBehaviors)
 
@@ -70,10 +63,9 @@ class ItemDescriptor internal constructor(
  * @see ItemDescriptor
  */
 @ItemDescriptorDsl
-class ItemDescriptorBuilder internal constructor() {
-    var name: PersonalizedWithDefault<Component>? = null
+class ItemDescriptorBuilder {
     var texture: Personalized<TextureRef>? = null
-    var description: (DescriptionBuilder.() -> Unit)? = {
+    var display: (DisplayBuilder.() -> Unit)? = {
         emptyLine()
         behaviorLore(Color.Blue)
     }
@@ -98,42 +90,46 @@ class ItemDescriptorBuilder internal constructor() {
 
     fun build(): ItemDescriptor {
         return ItemDescriptor(
-            name = name,
-            description = description,
+            display = display,
             texture = texture,
             itemBehaviors = itemBehaviors
         )
     }
 
-    fun description(block: DescriptionBuilder.() -> Unit) {
-        description = block
+    fun display(block: DisplayBuilder.() -> Unit) {
+        display = block
     }
 
-    fun noDescription() {
-        description = {}
+    fun noDisplay() {
+        display = {}
     }
 }
 
 /**
- * A class for creating dynamic descriptions for [CuTItemStack]s.
+ * A class for creating dynamic displays (lore, name) for [CuTItemStack]s.
  * Whenever the server sends an ItemStack to the client for any reason, this will be
  * applied to it.
  */
 @ItemDescriptorDsl
-open class DescriptionBuilder(val itemStack: CuTItemStack, val viewer: Player?) :
+open class DisplayBuilder(val itemStack: CuTItemStack, val viewer: Player?) :
     BehaviorHolder<ItemBehavior> by itemBehaviorHolder(itemStack.type) {
 
     val type get() = itemStack.type
 
     private val lines = mutableListOf<Component>()
+    var name : Component? = null
 
     /**
      * Adds a Component to this item description.
      *
      * @param component
      */
-    fun textComponent(component: Component) {
-        lines += component
+    fun text(vararg components: Component) {
+        lines += components
+    }
+
+    fun text(components: Collection<Component>) {
+        lines += components
     }
 
     /**

@@ -9,7 +9,6 @@ import xyz.mastriel.brazil.Plugin
 import xyz.mastriel.brazil.behaviors.DisableOffhand
 import xyz.mastriel.brazil.behaviors.Soulbound
 import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.item.ItemDescriptor
 import xyz.mastriel.cutapi.item.behaviors.DisplayAs
 import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.item.behaviors.StaticLore
@@ -25,7 +24,6 @@ import xyz.mastriel.cutapi.utils.playSound
 import kotlin.random.Random
 
 val ShinyKnife = customItem(id(Plugin, "shiny_knife"), Material.IRON_SWORD) {
-    name = personalized("&fShiny Knife".colored)
     texture = personalized( ref(Plugin, "textures/rivers_of_blood.png") )
 
     behavior(
@@ -37,14 +35,15 @@ val ShinyKnife = customItem(id(Plugin, "shiny_knife"), Material.IRON_SWORD) {
         DisplayAs(Material.GLISTERING_MELON_SLICE)
     )
 
-    description {
+    display {
+        name = "&fShiny Knife".colored
         val damager = getBehavior<ShinyKnifeDamager>()
         if (damager.getDeathChance(itemStack) < 1.0) {
-            textComponent("&7A very, very shiny knife. You can".colored)
-            textComponent("&7even see your own reflection!".colored)
+            text("&7A very, very shiny knife. You can".colored)
+            text("&7even see your own reflection!".colored)
         } else {
-            textComponent("&7A dulled knife. You can no longer".colored)
-            textComponent("&7view your own reflection.".colored)
+            text("&7A dulled knife. You can no longer".colored)
+            text("&7view your own reflection.".colored)
         }
         emptyLine()
         behaviorLore(Color.Elethium)
@@ -67,7 +66,7 @@ class ShinyKnifeDamager : ItemBehavior(id(Plugin, "shiny_knife_damager")) {
         if (killsPlayer && !attackerIsInCreativeMode) {
             attacker.health = 0.0
             event.isCancelled = true
-            attacker.sendMessage("&c&oYou were holding the knife backwards...".colored)
+            attacker.sendMessage("&c&oYou were holding the knife backwards dumbass...".colored)
             return
         }
 

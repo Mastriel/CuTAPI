@@ -11,7 +11,7 @@ import xyz.mastriel.cutapi.pdc.setPrimitiveValue
 import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
 import xyz.mastriel.cutapi.registry.Identifier
 
-class ItemBehaviorTagContainer(private val itemStack: ItemStack, componentId: Identifier) : TagContainer() {
+class ItemBehaviorTagContainer(private val itemStack: ItemStack, componentId: Identifier) : TagContainer {
 
     private val key = componentId.toString().replace(':', '.')
 

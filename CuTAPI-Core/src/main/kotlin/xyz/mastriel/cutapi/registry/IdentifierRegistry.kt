@@ -48,7 +48,24 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      *
      * @return A set of the [Identifier]s.
      */
-    fun getAllIds(): Set<Identifier> {
+    open fun getAllIds(): Set<Identifier> {
         return values.keys
     }
+
+    /**
+     * Get all the used IDs of this map.
+     *
+     * @return A set of the [Identifier]s.
+     */
+    open fun getAllValues(): Set<T> {
+        return values.values.toSet()
+    }
+
+    /**
+     *
+     */
+    open fun has(id: Identifier?) : Boolean {
+        return id in values.keys
+    }
+
 }

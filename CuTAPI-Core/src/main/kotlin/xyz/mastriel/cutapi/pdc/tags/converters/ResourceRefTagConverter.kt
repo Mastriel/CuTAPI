@@ -12,6 +12,7 @@ class ResourceRefTagConverter<T: ResourceWithMeta<*>> :
         return ref(id(primitive))
     }
 
+
     @Deprecated("Use other overload for better type safety.",
         replaceWith = ReplaceWith("toPrimitive(complex: ResourceReference<T>)"),
         level = DeprecationLevel.HIDDEN)
@@ -20,6 +21,7 @@ class ResourceRefTagConverter<T: ResourceWithMeta<*>> :
     }
 
     @Suppress("DEPRECATION")
+    @JvmName("safeToPrimitive")
     fun toPrimitive(complex: ResourceReference<T>): String {
         return (this as TagConverter<String, ResourceReference<*>>).toPrimitive(complex as ResourceReference<*>)
     }

@@ -7,7 +7,7 @@ import xyz.mastriel.cutapi.pdc.getPrimitiveValue
 import xyz.mastriel.cutapi.pdc.setPrimitiveValue
 import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
 
-open class ItemTagContainer(private val itemStack: ItemStack) : TagContainer() {
+open class ItemTagContainer(private val itemStack: ItemStack) : TagContainer {
 
 
     override fun <P: Any, C: Any> set(key: String, complexValue: C?, converter: TagConverter<P, C>) {

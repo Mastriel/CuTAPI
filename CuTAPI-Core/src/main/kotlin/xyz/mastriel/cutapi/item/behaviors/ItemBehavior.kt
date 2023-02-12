@@ -47,7 +47,7 @@ abstract class ItemBehavior(
      * @param item A normal ItemStack which will only be sent to the client, and will not reflect
      * the "real" properties of the respective CuTItemStack if it is changed.
      */
-    open fun onRender(viewer: Player?, item: ItemStack) {}
+    open fun onRender(viewer: Player?, item: CuTItemStack) {}
 
     open fun onTickInEitherHand(player: Player, item: CuTItemStack) {}
     open fun onTickInInventory(player: Player, item: CuTItemStack) {}

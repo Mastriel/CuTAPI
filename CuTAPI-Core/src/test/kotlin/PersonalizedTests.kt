@@ -36,7 +36,7 @@ class PersonalizedTests {
         assertEquals(personalized withViewer player, 40L,
             "Personalized.alterResult does not change withViewer value")
 
-        constantPersonalizedWithDefault = constantPersonalizedWithDefault alterResult { _, long ->
+        constantPersonalizedWithDefault = constantPersonalizedWithDefault alterResult { long ->
             long + 20
         }
 
@@ -45,7 +45,7 @@ class PersonalizedTests {
         assertEquals(constantPersonalizedWithDefault.getDefault(), 20L,
             "ConstantPersonalizedWithDefault.alterResult changes getDefault value")
 
-        childPersonalizedWithDefault = childPersonalizedWithDefault alterResult { _, long ->
+        childPersonalizedWithDefault = childPersonalizedWithDefault alterResult { long ->
             long + 20
         }
 
