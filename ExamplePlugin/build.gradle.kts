@@ -10,7 +10,7 @@ plugins {
 
 val kotlinVersion : String by properties
 group = "xyz.mastriel"
-version = "1.0"
+version = "0.0.1a"
 
 repositories {
     mavenCentral()
