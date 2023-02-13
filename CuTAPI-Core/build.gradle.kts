@@ -12,7 +12,7 @@ plugins {
 
 val kotlinVersion : String by properties
 group = "xyz.mastriel"
-version = "0.0.1a"
+version = "0.0.2a"
 
 repositories {
     mavenCentral()
@@ -57,6 +57,7 @@ dependencies {
 
 tasks.withType<ShadowJar> {
     configurations = listOf(project.configurations.shadow.get())
+    archiveFileName.set("CuTAPI-v${archiveVersion.get()}.jar")
 }
 
 
