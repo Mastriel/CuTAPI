@@ -37,21 +37,18 @@ repositories {
 
 dependencies {
     testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
-    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
-    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
-    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
     testImplementation(kotlin("test"))
     implementation("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")
     implementation("com.comphenix.protocol:ProtocolLib:5.0.0-SNAPSHOT")
 
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
-    compileOnly("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    shadow("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
+    shadow("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
+    shadow("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
+    shadow("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
+    shadow("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 
-    compileOnly("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.6.0")
-    compileOnly("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.6.0")
+    shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.6.0")
+    shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.6.0")
 }
 
 
