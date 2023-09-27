@@ -1,6 +1,7 @@
 package xyz.mastriel.cutapi.registry
 
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Polymorphic
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -30,5 +31,3 @@ open class IdentifiableSerializer<T: Identifiable>(val serialName: String, val m
         encoder.encodeString(identifier)
     }
 }
-
-

@@ -25,3 +25,7 @@ interface BehaviorHolder<B : Behavior> {
 inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.hasBehavior() = hasBehavior(B::class)
 inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.getBehavior() = getBehavior(B::class)
 inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.getBehaviorOrNull() = getBehaviorOrNull(B::class)
+
+inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.getBehaviorsOfType() : List<B> {
+    return this.getAllBehaviors().filterIsInstance<B>()
+}

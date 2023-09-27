@@ -111,6 +111,4 @@ object IdentifierSerializer : KSerializer<Identifier> {
     override fun serialize(encoder: Encoder, value: Identifier) {
         encoder.encodeString(value.toString())
     }
-
-
 }

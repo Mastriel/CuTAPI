@@ -6,6 +6,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerQuitEvent
 import kotlin.reflect.KClass
 
+@Deprecated("Bad design")
 object PlayerComponentManager : Listener {
 
     private val components = mutableMapOf<Player, MutableSet<PlayerComponent>>()

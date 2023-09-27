@@ -18,6 +18,7 @@ private typealias PlayerStateCtor = (UUID) -> PlayerModule
  * A PlayerComponent can be read/written to a player, and is managed by the implementor.
  * A PlayerState is managed by the server, and can only be read.
  */
+@Deprecated("Bad design")
 object PlayerModuleManager : Listener {
 
     private data class PlayerStateClass(

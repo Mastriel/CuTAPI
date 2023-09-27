@@ -12,6 +12,7 @@ import java.util.*
  *
  * @see PlayerModuleManager
  */
+@Deprecated("Bad design")
 interface PlayerModule {
 
     val uuid: UUID

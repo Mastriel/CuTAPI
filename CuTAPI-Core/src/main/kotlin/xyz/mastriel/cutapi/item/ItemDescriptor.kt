@@ -46,7 +46,7 @@ class ItemDescriptor internal constructor(
 
             for (otherBehavior in other.itemBehaviors) {
                 val behaviorCollision = itemBehaviors.any { it.id == otherBehavior.id }
-                if (behaviorCollision) {
+                if (behaviorCollision && !otherBehavior.isRepeatable()) {
                     itemBehaviors.removeIf { it.id == otherBehavior.id }
                 }
                 behavior(otherBehavior)
