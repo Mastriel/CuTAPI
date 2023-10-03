@@ -10,7 +10,7 @@ import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.pdc.getPrimitiveValue
 import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
 
-open class BlockTagContainer(val block : Block) : TagContainer {
+open class BlockDataTagContainer(val block : Block) : TagContainer {
 
     val location : Location get() = block.location
     val chunk : Chunk get() = block.chunk
@@ -54,6 +54,6 @@ open class BlockTagContainer(val block : Block) : TagContainer {
     }
 
     private fun getBlockKey() : NamespacedKey {
-        return NamespacedKey(Plugin, "CuTBlock/${block.x}/${block.y}/${block.z}")
+        return NamespacedKey(Plugin, "CuTBlockData/${block.x}/${block.y}/${block.z}")
     }
 }

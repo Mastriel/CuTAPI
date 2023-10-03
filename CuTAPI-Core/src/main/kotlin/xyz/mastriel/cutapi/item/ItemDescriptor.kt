@@ -10,7 +10,6 @@ import xyz.mastriel.cutapi.resourcepack.resourcetypes.TextureRef
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.Personalized
-import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 
 
 @DslMarker
@@ -27,7 +26,7 @@ class ItemDescriptor internal constructor(
      * The texture that this custom material should use, by default.
      * */
     val texture: Personalized<TextureRef>? = null,
-    val display: (DisplayBuilder.() -> Unit)? = null,
+    val display: (ItemDisplayBuilder.() -> Unit)? = null,
 
     /**
      * This is always actually a MutableList<ItemBehavior>, however you should
@@ -38,6 +37,10 @@ class ItemDescriptor internal constructor(
 
     infix fun with(block: ItemDescriptorBuilder.() -> Unit) : ItemDescriptor {
         val other = ItemDescriptorBuilder().apply(block).build()
+        return this + other
+    }
+
+    operator fun plus(other: ItemDescriptor) : ItemDescriptor {
         return itemDescriptor {
             texture = other.texture ?: this@ItemDescriptor.texture
             display = other.display ?: this@ItemDescriptor.display
@@ -52,7 +55,6 @@ class ItemDescriptor internal constructor(
                 behavior(otherBehavior)
             }
         }
-
     }
 }
 
@@ -65,7 +67,7 @@ class ItemDescriptor internal constructor(
 @ItemDescriptorDsl
 class ItemDescriptorBuilder {
     var texture: Personalized<TextureRef>? = null
-    var display: (DisplayBuilder.() -> Unit)? = {
+    var display: (ItemDisplayBuilder.() -> Unit)? = {
         emptyLine()
         behaviorLore(Color.Blue)
     }
@@ -96,7 +98,7 @@ class ItemDescriptorBuilder {
         )
     }
 
-    fun display(block: DisplayBuilder.() -> Unit) {
+    fun display(block: ItemDisplayBuilder.() -> Unit) {
         display = block
     }
 
@@ -106,12 +108,12 @@ class ItemDescriptorBuilder {
 }
 
 /**
- * A class for creating dynamic displays (lore, name) for [CuTItemStack]s.
+ * A class for creating dynamic displays (lore, name, etc.) for [CuTItemStack]s.
  * Whenever the server sends an ItemStack to the client for any reason, this will be
  * applied to it.
  */
 @ItemDescriptorDsl
-open class DisplayBuilder(val itemStack: CuTItemStack, val viewer: Player?) :
+open class ItemDisplayBuilder(val itemStack: CuTItemStack, val viewer: Player?) :
     BehaviorHolder<ItemBehavior> by itemBehaviorHolder(itemStack.type) {
 
     val type get() = itemStack.type
@@ -122,7 +124,7 @@ open class DisplayBuilder(val itemStack: CuTItemStack, val viewer: Player?) :
     /**
      * Adds a Component to this item description.
      *
-     * @param component
+     * @param components The component(s) being added to this item's description.
      */
     fun text(vararg components: Component) {
         lines += components

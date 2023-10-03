@@ -10,7 +10,7 @@ data class CuTMeta(
     val usedFor : UsedFor? = UsedFor.ANY,
 
     @SerialName("resource_file")
-    val resourceFilePath : String? = null,
+    val resourceFilePaths : List<String> = listOf(),
 
     @SerialName("applies_to")
     val appliesTo : List<String> = emptyList(),

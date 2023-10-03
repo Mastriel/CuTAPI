@@ -90,8 +90,11 @@ class CuTAPIPlugin : JavaPlugin {
     private fun registerEvents() {
         server.pluginManager.registerEvents(PlayerItemEvents, this)
         server.pluginManager.registerEvents(CustomItemEvents(), this)
-        server.pluginManager.registerEvents(ItemBehaviorEvents(), this)
         server.pluginManager.registerEvents(PacketItemHandler, this)
+
+        val itemBehaviorEvents = ItemBehaviorEvents()
+        server.pluginManager.registerEvents(itemBehaviorEvents, this)
+        CuTAPI.periodicManager.register(itemBehaviorEvents)
     }
 
     private fun registerCommands() {

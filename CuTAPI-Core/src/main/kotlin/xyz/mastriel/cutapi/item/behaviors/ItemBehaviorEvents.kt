@@ -7,11 +7,14 @@ import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerSwapHandItemsEvent
 import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.item.events.CustomItemObtainEvent
+import xyz.mastriel.cutapi.periodic.Periodic
+import xyz.mastriel.cutapi.utils.onlinePlayers
 
 class ItemBehaviorEvents : Listener {
 
@@ -33,6 +36,17 @@ class ItemBehaviorEvents : Listener {
                 event.action.isLeftClick -> it.onLeftClick(event.player, customItem, event)
                 event.action.isRightClick -> it.onRightClick(event.player, customItem, event)
             }
+        }
+    }
+
+    @EventHandler
+    fun onInteract(event: PlayerDropItemEvent) {
+        val item = event.itemDrop.itemStack
+        if (!item.isCustom) return
+        val customItem = item.wrap()
+
+        customItem?.getAllBehaviors()?.forEach {
+            it.onDrop(event.player, customItem, event)
         }
     }
 
@@ -74,6 +88,32 @@ class ItemBehaviorEvents : Listener {
 
         customItem.getAllBehaviors().forEach {
             it.onDamageEntity(damager, victim, customItem, event)
+        }
+    }
+
+    /**
+     * Deals with onTick... functions for [ItemBehavior]. Ran once per tick.
+     */
+    @Periodic(1)
+    fun tickEvents() {
+        for (player in onlinePlayers()) {
+            player.inventory.mapIndexedNotNull { index, itemStack -> itemStack.wrap() to index }
+                .filter { it.first != null }
+                .forEach { it.first!!.getAllBehaviors().forEach { b -> b.onTickInInventory(player, it.first!!, it.second) } }
+
+            val mainHand = player.inventory.itemInMainHand.wrap()
+            mainHand?.getAllBehaviors()?.forEach { b -> b.onTickInEitherHand(player, mainHand, HandSlot.MAIN_HAND) }
+
+            val offHand = player.inventory.itemInOffHand.wrap()
+            offHand?.getAllBehaviors()?.forEach { b -> b.onTickInEitherHand(player, offHand, HandSlot.OFF_HAND) }
+
+            val armorList = player.inventory.run { listOf(helmet, chestplate, leggings, boots) }
+            val slotList = ArmorSlot.values()
+
+            for ((i, piece) in armorList.withIndex()) {
+                val wrappedPiece = piece?.wrap()
+                wrappedPiece?.getAllBehaviors()?.forEach { b -> b.onTickEquipped(player, wrappedPiece, slotList[i]) }
+            }
         }
     }
 }

@@ -11,8 +11,6 @@ import xyz.mastriel.cutapi.registry.IdentifierRegistry
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
-import xyz.mastriel.cutapi.utils.personalized.or
-import xyz.mastriel.cutapi.utils.personalized.personalized
 import xyz.mastriel.cutapi.utils.personalized.withViewer
 
 open class ActiveSpellItem(
@@ -61,7 +59,7 @@ open class ActiveSpellItem(
     }
 
 
-    internal fun setLore(builder: DisplayBuilder, color: Color) {
+    internal fun setLore(builder: ItemDisplayBuilder, color: Color) {
         builder.apply {
             emptyLine()
             val lore = getLore(itemStack, viewer) ?: listOf("A basic spell.".colored)

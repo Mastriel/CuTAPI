@@ -6,6 +6,7 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/CuTAPI-Core/CuTAPI.CuTAPI-Core.test.iml" filepath="$PROJECT_DIR$/.idea/modules/CuTAPI-Core/CuTAPI.CuTAPI-Core.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/ExamplePlugin/CuTAPI.ExamplePlugin.main.iml" filepath="$PROJECT_DIR$/.idea/modules/ExamplePlugin/CuTAPI.ExamplePlugin.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/ExamplePlugin/CuTAPI.ExamplePlugin.test.iml" filepath="$PROJECT_DIR$/.idea/modules/ExamplePlugin/CuTAPI.ExamplePlugin.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/CuTAPI.main.iml" filepath="$PROJECT_DIR$/.idea/modules/CuTAPI.main.iml" />
     </modules>
   </component>
 </project>

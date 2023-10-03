@@ -10,11 +10,12 @@ import xyz.mastriel.cutapi.resourcepack.resourcetypes.TextureRef
 import xyz.mastriel.cutapi.utils.personalized.Personalized
 import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 
-open class EntityDescriptor(
-    open val name: PersonalizedWithDefault<Component>? = null,
-    open val texture: Personalized<TextureRef>? = null,
-    open val maxHealth: Int = 20,
-    open val entityBehaviors: List<EntityBehavior> = listOf()
+class EntityDescriptor(
+    val name: PersonalizedWithDefault<Component>? = null,
+    val texture: Personalized<TextureRef>? = null,
+    val maxHealth: Int = 20,
+    val entityBehaviors: List<EntityBehavior> = listOf(),
+    val equipment: EntityEquipment
 ) {
 
 }
@@ -25,7 +26,7 @@ open class EntityDescriptorBuilder {
     var maxHealth: Int = 20
     var texture : Personalized<TextureRef>? = null
 
-    var equipment : EntityEquipment? = null
+    var equipment : EntityEquipment = EntityEquipment()
         private set
 
     val entityBehaviors = mutableListOf<EntityBehavior>()
@@ -55,7 +56,8 @@ open class EntityDescriptorBuilder {
             name,
             texture,
             maxHealth,
-            entityBehaviors
+            entityBehaviors,
+            equipment
         )
     }
 }

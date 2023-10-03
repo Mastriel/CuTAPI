@@ -64,7 +64,7 @@ internal object PacketItemHandler : PacketListener, Listener {
 
     }
 
-    @Periodic(ticks = 10, asyncThread = false)
+    @Periodic(ticks = 5, asyncThread = false)
     fun updatePlayerItems()  {
         for (player in Bukkit.getOnlinePlayers().filterNotNull()) {
 
@@ -74,10 +74,12 @@ internal object PacketItemHandler : PacketListener, Listener {
         }
     }
 
+    /*
     @EventHandler
     fun onItemClick(e: InventoryClickEvent) {
-        e.viewers.forEach{
+        e.viewers.forEach {
             it.sendMessage("Bukkit: ${e.slot} | Notchian: ${e.rawSlot} | Type: ${e.clickedInventory?.type}")
         }
     }
+    */
 }

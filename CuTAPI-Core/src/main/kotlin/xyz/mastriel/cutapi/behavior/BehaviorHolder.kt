@@ -22,10 +22,19 @@ interface BehaviorHolder<B : Behavior> {
     fun getAllBehaviors() : Set<B>
 }
 
-inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.hasBehavior() = hasBehavior(B::class)
-inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.getBehavior() = getBehavior(B::class)
-inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.getBehaviorOrNull() = getBehaviorOrNull(B::class)
+inline fun <reified B: Behavior> BehaviorHolder<B>.hasBehavior() = hasBehavior(B::class)
+inline fun <reified B: Behavior> BehaviorHolder<B>.getBehavior() = getBehavior(B::class)
+inline fun <reified B: Behavior> BehaviorHolder<B>.getBehaviorOrNull() = getBehaviorOrNull(B::class)
 
-inline fun <reified B: ItemBehavior> BehaviorHolder<ItemBehavior>.getBehaviorsOfType() : List<B> {
+inline fun <reified B: Behavior> BehaviorHolder<*>.getBehaviorsOfType() : List<B> {
     return this.getAllBehaviors().filterIsInstance<B>()
+}
+
+
+/**
+ * @throws IllegalStateException if this is not a repeatable behavior and it's already in the holder.
+ */
+inline fun BehaviorHolder<*>.requireRepeatableIfExists(behavior: Behavior) {
+    if (this.getAllBehaviors().any { it.id == behavior.id } && !behavior.isRepeatable())
+        error("${behavior.id} lacks a RepeatableBehavior annotation to be repeatable.")
 }
