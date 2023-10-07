@@ -91,8 +91,7 @@ object CuTAPI {
      * @returns true if the plugin is registered, false otherwise.
      */
     fun isRegistered(plugin: Plugin) : Boolean {
-        if (plugin in plugins) return true
-        return false
+        return plugin in plugins
     }
 
     /**

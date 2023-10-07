@@ -2,7 +2,6 @@ package xyz.mastriel.cutapi.resourcepack.management
 
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.resourcepack.DistinctMetaFile
 import xyz.mastriel.cutapi.resourcepack.data.CuTMeta
 import xyz.mastriel.cutapi.resourcepack.generator.PackGenerationException
 import xyz.mastriel.cutapi.utils.appendPath
