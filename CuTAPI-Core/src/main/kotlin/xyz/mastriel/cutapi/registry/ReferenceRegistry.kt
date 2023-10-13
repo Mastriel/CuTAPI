@@ -4,6 +4,8 @@ import xyz.mastriel.cutapi.Plugin
 import kotlin.reflect.KClass
 import kotlin.reflect.full.companionObjectInstance
 
+// what the fuck is this
+// -Mastriel (who also wrote this)
 open class ReferenceRegistry <T: Any> {
     protected val values = mutableMapOf<Identifier, KClass<out T>>()
 

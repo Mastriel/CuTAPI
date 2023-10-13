@@ -14,6 +14,7 @@ import xyz.mastriel.cutapi.item.PacketItemHandler
 import xyz.mastriel.cutapi.item.behaviors.ItemBehaviorEvents
 import xyz.mastriel.cutapi.item.bukkitevents.PlayerItemEvents
 import xyz.mastriel.cutapi.item.events.CustomItemEvents
+import xyz.mastriel.cutapi.resourcepack.ResourceLoader
 import xyz.mastriel.cutapi.resourcepack.generator.PackGenerationException
 import xyz.mastriel.cutapi.resourcepack.postprocess.GrayscalePostProcessor
 import xyz.mastriel.cutapi.resourcepack.postprocess.TexturePostProcessor
@@ -49,6 +50,8 @@ class CuTAPIPlugin : JavaPlugin {
         CustomItem.register(CustomItem.Unknown)
         TexturePostProcessor.register(GrayscalePostProcessor)
         TexturePostProcessor.registerBuiltins()
+
+        ResourceLoader.spliterator()
 
         registerPacketListeners()
 
