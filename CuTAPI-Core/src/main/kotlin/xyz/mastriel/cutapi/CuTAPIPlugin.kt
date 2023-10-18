@@ -51,8 +51,6 @@ class CuTAPIPlugin : JavaPlugin {
         TexturePostProcessor.register(GrayscalePostProcessor)
         TexturePostProcessor.registerBuiltins()
 
-        ResourceFileLoader.spliterator()
-
         registerPacketListeners()
 
         registerResourceTypes()

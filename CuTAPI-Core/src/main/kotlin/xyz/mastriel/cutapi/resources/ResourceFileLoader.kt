@@ -14,7 +14,7 @@ import java.io.File
 private typealias ResourceLoaderFunction<T> = (ref: ResourceRef<T>, data: ByteArray, metadata: ByteArray) -> T?
 
 fun interface ResourceFileLoader<T : Resource> {
-    fun loadResource(ref: ResourceRef<T>, data: ByteArray, metadata: ByteArray): T?
+    fun loadResource(ref: ResourceRef<T>, data: ByteArray, metadata: ByteArray?): T?
 
     companion object : ListRegistry<ResourceFileLoader<*>>("Resource File Loaders")
 }
@@ -28,14 +28,14 @@ fun interface ResourceFileLoader<T : Resource> {
 fun <T : Resource, M : CuTMeta> autoResourceFileLoader(
     vararg extensions: String,
     metadataSerializer: KSerializer<M>,
-    func: (ref: ResourceRef<*>, data: ByteArray, metadata: M) -> T
+    func: (ref: ResourceRef<*>, data: ByteArray, metadata: M?) -> T
 ) : ResourceFileLoader<T> {
 
     return ResourceFileLoader { ref, data, metadataBytes ->
         if (ref.extension in extensions) {
-            val metadataText = metadataBytes.toString(Charsets.UTF_8)
+            val metadataText = metadataBytes?.toString(Charsets.UTF_8)
             try {
-                val parsedMetadata = CuTAPI.toml.decodeFromString(metadataSerializer, metadataText)
+                val parsedMetadata = metadataText?.let { CuTAPI.toml.decodeFromString(metadataSerializer, it) }
                 return@ResourceFileLoader func(ref, data, parsedMetadata)
             } catch (e: IllegalArgumentException) {
                 Plugin.error("Metadata of $ref is not valid. Skipping! " + e.message)

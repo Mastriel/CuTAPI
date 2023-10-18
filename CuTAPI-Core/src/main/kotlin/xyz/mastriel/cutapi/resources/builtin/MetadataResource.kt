@@ -1,6 +1,7 @@
 package xyz.mastriel.cutapi.resources.builtin
 
 import kotlinx.serialization.KSerializer
+import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.resources.Resource
 import xyz.mastriel.cutapi.resources.ResourceFileLoader
 import xyz.mastriel.cutapi.resources.ResourceRef
@@ -17,8 +18,13 @@ open class MetadataResource<M : CuTMeta>(
 }
 
 
-fun <M: CuTMeta> metadataResourceFileLoader(serializer: KSerializer<MetadataResource<M>>) : ResourceFileLoader<MetadataResource<M>> {
-    return ResourceFileLoader<M> {
-
+fun <M: CuTMeta> metadataResourceFileLoader(extensions: Collection<String>, serializer: KSerializer<M>) : ResourceFileLoader<MetadataResource<M>> {
+    return ResourceFileLoader { ref, data, _ ->
+        if (ref.extension in extensions) {
+            val textMetadata = data.toString(Charsets.UTF_8)
+            val parsedMetadata = CuTAPI.toml.decodeFromString(serializer, textMetadata)
+            return@ResourceFileLoader MetadataResource(ref, parsedMetadata)
+        }
+        null
     }
 }
