@@ -1,9 +1,9 @@
 package xyz.mastriel.cutapi.pdc.tags.converters
 
 import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.resourcepack.management.ResourceReference
-import xyz.mastriel.cutapi.resourcepack.management.ResourceWithMeta
-import xyz.mastriel.cutapi.resourcepack.management.ref
+import xyz.mastriel.cutapi.resources.management.ResourceReference
+import xyz.mastriel.cutapi.resources.management.ResourceWithMeta
+import xyz.mastriel.cutapi.resources.management.ref
 
 class ResourceRefTagConverter<T: ResourceWithMeta<*>> :
     TagConverter<String, ResourceReference<*>>(String::class, ResourceReference::class) {

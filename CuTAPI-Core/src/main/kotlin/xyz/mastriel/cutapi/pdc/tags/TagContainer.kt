@@ -5,8 +5,6 @@ import org.bukkit.OfflinePlayer
 import xyz.mastriel.cutapi.item.CustomItem
 import xyz.mastriel.cutapi.pdc.tags.converters.*
 import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.resourcepack.management.ResourceReference
-import xyz.mastriel.cutapi.resourcepack.management.ResourceWithMeta
 import java.util.*
 
 interface TagContainer {
@@ -164,13 +162,6 @@ inline fun <reified T : Any> TagContainer.objectTag(key: String, default: T, ser
 inline fun <reified T : Any> TagContainer.nullableObjectTag(key: String, default: T?, serializer: KSerializer<T>) =
     NullableTag(key, this, default, ObjectTagConverter(T::class, serializer))
 
-inline fun <reified T: ResourceWithMeta<*>> TagContainer.resourceRefTag(key: String, default: ResourceReference<T>) =
-    NotNullTag(key, this, default, ResourceRefTagConverter<T>())
-
-inline fun <reified T: ResourceWithMeta<*>> TagContainer.nullableResourceRefTag(
-    key: String, default: ResourceReference<T>? = null) =
-    NullableTag(key, this, default, ResourceRefTagConverter<T>())
-
 inline fun <reified T: Enum<T>> TagContainer.setEnum(key: String, value: T? = null) =
     set(key, value, EnumTagConverter(T::class))
 inline fun <reified T: Enum<T>> TagContainer.getEnum(key: String) =
@@ -180,4 +171,3 @@ inline fun <reified T: Any> TagContainer.setObject(key: String, value: T? = null
     set(key, value, ObjectTagConverter(T::class, serializer))
 inline fun <reified T: Any> TagContainer.getObject(key: String, serializer: KSerializer<T>) =
     get(key, ObjectTagConverter(T::class, serializer))
-

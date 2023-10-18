@@ -16,7 +16,7 @@ import xyz.mastriel.cutapi.item.customItem
 import xyz.mastriel.cutapi.pdc.tags.getDouble
 import xyz.mastriel.cutapi.pdc.tags.setDouble
 import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.resourcepack.management.ref
+import xyz.mastriel.cutapi.resources.management.ref
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.personalized

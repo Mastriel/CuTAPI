@@ -2,7 +2,6 @@ package xyz.mastriel.cutapi.utils
 
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.resourcepack.management.path
 import java.io.File
 
 /**
@@ -30,9 +29,3 @@ fun File.createAndWrite(text: String) {
 fun File.mkdirsOfParent() {
     File(parent).mkdirs()
 }
-
-fun pathFromFile(plugin: Plugin, file: File) =
-    file.getPathMinusFolder(CuTAPI.resourceManager.getResourcesFolder(plugin)).replace("\\", "/")
-
-fun resourcePathFromFile(plugin: Plugin, file: File) =
-    path(plugin, file.getPathMinusFolder(CuTAPI.resourceManager.getResourcesFolder(plugin)).replace("\\", "/"))

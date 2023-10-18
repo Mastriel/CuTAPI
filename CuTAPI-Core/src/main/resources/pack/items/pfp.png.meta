@@ -1,0 +1,23 @@
+
+res_id = "cutapi:texture2d"
+
+[[post_processors]]
+
+
+[[generate]]
+    id = "cutapi:generate_postprocess"
+    postprocess = "cutapi:grayscale"
+    res_subid = "locked"
+
+    [generate.options]
+        gray_percentage = 0.7
+
+
+[[generate]]
+    id = "cutapi:generate_postprocess"
+    postprocess = "cutapi:black_and_white"
+    res_subid = "bnw"
+
+    [generate.options]
+        threshold = 0.5
+

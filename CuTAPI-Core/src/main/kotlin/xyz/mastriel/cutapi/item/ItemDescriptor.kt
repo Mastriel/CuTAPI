@@ -6,7 +6,7 @@ import xyz.mastriel.cutapi.behavior.BehaviorHolder
 import xyz.mastriel.cutapi.behavior.isRepeatable
 import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.item.behaviors.itemBehaviorHolder
-import xyz.mastriel.cutapi.resourcepack.resourcetypes.TextureRef
+import xyz.mastriel.cutapi.resources.resourcetypes.TextureRef
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.Personalized

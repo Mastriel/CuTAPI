@@ -17,7 +17,8 @@ data class PluginDescriptor internal constructor(
 
 data class PluginOptions internal constructor(
     val packFolder: String = "pack",
-    val autoDisplayAsForTexturedItems : Material? = null
+    val autoDisplayAsForTexturedItems : Material? = null,
+    val strictResourceLoading : Boolean = false
 )
 
 class PluginOptionsBuilder {
@@ -32,11 +33,22 @@ class PluginOptionsBuilder {
      * If not null, this will automatically add the [DisplayAs][xyz.mastriel.cutapi.item.behaviors.DisplayAs]
      * component to any custom item with a texture specified. This will also add this Material to all textures
      * .cutmeta files.
+     *
+     * `null` by default.
      */
     var autoDisplayAsForTexturedItems : Material? = null
 
+    /**
+     * When true, if a resource is attempted to be loaded from a file and that operation fails, then your plugin
+     * will be disabled. Otherwise, an error will be logged and everything will continue as normal (minus that resource,
+     * of course).
+     *
+     * `false` by default
+     */
+    var strictResourceLoading : Boolean = false
+
     fun build() : PluginOptions {
-        return PluginOptions(packFolder, autoDisplayAsForTexturedItems)
+        return PluginOptions(packFolder, autoDisplayAsForTexturedItems, strictResourceLoading)
     }
 }
 

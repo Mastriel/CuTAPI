@@ -19,6 +19,10 @@ open class ListRegistry <T: Any>(val name: String) : Iterable<T> {
         Plugin.info("[REGISTRY] A ${name ?: item::class.qualifiedName} added to '${name}'.")
     }
 
+    open operator fun plusAssign(item: T) {
+        register(item)
+    }
+
     /**
      * Get all the registered items in this list.
      *

@@ -14,12 +14,12 @@ import xyz.mastriel.cutapi.item.PacketItemHandler
 import xyz.mastriel.cutapi.item.behaviors.ItemBehaviorEvents
 import xyz.mastriel.cutapi.item.bukkitevents.PlayerItemEvents
 import xyz.mastriel.cutapi.item.events.CustomItemEvents
-import xyz.mastriel.cutapi.resourcepack.ResourceLoader
-import xyz.mastriel.cutapi.resourcepack.generator.PackGenerationException
-import xyz.mastriel.cutapi.resourcepack.postprocess.GrayscalePostProcessor
-import xyz.mastriel.cutapi.resourcepack.postprocess.TexturePostProcessor
-import xyz.mastriel.cutapi.resourcepack.postprocess.TextureProcessor
-import xyz.mastriel.cutapi.resourcepack.resourcetypes.Texture
+import xyz.mastriel.cutapi.resources.ResourceFileLoader
+import xyz.mastriel.cutapi.resources.generator.PackGenerationException
+import xyz.mastriel.cutapi.resources.postprocess.GrayscalePostProcessor
+import xyz.mastriel.cutapi.resources.postprocess.TexturePostProcessor
+import xyz.mastriel.cutapi.resources.postprocess.TextureProcessor
+import xyz.mastriel.cutapi.resources.resourcetypes.Texture
 import java.io.File
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
@@ -51,7 +51,7 @@ class CuTAPIPlugin : JavaPlugin {
         TexturePostProcessor.register(GrayscalePostProcessor)
         TexturePostProcessor.registerBuiltins()
 
-        ResourceLoader.spliterator()
+        ResourceFileLoader.spliterator()
 
         registerPacketListeners()
 

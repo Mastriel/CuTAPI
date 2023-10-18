@@ -49,10 +49,13 @@ dependencies {
     compileOnly("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-hocon:1.4.1")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    compileOnly("net.peanuuutz.tomlkt:tomlkt:0.3.7")
 
     compileOnly("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.6.0")
     compileOnly("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.6.0")
+
 }
 
 

@@ -47,6 +47,10 @@ data class Identifier internal constructor(val namespace: String, val key: Strin
         }
         return NamespacedKey(namespace, key)
     }
+
+    fun isUnknown() : Boolean {
+        return this == unknownID()
+    }
 }
 
 fun NamespacedKey.toIdentifier() = id("$namespace:$key")

@@ -8,8 +8,7 @@ import xyz.mastriel.brazil.postprocess.LockedSpellPostProcess
 import xyz.mastriel.brazil.spells.active.ActiveSpellItem
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.item.CustomItem
-import xyz.mastriel.cutapi.resourcepack.postprocess.TexturePostProcessor
-import java.io.File
+import xyz.mastriel.cutapi.resources.postprocess.TexturePostProcessor
 
 internal lateinit var Plugin : BrazilPlugin
     private set

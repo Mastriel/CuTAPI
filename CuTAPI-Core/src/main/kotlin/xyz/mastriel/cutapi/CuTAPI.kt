@@ -1,13 +1,15 @@
 package xyz.mastriel.cutapi
 
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.YamlConfiguration
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.json.Json
+import net.peanuuutz.tomlkt.Toml
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.packets.PacketManager
 import xyz.mastriel.cutapi.periodic.PeriodicManager
-import xyz.mastriel.cutapi.resourcepack.management.ResourceManager
-import xyz.mastriel.cutapi.resourcepack.management.ResourcePackManager
+import xyz.mastriel.cutapi.resources.ResourceManager
 import xyz.mastriel.cutapi.utils.ServiceManager
 
 
@@ -28,9 +30,7 @@ object CuTAPI {
     internal val packetManager = PacketManager(Plugin)
     internal val packetEventManager = packetManager.eventManager
 
-    val resourcePackManager = ResourcePackManager()
     val resourceManager = ResourceManager()
-    val packGenerator = resourcePackManager.generator
     val periodicManager = PeriodicManager()
     val serviceManager = ServiceManager()
 
@@ -143,6 +143,9 @@ object CuTAPI {
         if (!namespaceRegex.matches(namespace)) {
             throw IllegalArgumentException("Namespace $namespace is not valid! (does not match ${namespaceRegex.pattern})")
         }
+        if (namespace.startsWith("_") || namespace.endsWith("_")) {
+            throw IllegalArgumentException("Namespace $namespace is not valid! (starts/ends with _)")
+        }
         // The plugin that is using this namespace, if there is one.
         val namespaceOwner = plugins.values.find { it.namespace == namespace }
 
@@ -162,5 +165,9 @@ object CuTAPI {
         ignoreUnknownKeys = true
         prettyPrint = true
         encodeDefaults = true
+    }
+
+    internal val toml = Toml {
+        ignoreUnknownKeys = true
     }
 }

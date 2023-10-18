@@ -5,7 +5,7 @@ import org.bukkit.Material
 import xyz.mastriel.brazil.spells.active.ActiveSpellFlag
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.resourcepack.resourcetypes.TextureRef
+import xyz.mastriel.cutapi.resources.resourcetypes.TextureRef
 
 abstract class PassiveSpell(override val id: Identifier) : Identifiable {
 

@@ -6,7 +6,7 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.inventory.ItemStack
 import xyz.mastriel.cutapi.behavior.isRepeatable
 import xyz.mastriel.cutapi.entity.behaviors.EntityBehavior
-import xyz.mastriel.cutapi.resourcepack.resourcetypes.TextureRef
+import xyz.mastriel.cutapi.resources.resourcetypes.TextureRef
 import xyz.mastriel.cutapi.utils.personalized.Personalized
 import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 

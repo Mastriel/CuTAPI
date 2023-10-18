@@ -14,7 +14,7 @@ import xyz.mastriel.cutapi.item.behaviors.itemBehaviorHolder
 import xyz.mastriel.cutapi.pdc.tags.ItemBehaviorTagContainer
 import xyz.mastriel.cutapi.pdc.tags.TagContainer
 import xyz.mastriel.cutapi.registry.*
-import xyz.mastriel.cutapi.resourcepack.management.ref
+import xyz.mastriel.cutapi.resources.management.ref
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.personalized
 import kotlin.reflect.KClass
