@@ -1,10 +1,13 @@
 package xyz.mastriel.cutapi.resources.builtin
 
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerializationException
 import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.resources.Resource
-import xyz.mastriel.cutapi.resources.ResourceFileLoader
-import xyz.mastriel.cutapi.resources.ResourceRef
+import xyz.mastriel.cutapi.Plugin
+import xyz.mastriel.cutapi.registry.Identifier
+import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.checkIsResourceTypeOrUnknown
+import xyz.mastriel.cutapi.resources.checkResourceLoading
 import xyz.mastriel.cutapi.resources.data.CuTMeta
 
 
@@ -18,12 +21,36 @@ open class MetadataResource<M : CuTMeta>(
 }
 
 
-fun <M: CuTMeta> metadataResourceFileLoader(extensions: Collection<String>, serializer: KSerializer<M>) : ResourceFileLoader<MetadataResource<M>> {
+fun <M : CuTMeta> metadataResourceFileLoader(
+    extensions: Collection<String>,
+    resourceTypeId: Identifier,
+    serializer: KSerializer<M>
+): ResourceFileLoader<MetadataResource<M>> {
+    // in this case, a metadata resource should *probably* have no metadata,
+    // so we ignore it.
     return ResourceFileLoader { ref, data, _ ->
         if (ref.extension in extensions) {
-            val textMetadata = data.toString(Charsets.UTF_8)
-            val parsedMetadata = CuTAPI.toml.decodeFromString(serializer, textMetadata)
-            return@ResourceFileLoader MetadataResource(ref, parsedMetadata)
+            try {
+
+                val metadataText = data.toString(Charsets.UTF_8)
+
+                if (!checkIsResourceTypeOrUnknown(ref, metadataText, resourceTypeId)) {
+                    return@ResourceFileLoader null
+                }
+
+                val parsedMetadata = CuTAPI.toml.decodeFromString(serializer, metadataText)
+                return@ResourceFileLoader MetadataResource(ref, parsedMetadata)
+
+            } catch (e: IllegalArgumentException) {
+                Plugin.error("Metadata of $ref is not valid. Skipping! " + e.message)
+                checkResourceLoading(ref.plugin)
+                return@ResourceFileLoader null
+
+            } catch (e: SerializationException) {
+                Plugin.error("Failed deserializing $ref. Skipping! " + e.message)
+                checkResourceLoading(ref.plugin)
+                return@ResourceFileLoader null
+            }
         }
         null
     }

@@ -1,5 +1,6 @@
 package xyz.mastriel.cutapi.registry
 
+import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.Plugin
 
 /**
@@ -66,6 +67,13 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      */
     open fun has(id: Identifier?) : Boolean {
         return id in values.keys
+    }
+
+    /**
+     * Gets all entries in this registry by this particular plugin.
+     */
+    open fun getBy(plugin: Plugin) : Set<T> {
+        return values.values.filter { it.id.plugin == plugin }.toSet()
     }
 
 }

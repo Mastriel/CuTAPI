@@ -1,10 +1,10 @@
 package xyz.mastriel.cutapi
 
-import com.charleskorn.kaml.Yaml
-import com.charleskorn.kaml.YamlConfiguration
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.plus
 import net.peanuuutz.tomlkt.Toml
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.packets.PacketManager
@@ -154,6 +154,7 @@ object CuTAPI {
             error("Namespace $namespace already exists! (used by ${pluginName})")
         }
     }
+
 
 
     @OptIn(ExperimentalSerializationApi::class)

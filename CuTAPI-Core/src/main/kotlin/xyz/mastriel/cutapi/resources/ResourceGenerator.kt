@@ -14,17 +14,17 @@ abstract class ResourceGenerator(
     /**
      * [context] and the return value can NOT have the same [ResourceRef]!
      */
-    abstract fun generate(context: ResourceGeneratorContext<Resource>) : Resource?
+    abstract fun generate(context: ResourceGeneratorContext<Resource>): Resource?
 
     companion object : IdentifierRegistry<ResourceGenerator>("Resource Generators")
 }
 
-data class ResourceGeneratorContext<out T: Resource>(val resource: T)
+data class ResourceGeneratorContext<out T : Resource>(val resource: T)
 
 /**
  * Ran for ALL resources that exist.
  */
-fun globalResourceGenerator(id: Identifier, block: (ResourceGeneratorContext<Resource>) -> Resource?) : ResourceGenerator {
+fun resourceGenerator(id: Identifier, block: (ResourceGeneratorContext<Resource>) -> Resource?): ResourceGenerator {
     return object : ResourceGenerator(id) {
         override fun generate(context: ResourceGeneratorContext<Resource>): Resource? {
             return block(context)
@@ -35,16 +35,18 @@ fun globalResourceGenerator(id: Identifier, block: (ResourceGeneratorContext<Res
 /**
  * Ran only for resources of a certain type that has [id] in its `generate` metadata section.
  */
-fun <T : Resource> resourceGenerator(id: Identifier, block: (T) -> T?) : ResourceGenerator {
-
-}
-
-
-fun a() {
-    globalResourceGenerator(id(Plugin, "generate_postprocess")) { (res) ->
-        if (res is Texture2D) {
-            res.metadata
+inline fun <reified T : Resource> resourceGenerator(
+    id: Identifier,
+    crossinline block: (ResourceGeneratorContext<T>) -> T?
+): ResourceGenerator {
+    return object : ResourceGenerator(id) {
+        override fun generate(context: ResourceGeneratorContext<Resource>): Resource? {
+            if (context.resource is T) {
+                // very nasty
+                @Suppress("UNCHECKED_CAST")
+                return block(context as ResourceGeneratorContext<T>)
+            }
+            return null
         }
-        null
     }
 }

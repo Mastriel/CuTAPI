@@ -2,8 +2,8 @@ package xyz.mastriel.cutapi.resources.postprocess.builtin
 
 import com.jhlabs.image.AbstractBufferedImageOp
 import xyz.mastriel.cutapi.registry.Identifier
+import xyz.mastriel.cutapi.resources.builtin.Texture2D
 import xyz.mastriel.cutapi.resources.postprocess.TexturePostProcessor
-import xyz.mastriel.cutapi.resources.resourcetypes.Texture
 import java.awt.image.BufferedImageOp
 
 class BufferedImageOpPostProcessor<T: AbstractBufferedImageOp>(
@@ -12,13 +12,15 @@ class BufferedImageOpPostProcessor<T: AbstractBufferedImageOp>(
     val propertyMap: ImageOpPropertyMap<T>
 ) : TexturePostProcessor(id) {
 
-    override fun process(texture: Texture) {
-        val image = texture.resource
-        val imageOp = bufferedImageOp.clone() as BufferedImageOp
+    override fun process(texture: Texture2D) {
 
-        propertyMap.setValues(bufferedImageOp, texture.postProcessProperties)
-        val newImage = imageOp.filter(image, null)
-        texture.resource = newImage
+        texture.process { img ->
+            val imageOp = bufferedImageOp.clone() as BufferedImageOp
+
+            propertyMap.setValues(bufferedImageOp, texture.postProcessProperties)
+            val newImage = imageOp.filter(img, null)
+            newImage
+        }
     }
 }
 

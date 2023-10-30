@@ -1,23 +1,35 @@
+# the id of the resource type you're trying to instance
+# most of the time this will be automatically determined,
+# but if your extensions are extremely broad like ".json" then
+# you may want to specify it specifically or it may be interpreted
+# as the wrong type.
+id = "cutapi:texture2d"
 
-res_id = "cutapi:texture2d"
-
-[[post_processors]]
-
-
+# you can derive different resources off of this one.
+# in this case, it applies a post-process effect to the texture image
+# and will turn it grayscale based off of postprocess and generate.options.
+# id and res_subid are both always in generate tables, everything else
+# can be specified by the postprocessor. res_subid will produce a file like this:
+# cutapi://textures/test.png -> cutapi://textures/test.png/locked (in this case)
+#
+# everything else in this table will be part of the cutmeta of the generated resource.
 [[generate]]
-    id = "cutapi:generate_postprocess"
-    postprocess = "cutapi:grayscale"
+    gen_id = "cutapi:generate_postprocess"
     res_subid = "locked"
-
+    # generate_postprocess specific options
+    postprocess = "cutapi:grayscale"
     [generate.options]
         gray_percentage = 0.7
 
-
+# you can have multiple generate blocks. they don't necessarily have to be the same generators
 [[generate]]
-    id = "cutapi:generate_postprocess"
-    postprocess = "cutapi:black_and_white"
+    gen_id = "cutapi:generate_postprocess"
     res_subid = "bnw"
-
+    postprocess = "cutapi:black_and_white"
     [generate.options]
         threshold = 0.5
 
+# this example fits more for a model file, but you can also link this resource together with
+# other resources using this sort of syntax, "{plugin}://{path}"
+[model_assignments]
+    texture1 = "cutapi://textures/example.png"
