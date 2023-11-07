@@ -1,15 +1,16 @@
 package xyz.mastriel.cutapi.block
 
-import org.bukkit.Material
-import xyz.mastriel.cutapi.item.CustomItem
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.Identifier
 
 
-interface CustomTile<T: CuTPlacedBlock> : Identifiable
+sealed interface CustomTile<T: CuTPlacedTile> : Identifiable {
+    val descriptor: TileDescriptor
+}
 
-class CustomBlock<T: CuTPlacedBlock>(
-    override val id: Identifier
+class CustomBlock<T: CuTPlacedTile>(
+    override val id: Identifier,
+    override val descriptor: TileDescriptor
 ) : CustomTile<T> {
 
 }

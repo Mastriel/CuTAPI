@@ -20,6 +20,10 @@ data class FolderRef internal constructor(override val plugin: Plugin, override 
     fun getChildren() : List<Locator> {
         return CuTAPI.resourceManager.getFolderContents(plugin, this)
     }
+
+    override fun toString(): String {
+        return "${CuTAPI.getDescriptor(plugin).namespace}://${path}"
+    }
 }
 
 fun folderRef(plugin: Plugin, path: String) : FolderRef {

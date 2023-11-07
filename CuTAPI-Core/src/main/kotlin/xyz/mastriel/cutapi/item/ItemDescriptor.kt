@@ -6,10 +6,10 @@ import xyz.mastriel.cutapi.behavior.BehaviorHolder
 import xyz.mastriel.cutapi.behavior.isRepeatable
 import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.item.behaviors.itemBehaviorHolder
-import xyz.mastriel.cutapi.resources.resourcetypes.TextureRef
+import xyz.mastriel.cutapi.resources.ResourceRef
+import xyz.mastriel.cutapi.resources.builtin.Texture2D
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
-import xyz.mastriel.cutapi.utils.personalized.Personalized
 
 
 @DslMarker
@@ -22,10 +22,6 @@ annotation class ItemDescriptorDsl
  * @see ItemDescriptorBuilder
  */
 class ItemDescriptor internal constructor(
-    /**
-     * The texture that this custom material should use, by default.
-     * */
-    val texture: Personalized<TextureRef>? = null,
     val display: (ItemDisplayBuilder.() -> Unit)? = null,
 
     /**
@@ -42,7 +38,6 @@ class ItemDescriptor internal constructor(
 
     operator fun plus(other: ItemDescriptor) : ItemDescriptor {
         return itemDescriptor {
-            texture = other.texture ?: this@ItemDescriptor.texture
             display = other.display ?: this@ItemDescriptor.display
 
             itemBehaviors.addAll(this@ItemDescriptor.itemBehaviors)
@@ -66,7 +61,6 @@ class ItemDescriptor internal constructor(
  */
 @ItemDescriptorDsl
 class ItemDescriptorBuilder {
-    var texture: Personalized<TextureRef>? = null
     var display: (ItemDisplayBuilder.() -> Unit)? = {
         emptyLine()
         behaviorLore(Color.Blue)
@@ -93,7 +87,6 @@ class ItemDescriptorBuilder {
     fun build(): ItemDescriptor {
         return ItemDescriptor(
             display = display,
-            texture = texture,
             itemBehaviors = itemBehaviors
         )
     }
@@ -120,6 +113,8 @@ open class ItemDisplayBuilder(val itemStack: CuTItemStack, val viewer: Player?) 
 
     private val lines = mutableListOf<Component>()
     var name : Component? = null
+
+    var texture: ResourceRef<Texture2D>? = null
 
     /**
      * Adds a Component to this item description.

@@ -26,14 +26,20 @@ class ResourceManager {
 
     @Suppress("UNCHECKED_CAST")
     fun <T: Resource> getResourceOrNull(ref: ResourceRef<T>) : T? {
-        return resources.toList()
-            .find { it.first.name == ref.name && it.first.plugin.name == ref.plugin.name }
-            ?.second as? T?
+        return resources[ref] as? T
+    }
+
+    fun isAvailable(ref: ResourceRef<*>) : Boolean {
+        return resources[ref] != null
     }
 
     fun getFolderContents(plugin: Plugin, folderRef: FolderRef) : List<Locator> {
         return locators.filter { it.plugin == plugin }
             .filter { it.parent == folderRef }
+    }
+
+    fun getAllResources() : List<Resource> {
+        return resources.values.toList()
     }
 
 

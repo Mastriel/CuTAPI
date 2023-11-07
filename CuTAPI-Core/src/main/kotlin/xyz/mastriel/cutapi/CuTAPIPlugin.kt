@@ -20,11 +20,13 @@ import xyz.mastriel.cutapi.resources.postprocess.GrayscalePostProcessor
 import xyz.mastriel.cutapi.resources.postprocess.TexturePostProcessor
 import xyz.mastriel.cutapi.resources.postprocess.TextureProcessor
 import xyz.mastriel.cutapi.resources.resourcetypes.Texture
+import xyz.mastriel.cutapi.utils.registerBuiltinDirectives
 import java.io.File
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
 
+@PublishedApi
 internal lateinit var Plugin : CuTAPIPlugin
     private set
 
@@ -53,6 +55,8 @@ class CuTAPIPlugin : JavaPlugin {
 
         registerPacketListeners()
 
+        registerBuiltinDirectives()
+
         registerResourceTypes()
 
         generateResourcePackWhenReady()
@@ -65,7 +69,7 @@ class CuTAPIPlugin : JavaPlugin {
                 Plugin.launch {
                     try {
                         val executionTime = measureTime {
-                            val generator = CuTAPI.resourcePackManager.generator
+                            val generator = CuTAPI.resourcePackManager
                             generator.generate()
                         }
                         info("Resource pack generated in $executionTime.")
@@ -117,8 +121,11 @@ class CuTAPIPlugin : JavaPlugin {
         CuTAPI.unregisterPlugin(this)
     }
 
+    @PublishedApi
     internal fun info(msg: Any?) = logger.info("$msg")
+    @PublishedApi
     internal fun warn(msg: Any?) = logger.warning("$msg")
+    @PublishedApi
     internal fun error(msg: Any?) = logger.severe("$msg")
 
 

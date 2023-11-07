@@ -10,7 +10,10 @@ import xyz.mastriel.brazil.spells.active.CastMethod
 import xyz.mastriel.brazil.spells.active.ActiveSpellItem
 import xyz.mastriel.brazil.utils.format
 import xyz.mastriel.cutapi.item.CuTItemStack
+import xyz.mastriel.cutapi.item.customItem
 import xyz.mastriel.cutapi.registry.id
+import xyz.mastriel.cutapi.resources.builtin.Texture2D
+import xyz.mastriel.cutapi.resources.ref
 import xyz.mastriel.cutapi.utils.chatTooltip
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.personalized
@@ -52,5 +55,13 @@ object RedHandsSpellItem : ActiveSpellItem(
                 .append(item.handle.chatTooltip)
                 .append("&c&o?".colored)
         )
+    }
+}
+
+
+val ItemExample = customItem(id(Plugin, "example_item"), Material.STICK) {
+    display {
+        name = "&6Example Stick".colored
+        texture = ref<Texture2D>("example://items/example_item.png")
     }
 }

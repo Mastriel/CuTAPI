@@ -6,8 +6,7 @@ class PackVersion9Generator : ResourcePackGenerator() {
 
     override suspend fun generate() {
         generationStep("Creating Default Pack", 1) { createSkeleton() }
-        generationStep("Loading Resources", 2) { loadResources() }
-        generationStep("Processing Resources", 3) { processResources() }
+        generationStep("Running Pack Processors", 1) { createSkeleton() }
     }
 
 

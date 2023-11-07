@@ -1,9 +1,10 @@
 package xyz.mastriel.cutapi.resources.generator
 
-import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.resources.management.ResourcePath
+import xyz.mastriel.cutapi.registry.ListRegistry
+import xyz.mastriel.cutapi.resources.ResourceRef
+import xyz.mastriel.cutapi.resources.builtin.Texture2D
 import xyz.mastriel.cutapi.utils.*
 import xyz.mastriel.cutapi.utils.cutConfigValue
 import java.io.File
@@ -28,8 +29,6 @@ abstract class ResourcePackGenerator {
     protected fun createSkeleton() {
         tempPackFolder.mkdirs()
 
-        dumpPluginResourcesToTmp()
-
         val json = """
             {
                 "pack": {
@@ -45,60 +44,9 @@ abstract class ResourcePackGenerator {
         File(tempPackFolder, "assets/minecraft/").mkdirs()
 
         for (plugin in CuTAPI.registedPlugins) {
-            resourceManager.getTexturesFolder(plugin).mkdirs()
+            CuTAPI.resourcePackManager.getTexturesFolder(plugin).mkdirs()
         }
     }
-
-    /**
-     * Dumps all plugins [packFolder](xyz.mastriel.cutapi.PluginOptions.packFolder)s to tmp/$namespace in CuTAPI's
-     * data folder
-     */
-    protected fun dumpPluginResourcesToTmp() {
-        for (plugin in CuTAPI.registedPlugins) {
-            val descriptor = CuTAPI.getDescriptor(plugin)
-            val options = descriptor.options
-            val packFolder = options.packFolder
-
-            val dumpFolder = File(tempFolder, descriptor.namespace)
-            dumpFolder.mkdir()
-
-            val packFolderURI = plugin::class.java.getResource("/$packFolder")
-            if (packFolderURI != null) {
-                Plugin.info("Pack folder found for $plugin.")
-                copyResourceDirectory(packFolderURI, dumpFolder)
-            } else {
-                Plugin.warn("Pack folder not found for $plugin.")
-            }
-        }
-    }
-
-
-    protected fun loadResources() {
-        for (plugin in CuTAPI.registedPlugins) {
-            val resourcesFolder = resourceManager.getResourcesFolder(plugin)
-
-            loadResourcesFromFolder(resourcesFolder, plugin)
-        }
-    }
-
-    fun processResources() {
-        CuTAPI.resourceManager.getAllProcessors().forEach {
-            it.processResources()
-        }
-    }
-
-    private fun loadResourcesFromFolder(folder: File, plugin: Plugin) {
-        folder.listFiles()?.toList()?.forEach { file ->
-            if (file.isDirectory) {
-                loadResourcesFromFolder(file, plugin)
-                return@forEach
-            }
-
-            val resourcePath = resourcePathFromFile(plugin, file)
-            CuTAPI.resourceManager.addResource(resourcePath)
-        }
-    }
-
 
 
     protected fun generationStep(message: String, currentStep: Int, step: ()->Unit) {
@@ -106,10 +54,17 @@ abstract class ResourcePackGenerator {
         Plugin.info("Resource Pack: ($currentStep/$generationSteps) $message")
     }
 
-    fun texturePathOf(resourcePath: ResourcePath) : String {
-        return "custom/${resourcePath.namespace}/${resourcePath.rawPathWithoutExtension}"
+    fun textureFolderPathOf(ref: ResourceRef<Texture2D>) : String {
+        return "custom/${ref.namespace}/${ref.path(withName = true)}"
     }
 
     abstract suspend fun generate()
+
+
+    companion object : ListRegistry<ResourcePackGenerator>("Pack Generators") {
+        fun getByVersionNumber(number: Int) : ResourcePackGenerator? {
+            return values.find { it.packVersion == number } 
+        }
+    }
 
 }

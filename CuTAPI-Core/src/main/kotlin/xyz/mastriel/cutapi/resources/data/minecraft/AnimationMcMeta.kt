@@ -26,5 +26,15 @@ data class Animation(
     val frametime: Int? = null,
 
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val frames: List<JsonElement> = listOf() // this will be directly copied
+    val frames: List<AnimationFrame> = listOf()
+)
+
+@Serializable
+@OptIn(ExperimentalSerializationApi::class)
+data class AnimationFrame(
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val index: Int,
+
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val time: Int
 )

@@ -41,6 +41,10 @@ data class Identifier internal constructor(val namespace: String, val key: Strin
         return Identifier(namespace, "$key/$string")
     }
 
+    operator fun div(string: String) : Identifier {
+        return Identifier(namespace, "$key/$string")
+    }
+
     fun toNamespacedKey() : NamespacedKey {
         if (plugin != null) {
             return NamespacedKey(plugin!!, key)

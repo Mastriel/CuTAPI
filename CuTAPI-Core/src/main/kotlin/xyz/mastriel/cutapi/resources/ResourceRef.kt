@@ -14,12 +14,17 @@ import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.resources.data.CuTMeta
+import java.lang.StringBuilder
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 
+/**
+ * A reference to a resource that may or may not exist.
+ * Use getResource to get the actual resource this is referring to (if it exists)
+ */
 @Serializable(with = ResourceRefSerializer::class)
-data class ResourceRef<out T : @Contextual Resource> internal constructor(
+data class ResourceRef<out T : Resource> internal constructor(
     override val plugin: Plugin,
     override val pathList: List<String>
 ) : ReadOnlyProperty<Any?, T?>, Locator {
@@ -32,11 +37,36 @@ data class ResourceRef<out T : @Contextual Resource> internal constructor(
         return getResource()?.metadata
     }
 
+    fun isAvailable(): Boolean {
+        return CuTAPI.resourceManager.isAvailable(this)
+    }
+
     override fun getValue(thisRef: Any?, property: KProperty<*>): T? {
         return getResource()
     }
 
+
     override val path get() = pathList.joinToString("/")
+
+    fun path(
+        withExtension: Boolean = false,
+        withNamespace: Boolean = false,
+        withNamespaceAsFolder: Boolean = false,
+        withName: Boolean = true
+    ) : String {
+        val sb = StringBuilder("")
+        if (withNamespace) sb.append("${namespace}://")
+        if (withNamespaceAsFolder) sb.append("${namespace}/")
+        sb.append(path)
+
+        if (withName) {
+            sb.append("/${name}")
+        }
+        if (withExtension) {
+            sb.append(".${extension}")
+        }
+        return sb.toString()
+    }
 
     val name
         get() = path
@@ -44,12 +74,12 @@ data class ResourceRef<out T : @Contextual Resource> internal constructor(
             .last()
 
     val extension
-        get() = path
+        get() = name
             .split(".", limit = 2)
             .last()
 
     override val parent: FolderRef? get() {
-        val list =  pathList.dropLast(1)
+        val list =  pathList.dropLast(2)
         if (list.isEmpty()) return null
         return folderRef(plugin, list.joinToString("/"))
     }
@@ -82,6 +112,7 @@ fun <T : Resource> ref(plugin: Plugin, path: String): ResourceRef<T> {
 }
 
 fun <T : Resource> ref(stringPath: String): ResourceRef<T> {
+    require("://" in stringPath) { "String ResourceRef $stringPath does not follow namespace://path format." }
     val (namespace, path) = stringPath.split("://", limit = 2)
     val plugin = CuTAPI.getPluginFromNamespace(namespace)
     return ref(plugin, path)

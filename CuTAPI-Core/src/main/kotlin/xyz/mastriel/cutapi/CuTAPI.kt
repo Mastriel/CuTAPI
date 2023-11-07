@@ -10,6 +10,7 @@ import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.packets.PacketManager
 import xyz.mastriel.cutapi.periodic.PeriodicManager
 import xyz.mastriel.cutapi.resources.ResourceManager
+import xyz.mastriel.cutapi.resources.ResourcePackManager
 import xyz.mastriel.cutapi.utils.ServiceManager
 
 
@@ -31,6 +32,7 @@ object CuTAPI {
     internal val packetEventManager = packetManager.eventManager
 
     val resourceManager = ResourceManager()
+    val resourcePackManager = ResourcePackManager()
     val periodicManager = PeriodicManager()
     val serviceManager = ServiceManager()
 
@@ -79,9 +81,10 @@ object CuTAPI {
      * @returns The descriptor used for the [plugin].
      * @see PluginDescriptor
      */
+    @Throws(IllegalStateException::class)
     fun getDescriptor(plugin: Plugin) : PluginDescriptor {
         requireRegistered(plugin)
-        return plugins[plugin] ?: error("Plugin $plugin not registered when it should be?")
+        return plugins[plugin]!!
     }
 
     /**
