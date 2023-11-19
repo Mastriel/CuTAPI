@@ -6,13 +6,14 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.inventory.ItemStack
 import xyz.mastriel.cutapi.behavior.isRepeatable
 import xyz.mastriel.cutapi.entity.behaviors.EntityBehavior
-import xyz.mastriel.cutapi.resources.resourcetypes.TextureRef
+import xyz.mastriel.cutapi.resources.ResourceRef
+import xyz.mastriel.cutapi.resources.builtin.Texture2D
 import xyz.mastriel.cutapi.utils.personalized.Personalized
 import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 
 class EntityDescriptor(
     val name: PersonalizedWithDefault<Component>? = null,
-    val texture: Personalized<TextureRef>? = null,
+    val texture: Personalized<ResourceRef<Texture2D>>? = null,
     val maxHealth: Int = 20,
     val entityBehaviors: List<EntityBehavior> = listOf(),
     val equipment: EntityEquipment
@@ -24,7 +25,7 @@ class EntityDescriptor(
 open class EntityDescriptorBuilder {
     var name: PersonalizedWithDefault<Component>? = null
     var maxHealth: Int = 20
-    var texture : Personalized<TextureRef>? = null
+    var texture : Personalized<ResourceRef<Texture2D>>? = null
 
     var equipment : EntityEquipment = EntityEquipment()
         private set
@@ -73,12 +74,13 @@ data class EntityEquipment(
     fun applyToEntity(entity: Entity) {
         if (entity !is LivingEntity) return
         with(entity.equipment) {
-            this?.helmet = helmet
-            this?.chestplate = chestplate
-            this?.leggings = leggings
-            this?.boots = boots
-            this?.setItemInMainHand(mainhand)
-            this?.setItemInOffHand(offhand)
+            if (this == null) return@with
+            helmet = helmet
+            chestplate = chestplate
+            leggings = leggings
+            boots = boots
+            setItemInMainHand(mainhand)
+            setItemInOffHand(offhand)
         }
     }
 }

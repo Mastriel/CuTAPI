@@ -3,14 +3,19 @@ package xyz.mastriel.cutapi.resources.generator
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.registry.ListRegistry
+import xyz.mastriel.cutapi.resources.ResourcePackProcessor
 import xyz.mastriel.cutapi.resources.ResourceRef
 import xyz.mastriel.cutapi.resources.builtin.Texture2D
 import xyz.mastriel.cutapi.utils.*
 import xyz.mastriel.cutapi.utils.cutConfigValue
 import java.io.File
+import kotlin.time.measureTime
 
 abstract class ResourcePackGenerator {
 
+    /**
+     * Pick the earliest version that this generator supports
+     */
     abstract val packVersion : Int
     abstract val generationSteps : Int
 
@@ -58,12 +63,23 @@ abstract class ResourcePackGenerator {
         return "custom/${ref.namespace}/${ref.path(withName = true)}"
     }
 
+
+    protected fun runResourceProcessorsPack() {
+        val executionTime = measureTime {
+            ResourcePackProcessor.forEach {
+                it.processResources(CuTAPI.resourceManager)
+            }
+        }
+        Plugin.info("Resource Processors (pack registry) ran in $executionTime.")
+    }
+
+
     abstract suspend fun generate()
 
 
     companion object : ListRegistry<ResourcePackGenerator>("Pack Generators") {
-        fun getByVersionNumber(number: Int) : ResourcePackGenerator? {
-            return values.find { it.packVersion == number } 
+        fun getByVersionNumber(range: IntRange) : ResourcePackGenerator? {
+            return values.find { it.packVersion in range }
         }
     }
 

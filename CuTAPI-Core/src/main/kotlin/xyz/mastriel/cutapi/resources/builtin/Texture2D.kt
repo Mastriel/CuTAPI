@@ -41,15 +41,22 @@ open class Texture2D(
         val itemModelData: ItemModelData? =
             ItemModelData(
                 parent = "minecraft:item/handheld",
-                textures = mapOf(
-                    "layer0" to texturePathOf(texture.ref)
-                ),
-                overrides = listOf(),
+                overrides = listOf()
+            ),
         @SerialName("model_file")
         val modelFile: ResourceRef<@Contextual JsonResource>? = null
     ) : CuTMeta() {
         val combinedModelData by lazy {
+            if (modelFile != null && modelFile.isAvailable()) {
+                val (json) = modelFile.getResource()!!
+            }
+        }
 
+    }
+
+    override fun check() {
+        metadata?.apply {
+            if (modelFile != null) requireValidRef(modelFile) { "" }
         }
     }
 

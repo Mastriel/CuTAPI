@@ -2,6 +2,7 @@ package xyz.mastriel.cutapi.registry
 
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.Plugin
+import java.lang.ref.WeakReference
 
 private typealias HookFunction<T> = HookContext<T>.() -> Unit
 
@@ -9,7 +10,7 @@ enum class HookPriority(val number: Byte) {
     FIRST(0),
     MIDDLE(1),
     LAST(2),
-    /** Don't make modifications at this level. */
+    /** Don't make modifications at this level pretty please */
     READONLY(3)
 }
 
@@ -30,6 +31,12 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      * @param item The object which the association is being made for.
      */
     open fun register(item: T): T {
+        // add this to the list of used registries. keeps track of all registries
+        // for when a plugin is disabled.
+        if (usedRegistries.any { it.get() == this }) {
+            usedRegistries += WeakReference(this)
+        }
+
         if (values.containsKey(item.id)) error("Two Identifiables cannot have the same ID in the same registry.")
         values[item.id] = item
 
@@ -44,6 +51,49 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
         }
         Plugin.info("[REGISTRY] ${item.id} added to '$name'.")
         return item
+    }
+
+    /**
+     * Remove an object from this registry.
+     *
+     * This can be dangerous if you're not handling this properly. It is not recommended
+     * to treat a registry as a place where you should commonly remove objects from, like
+     * a normal hashmap. This should only be used in situations where you can run into errors
+     * if you __dont__ unregister an object, like if a plugin is disabled that owns the [item].
+     *
+     * P.S. When a plugin is disabled, all identifiers registered to any registry is automatically
+     * unregistered, so you don't need to do that manually.
+     *
+     * @param item The object being removed.
+     */
+    open fun unregister(item: T) = unregister(item.id)
+
+    /**
+     * Remove an object from this registry.
+     *
+     * This can be dangerous if you're not handling this properly. It is not recommended
+     * to treat a registry as a place where you should commonly remove objects from, like
+     * a normal hashmap. This should only be used in situations where you can run into errors
+     * if you __don't__ unregister an object, like if a plugin is disabled that owns the [id].
+     *
+     * P.S. When a plugin is disabled, all identifiers registered to any registry is automatically
+     * unregistered, so you don't need to do that manually.
+     *
+     * @param id The object being removed.
+     */
+    open fun unregister(id: Identifier) {
+        if (!values.containsKey(id)) {
+            Plugin.warn("[REGISTRY] $id tried to be removed from '${this.name}', but it doesn't exist in this registry.")
+            return
+        }
+        values.remove(id)
+
+        // remove this registry from the list of used registries if this is now empty
+        if (this.values.isEmpty()) {
+            usedRegistries.removeIf { it.get() == this }
+        }
+
+        Plugin.info("[REGISTRY] $id removed from '$name'.")
     }
 
     /**
@@ -109,4 +159,17 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
         hooks += func to priority
     }
 
+
+
+    internal companion object {
+        // use weak references, although registries should probably not be
+        // garbage collected at any point and should always have a strong reference
+        private val usedRegistries = mutableListOf<WeakReference<IdentifierRegistry<*>>>()
+
+        internal fun unregisterPluginGlobally() {
+            usedRegistries.mapNotNull { it.get() }.forEach { registry ->
+                registry.values.keys.forEach { registry.unregister(it) }
+            }
+        }
+    }
 }

@@ -14,7 +14,6 @@ import java.io.File
 
 val TextureProcessor = resourceProcessor<Texture2D> {
     val (textures) = this
-    val resourceManager = CuTAPI.resourceManager
     val resourcePackManager = CuTAPI.resourcePackManager
 
     val itemModelFolder = resourcePackManager.tempFolder appendPath "assets/minecraft/models/item/"
@@ -35,7 +34,7 @@ fun generateTexturesInPack(textures: List<Texture2D>, modelFolder: File) {
         val texturesFolder = CuTAPI.resourcePackManager.getTexturesFolder(texture.ref.plugin)
 
         applyPostProcessing(texture)
-        texture.saveTo(texturesFolder appendPath texture.ref.path(withExtension = true, withNamespaceAsFolder = true))
+        texture.saveTo(texturesFolder appendPath texture.ref.path(withExtension = true))
 
         val metadata = texture.metadata ?: Texture2D.Metadata()
         val animationData = metadata.animation
@@ -67,7 +66,7 @@ private fun generateAnimationMcMeta(texture: Texture2D, texturesFolder: File, an
 }
 
 private fun applyPostProcessing(texture: Texture2D) {
-    texture.metadata.postProcessors.forEach {
+    texture.metadata?.postProcessors?.forEach {
         val context = TexturePostProcessContext(it.options)
         it.processor.process(texture, context)
     }
@@ -96,14 +95,16 @@ private fun generateItemJsonFiles(textures: Collection<Texture2D>, modelFolder: 
     }
 }
 
-private fun groupByAppliesTo(textures: Set<Texture2D>) : Map<String, MutableSet<Texture2D>> {
+private fun groupByAppliesTo(textures: Collection<Texture2D>) : Map<String, MutableSet<Texture2D>> {
     val items = mutableMapOf<String, MutableSet<Texture2D>>()
     for (texture in textures) {
         addDisplayAsRuleTexture(texture, items)
 
-        for (itemModel in texture.metadata.materials) {
-            items.putIfAbsent(itemModel, mutableSetOf())
-            items[itemModel]?.add(texture)
+        if (texture.metadata != null) {
+            for (itemModel in texture.metadata!!.materials) {
+                items.putIfAbsent(itemModel, mutableSetOf())
+                items[itemModel]?.add(texture)
+            }
         }
     }
     return items

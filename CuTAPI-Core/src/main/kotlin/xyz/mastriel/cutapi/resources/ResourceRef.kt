@@ -29,6 +29,8 @@ data class ResourceRef<out T : Resource> internal constructor(
     override val pathList: List<String>
 ) : ReadOnlyProperty<Any?, T?>, Locator {
 
+
+
     fun getResource(): T? {
         return CuTAPI.resourceManager.getResourceOrNull(this)
     }
@@ -57,10 +59,10 @@ data class ResourceRef<out T : Resource> internal constructor(
         val sb = StringBuilder("")
         if (withNamespace) sb.append("${namespace}://")
         if (withNamespaceAsFolder) sb.append("${namespace}/")
-        sb.append(path)
+        sb.append(pathList.dropLast(1).joinToString("/"))
 
         if (withName) {
-            sb.append("/${name}")
+            sb.append("/${name.split(".", limit = 2).first()}")
         }
         if (withExtension) {
             sb.append(".${extension}")
@@ -101,14 +103,11 @@ fun <T : Resource> Identifier.toResourceRef(): ResourceRef<T> {
 
 
 fun normalizeRefPath(path: String): String {
-    var newPath = path
-    if (newPath.endsWith("/")) newPath = newPath.removeSuffix("/")
-    if (newPath.startsWith("/")) newPath = newPath.removePrefix("/")
-    return newPath
+    return path.removeSuffix("/").removePrefix("/")
 }
 
 fun <T : Resource> ref(plugin: Plugin, path: String): ResourceRef<T> {
-    return ResourceRef(plugin, normalizeRefPath(path).split("/"))
+    return ResourceRef(plugin, normalizeRefPath(path).split("/").filterNot { it.isEmpty() })
 }
 
 fun <T : Resource> ref(stringPath: String): ResourceRef<T> {

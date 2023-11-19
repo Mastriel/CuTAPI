@@ -7,6 +7,7 @@ import net.peanuuutz.tomlkt.*
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.unknownID
+import xyz.mastriel.cutapi.resources.ResourceRef
 import xyz.mastriel.cutapi.resources.builtin.SerializableTemplateMetadataRef
 import xyz.mastriel.cutapi.utils.combine
 
@@ -42,6 +43,7 @@ open class CuTMeta {
 
         return CuTAPI.toml.decodeFromTomlElement(otherSerializer, newTable)
     }
+
 
 
 }

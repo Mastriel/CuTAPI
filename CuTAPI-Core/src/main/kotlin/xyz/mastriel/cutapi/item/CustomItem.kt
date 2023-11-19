@@ -14,7 +14,7 @@ import xyz.mastriel.cutapi.item.behaviors.itemBehaviorHolder
 import xyz.mastriel.cutapi.pdc.tags.ItemBehaviorTagContainer
 import xyz.mastriel.cutapi.pdc.tags.TagContainer
 import xyz.mastriel.cutapi.registry.*
-import xyz.mastriel.cutapi.resources.management.ref
+import xyz.mastriel.cutapi.resources.ref
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.personalized
 import kotlin.reflect.KClass
@@ -93,10 +93,12 @@ open class CustomItem<TStack: CuTItemStack>(
             unknownID(),
             Material.ANVIL
         ) {
-            texture = personalized { ref(Plugin, "items/unknown_item.png") }
 
             behavior(StaticLore("&cYou probably shouldn't have this...".colored))
             behavior(DisplayAs(Material.GLISTERING_MELON_SLICE))
+            display {
+                texture = ref(Plugin, "items/unknown_item.png")
+            }
         }
 
         override fun get(id: Identifier): CustomItem<*> {

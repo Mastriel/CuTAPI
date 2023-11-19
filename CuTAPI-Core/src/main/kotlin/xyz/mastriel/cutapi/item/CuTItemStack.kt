@@ -211,13 +211,13 @@ open class CuTItemStack protected constructor(
                 } else {
                     meta.displayName(display.name ?: "&c${type.id}".colored)
                 }
-            }
 
-            val textureRef = viewer?.let { p -> descriptor.texture?.withViewer(p) }
+                val textureRef = display.texture
 
-            if (textureRef != null && textureRef.isAvailable) {
-                val customModelData = textureRef.getResource().getCustomModelData()
-                meta.setCustomModelData(customModelData)
+                if (textureRef != null && textureRef.isAvailable()) {
+                    val customModelData = textureRef.getResource()!!.customModelData
+                    meta.setCustomModelData(customModelData)
+                }
             }
 
             meta.persistentDataContainer.set(NamespacedKey(Plugin, "IsDisplay"), PersistentDataType.BYTE, 1)

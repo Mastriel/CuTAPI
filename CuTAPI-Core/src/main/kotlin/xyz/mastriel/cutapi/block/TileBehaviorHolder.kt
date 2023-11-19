@@ -1,6 +1,6 @@
 package xyz.mastriel.cutapi.block
 
-private class BlockBehaviorHolder(block: CustomBlock) /*: BehaviorHolder<BlockBehavior>*/ {
+private class TileBehaviorHolder(block: CustomTile<*>) /*: BehaviorHolder<BlockBehavior>*/ {
 
     /*
     private val behaviors = block.descriptor.itemBehaviors

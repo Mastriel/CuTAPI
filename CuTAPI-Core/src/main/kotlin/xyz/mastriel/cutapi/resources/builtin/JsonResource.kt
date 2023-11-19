@@ -18,6 +18,7 @@ open class JsonResource(
         return str.toByteArray(Charsets.UTF_8)
     }
 
+    operator fun component1() = data
 }
 
 val JsonResourceLoader = resourceLoader<JsonResource, Nothing>(
@@ -28,7 +29,7 @@ val JsonResourceLoader = resourceLoader<JsonResource, Nothing>(
     val string = this.data.toString(Charsets.UTF_8)
     try {
         val data = CuTAPI.json.parseToJsonElement(string).jsonObject
-        JsonResource(ref, data)
+        success(JsonResource(ref, data))
     } catch (e: Exception) {
         resError(ref, "Failed to load JSON file. ${e.message}")
     }

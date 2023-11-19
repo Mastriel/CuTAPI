@@ -50,6 +50,7 @@ fun resourceGenerator(id: Identifier, block: ResourceGeneratorContext<Resource>.
 /**
  * Ran only for resources of a certain type that has [id] in its `generate` metadata section.
  */
+@JvmName("resourceGeneratorWithType")
 inline fun <reified T : Resource> resourceGenerator(
     id: Identifier,
     crossinline block: ResourceGeneratorContext<T>.() -> T?

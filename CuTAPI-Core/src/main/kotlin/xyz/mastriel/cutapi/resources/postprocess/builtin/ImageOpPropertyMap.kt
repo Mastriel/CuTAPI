@@ -2,6 +2,7 @@ package xyz.mastriel.cutapi.resources.postprocess.builtin
 
 import com.jhlabs.image.AbstractBufferedImageOp
 import kotlinx.serialization.json.*
+import net.peanuuutz.tomlkt.*
 import xyz.mastriel.cutapi.registry.Identifier
 import kotlin.reflect.jvm.ExperimentalReflectionOnLambdas
 import kotlin.reflect.jvm.reflect
@@ -39,41 +40,41 @@ class ImageOpPropertyMap<B : AbstractBufferedImageOp> internal constructor() {
      * @param properties the map of properties from a texture's post process properties for B.
      */
     @OptIn(ExperimentalReflectionOnLambdas::class)
-    internal fun setValues(reciever: B, properties: Map<String, JsonElement>) {
+    internal fun setValues(reciever: B, properties: Map<String, TomlElement>) {
         for ((name, element) in properties) {
             val setterType = getSetter<Any>(name)?.reflect()?.parameters?.first()?.type?.classifier ?: continue
-            if (element is JsonPrimitive) {
+            if (element is TomlLiteral) {
                 when {
-                    setterType == Int::class && element.intOrNull != null -> // int
-                        getSetter<Int>(name)?.invoke(reciever, element.int)
+                    setterType == Int::class && element.toIntOrNull() != null -> // int
+                        getSetter<Int>(name)?.invoke(reciever, element.toInt())
 
-                    setterType == Float::class && element.floatOrNull != null -> // float
-                        getSetter<Float>(name)?.invoke(reciever, element.float)
+                    setterType == Float::class && element.toFloatOrNull() != null -> // float
+                        getSetter<Float>(name)?.invoke(reciever, element.toFloat())
 
-                    setterType == Double::class && element.doubleOrNull != null -> // double
-                        getSetter<Double>(name)?.invoke(reciever, element.double)
+                    setterType == Double::class && element.toDoubleOrNull() != null -> // double
+                        getSetter<Double>(name)?.invoke(reciever, element.toDouble())
 
-                    setterType == Long::class && element.longOrNull != null -> // long
-                        getSetter<Long>(name)?.invoke(reciever, element.long)
+                    setterType == Long::class && element.toLongOrNull() != null -> // long
+                        getSetter<Long>(name)?.invoke(reciever, element.toLong())
 
-                    setterType == Boolean::class && element.booleanOrNull != null -> // boolean
-                        getSetter<Boolean>(name)?.invoke(reciever, element.boolean)
+                    setterType == Boolean::class && element.toBooleanOrNull() != null -> // boolean
+                        getSetter<Boolean>(name)?.invoke(reciever, element.toBoolean())
                 }
-            } else if (element is JsonArray) {
+            } else if (element is TomlArray) {
                 when (setterType) {
                     IntArray::class -> // int
                         getSetter<IntArray>(name)?.invoke(reciever,
-                            element.map { it.jsonPrimitive.int }.toIntArray()
+                            element.map { it.asTomlLiteral().toInt() }.toIntArray()
                         )
 
                     FloatArray::class -> // float
                         getSetter<FloatArray>(name)?.invoke(reciever,
-                            element.map { it.jsonPrimitive.float }.toFloatArray()
+                            element.map { it.asTomlLiteral().toFloat() }.toFloatArray()
                         )
 
                     DoubleArray::class -> // double
                         getSetter<DoubleArray>(name)?.invoke(reciever,
-                            element.map { it.jsonPrimitive.double }.toDoubleArray()
+                            element.map { it.asTomlLiteral().toDouble() }.toDoubleArray()
                         )
                 }
             }

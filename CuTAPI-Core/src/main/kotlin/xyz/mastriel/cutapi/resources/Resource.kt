@@ -5,6 +5,7 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.encodeToString
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
+import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.resources.data.CuTMeta
 import java.io.File
 
@@ -12,13 +13,35 @@ open class Resource(open val ref: ResourceRef<*>, open val metadata: CuTMeta? = 
 
     val plugin : Plugin get() = ref.plugin
 
+
+    /**
+     * When all resources are done loading, you can run specific checks to ensure this resource is logically correct.
+     * If this throws a ResourceCheckException, then the resource isn't valid, and it will be unregistered (or will
+     * unload your plugin if you have 'strictResourceLoading' enabled).
+     *
+     * @throws ResourceCheckException
+     * @see requireValidRef
+     */
+    open fun check() {}
+
+    /**
+     * Throws a [ResourceCheckException] if a specified [ResourceRef] is not available.
+     */
+    protected fun requireValidRef(ref: ResourceRef<*>, lazyReason: (() -> String)? = null) {
+        if (!ref.isAvailable()) throw ResourceCheckException(lazyReason?.invoke())
+    }
 }
+
+
+class ResourceCheckException(reason: String?) : Exception(reason)
 
 interface ByteArraySerializable {
     fun toBytes() : ByteArray
 }
 
 fun <T> T.saveTo(file: File) where T : ByteArraySerializable, T: Resource {
+    file.parentFile.mkdirs()
+    if (!file.exists()) file.createNewFile()
     file.writeBytes(toBytes())
 }
 

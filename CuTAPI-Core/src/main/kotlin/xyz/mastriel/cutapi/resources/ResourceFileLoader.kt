@@ -2,6 +2,7 @@ package xyz.mastriel.cutapi.resources
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
+import org.bukkit.Bukkit
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.Plugin
@@ -88,7 +89,7 @@ fun <T : Resource, M : CuTMeta> resourceLoader(
                     }
 
                 } catch (e: IllegalArgumentException) {
-                    Plugin.error("Metadata of $ref is not valid. Skipping! " + e.message)
+                    Plugin.error("Metadata of $ref is not valid. Skipping! $e")
                     checkResourceLoading(ref.plugin)
                     return ResourceLoadResult.Failure()
 
@@ -130,7 +131,8 @@ internal fun checkIsResourceTypeOrUnknown(
 
 internal fun checkResourceLoading(plugin: Plugin) {
     if (CuTAPI.getDescriptor(plugin).options.strictResourceLoading) {
-        Plugin.error("Strict resource loading is enabled for ${plugin.name}. Disabling the plugin...")
-        Plugin.pluginLoader.disablePlugin(plugin)
+        Plugin.error("Strict resource loading is enabled for ${plugin.name}. Disabling ${plugin.name}...")
+        Bukkit.getPluginManager().disablePlugin(plugin)
+        CuTAPI.unregisterPlugin(plugin)
     }
 }

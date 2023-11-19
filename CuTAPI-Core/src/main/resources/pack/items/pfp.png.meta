@@ -5,6 +5,13 @@
 # as the wrong type.
 id = "cutapi:texture2d"
 
+materials = ["glistering_melon_slice"]
+
+# this example fits more for a model file, but you can also link this resource together with
+# other resources using this sort of syntax, "{plugin}://{path}"
+[model_data]
+    texture1 = "cutapi://textures/example.png"
+
 # you can derive different resources off of this one.
 # in this case, it applies a post-process effect to the texture image
 # and will turn it grayscale based off of postprocess and generate.options.
@@ -42,10 +49,5 @@ id = "cutapi:texture2d"
     # a sub-id for this clone. a clone-specific attribute
     clone_subid = "red"
 
-    [model_data]
+    [clone.model_data]
         texture1 = "cutapi://textures/example-red.png"
-
-# this example fits more for a model file, but you can also link this resource together with
-# other resources using this sort of syntax, "{plugin}://{path}"
-[model_data]
-    texture1 = "cutapi://textures/example.png"

@@ -33,7 +33,7 @@ sealed class BlockItemPolicy {
                 else -> Material.STONE
             }
             return registerCustomItem(customTile.id / "item", material) {
-
+                // todo finish
             }
         }
     }
@@ -49,6 +49,7 @@ sealed class BlockItemPolicy {
 
             behaviors.add(BlockPlaceBehavior(customTile))
 
+            return item
         }
     }
 

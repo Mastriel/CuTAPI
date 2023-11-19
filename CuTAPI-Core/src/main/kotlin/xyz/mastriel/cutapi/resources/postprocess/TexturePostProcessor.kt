@@ -38,6 +38,8 @@ abstract class TexturePostProcessor(override val id: Identifier) : Identifiable 
 }
 
 data class TexturePostProcessContext(private val optionTable: TomlTable) {
+
+    fun optionsMap() = optionTable.toMap()
     fun <S> castOptions(serializer: KSerializer<S>) : S {
         return CuTAPI.toml.decodeFromTomlElement(serializer, optionTable)
     }

@@ -15,18 +15,20 @@ import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 sealed interface TileDescriptor {
     val behaviors: List<TileBehavior>
     val blockStrategy: BlockStrategy
-    val name: PersonalizedWithDefault<Component>
+    val name: PersonalizedWithDefault<Component>?
 }
 
 
 class BlockDescriptor(
     override val behaviors: List<BlockBehavior> = mutableListOf(),
-    override val blockStrategy: BlockStrategy
+    override val blockStrategy: BlockStrategy,
+    override val name: PersonalizedWithDefault<Component>?
 ) : TileDescriptor
 
 class TileEntityDescriptor(
     override val behaviors: List<TileEntityBehavior> = mutableListOf(),
-    override val blockStrategy: BlockStrategy
+    override val blockStrategy: BlockStrategy,
+    override val name: PersonalizedWithDefault<Component>?
 ) : TileDescriptor
 
 abstract class TileDescriptorBuilder<B: TileBehavior, T: TileDescriptor> {
@@ -34,6 +36,8 @@ abstract class TileDescriptorBuilder<B: TileBehavior, T: TileDescriptor> {
     open val behaviors = ListBehaviorHolder<B>()
 
     open var blockStrategy: BlockStrategy = BlockStrategy.Mushroom
+
+    open var name: PersonalizedWithDefault<Component>? = null
 
     open fun behavior(vararg behaviors: B) {
         for (behavior in behaviors) {
@@ -57,7 +61,7 @@ abstract class TileDescriptorBuilder<B: TileBehavior, T: TileDescriptor> {
 
 class BlockDescriptorBuilder : TileDescriptorBuilder<BlockBehavior, BlockDescriptor>() {
     override fun build() : BlockDescriptor {
-        return BlockDescriptor(behaviors, blockStrategy)
+        return BlockDescriptor(behaviors, blockStrategy, name)
     }
 }
 
@@ -67,10 +71,10 @@ private fun BlockBehavior.adapt() : TileEntityBehavior {
             this@adapt.onLeftClick(player, block, event)
         }
         override fun onMiddleClick(player: Player, block: CuTPlacedTile, event: PlayerInteractEvent) {
-            this@adapt.onLeftClick(player, block, event)
+            this@adapt.onMiddleClick(player, block, event)
         }
         override fun onRightClick(player: Player, block: CuTPlacedTile, event: PlayerInteractEvent) {
-            this@adapt.onLeftClick(player, block, event)
+            this@adapt.onRightClick(player, block, event)
         }
     }
 }
@@ -84,6 +88,7 @@ class TileEntityDescriptorBuilder : TileDescriptorBuilder<TileEntityBehavior, Ti
         }
     }
 
+    @JvmName("blockBehavior")
     fun behavior(behaviors: Collection<BlockBehavior>) {
         for (behavior in behaviors) {
             this.behaviors.requireRepeatableIfExists(behavior)
@@ -92,7 +97,7 @@ class TileEntityDescriptorBuilder : TileDescriptorBuilder<TileEntityBehavior, Ti
     }
 
     override fun build() : TileEntityDescriptor {
-        return TileEntityDescriptor(behaviors, blockStrategy)
+        return TileEntityDescriptor(behaviors, blockStrategy, name)
     }
 }
 

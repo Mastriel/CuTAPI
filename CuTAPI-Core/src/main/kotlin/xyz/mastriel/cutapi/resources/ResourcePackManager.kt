@@ -3,10 +3,13 @@ package xyz.mastriel.cutapi.resources
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.Plugin
+import xyz.mastriel.cutapi.resources.generator.PackVersion9To18Generator
+import xyz.mastriel.cutapi.resources.generator.ResourcePackGenerator
 import xyz.mastriel.cutapi.utils.appendPath
 import java.io.File
 
 class ResourcePackManager {
+
     val tempFolder = Plugin.dataFolder.appendPath("pack-tmp/")
 
     /**
@@ -29,6 +32,9 @@ class ResourcePackManager {
     }
 
 
-
+    val generator : ResourcePackGenerator get() {
+        // TODO("detect versions dynamically")
+        return PackVersion9To18Generator()
+    }
 
 }
