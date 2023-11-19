@@ -1,14 +1,16 @@
+import org.jetbrains.kotlin.konan.properties.loadProperties
+
 group = "xyz.mastriel"
 version = "0.0.1a"
 
-val kotlinVersion : String by properties
 
 plugins {
-    kotlin("jvm") version "1.7.20"
+    kotlin("jvm") version "1.9.10"
     java
 
-    id("com.github.johnrengelman.shadow") version "7.1.0"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.5.31"
+    id("xyz.jpenilla.run-paper") version "2.2.2"
 
     `maven-publish`
 }

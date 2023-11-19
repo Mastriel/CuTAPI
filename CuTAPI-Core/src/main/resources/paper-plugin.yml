@@ -1,0 +1,16 @@
+name: CuTAPI
+version: '$version'
+main: xyz.mastriel.cutapi.CuTAPIPlugin
+description: An API designed to make creating cool things in plugins possible!
+api-version: '1.20'
+loader: xyz.mastriel.cutapi.CuTAPILoader
+permissions:
+  cutapi.admin.give:
+    default: op
+  cutapi.admin.test:
+    default: op
+dependencies:
+  server:
+    ProtocolLib:
+      load: BEFORE
+      required: true

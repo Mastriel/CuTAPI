@@ -3,7 +3,7 @@ package xyz.mastriel.cutapi.pdc.tags.converters
 import xyz.mastriel.cutapi.pdc.tags.TagContainer
 import kotlin.reflect.KClass
 
-class PrimitiveTagConverter<P: Any>(kClass: KClass<P>) : TagConverter<P, P>(kClass, kClass) {
+class PrimitiveTagConverter<P: Any> private constructor(kClass: KClass<P>) : TagConverter<P, P>(kClass, kClass) {
 
     override fun fromPrimitive(primitive: P): P {
         return primitive

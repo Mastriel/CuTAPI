@@ -5,5 +5,5 @@ import xyz.mastriel.brazil.classes.PlayerSubclass
 import xyz.mastriel.cutapi.registry.id
 
 object BattlesmithSubclass : PlayerSubclass(SpelunkerClass, id(Plugin, "battlesmith")) {
-    override val name: String = "Raider"
+    override val name: String = "Battlesmith"
 }

@@ -16,7 +16,7 @@ import xyz.mastriel.cutapi.item.customItem
 import xyz.mastriel.cutapi.pdc.tags.getDouble
 import xyz.mastriel.cutapi.pdc.tags.setDouble
 import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.resourcepack.management.ref
+import xyz.mastriel.cutapi.resources.ref
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.personalized.personalized
@@ -24,7 +24,6 @@ import xyz.mastriel.cutapi.utils.playSound
 import kotlin.random.Random
 
 val ShinyKnife = customItem(id(Plugin, "shiny_knife"), Material.IRON_SWORD) {
-    texture = personalized( ref(Plugin, "textures/rivers_of_blood.png") )
 
     behavior(
         StaticLore("I'm lore!".colored),
@@ -37,6 +36,7 @@ val ShinyKnife = customItem(id(Plugin, "shiny_knife"), Material.IRON_SWORD) {
 
     display {
         name = "&fShiny Knife".colored
+        texture = ref(Plugin, "items/ruby_sword.png")
         val damager = getBehavior<ShinyKnifeDamager>()
         if (damager.getDeathChance(itemStack) < 1.0) {
             text("&7A very, very shiny knife. You can".colored)

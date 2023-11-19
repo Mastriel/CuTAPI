@@ -5,12 +5,11 @@ import org.bukkit.OfflinePlayer
 import xyz.mastriel.cutapi.item.CustomItem
 import xyz.mastriel.cutapi.pdc.tags.converters.*
 import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.resourcepack.management.ResourceReference
-import xyz.mastriel.cutapi.resourcepack.management.ResourceWithMeta
+import xyz.mastriel.cutapi.resources.Resource
+import xyz.mastriel.cutapi.resources.ResourceRef
 import java.util.*
 
 interface TagContainer {
-
 
 
     fun <P: Any, C: Any> set(key: String, complexValue: C?, converter: TagConverter<P, C>)
@@ -93,9 +92,9 @@ fun TagContainer.setIdentifier(key: String, value: Identifier? = null) =
 fun TagContainer.getIdentifier(key: String) =
     get(key, IdentifierTagConverter)
 
-inline fun <reified T: ResourceWithMeta<*>> TagContainer.setResourceRef(key: String, value: ResourceReference<T>? = null) =
+inline fun <reified T: Resource> TagContainer.setResourceRef(key: String, value: ResourceRef<T>? = null) =
     set(key, value, ResourceRefTagConverter<T>())
-inline fun <reified T: ResourceWithMeta<*>> TagContainer.getResourceRef(key: String) =
+inline fun <reified T: Resource> TagContainer.getResourceRef(key: String) =
     get(key, ResourceRefTagConverter<T>())
 
 fun TagContainer.playerTag(key: String, default: OfflinePlayer) =
@@ -158,18 +157,18 @@ inline fun <reified T : Enum<T>> TagContainer.enumTag(key: String, default: T) =
 inline fun <reified T : Enum<T>> TagContainer.nullableEnumTag(key: String, default: T? = null) =
     NullableTag(key, this, default, EnumTagConverter(T::class))
 
+
+inline fun <reified T : Resource> TagContainer.refTag(key: String, default: ResourceRef<T>) =
+    NotNullTag(key, this, default, ResourceRefTagConverter())
+
+inline fun <reified T : Resource> TagContainer.nullableRefTag(key: String, default: ResourceRef<T>? = null) =
+    NullableTag(key, this, default, ResourceRefTagConverter())
+
 inline fun <reified T : Any> TagContainer.objectTag(key: String, default: T, serializer: KSerializer<T>) =
     NotNullTag(key, this, default, ObjectTagConverter(T::class, serializer))
 
 inline fun <reified T : Any> TagContainer.nullableObjectTag(key: String, default: T?, serializer: KSerializer<T>) =
     NullableTag(key, this, default, ObjectTagConverter(T::class, serializer))
-
-inline fun <reified T: ResourceWithMeta<*>> TagContainer.resourceRefTag(key: String, default: ResourceReference<T>) =
-    NotNullTag(key, this, default, ResourceRefTagConverter<T>())
-
-inline fun <reified T: ResourceWithMeta<*>> TagContainer.nullableResourceRefTag(
-    key: String, default: ResourceReference<T>? = null) =
-    NullableTag(key, this, default, ResourceRefTagConverter<T>())
 
 inline fun <reified T: Enum<T>> TagContainer.setEnum(key: String, value: T? = null) =
     set(key, value, EnumTagConverter(T::class))
@@ -180,4 +179,3 @@ inline fun <reified T: Any> TagContainer.setObject(key: String, value: T? = null
     set(key, value, ObjectTagConverter(T::class, serializer))
 inline fun <reified T: Any> TagContainer.getObject(key: String, serializer: KSerializer<T>) =
     get(key, ObjectTagConverter(T::class, serializer))
-

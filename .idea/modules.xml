@@ -7,6 +7,10 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/ExamplePlugin/CuTAPI.ExamplePlugin.main.iml" filepath="$PROJECT_DIR$/.idea/modules/ExamplePlugin/CuTAPI.ExamplePlugin.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/ExamplePlugin/CuTAPI.ExamplePlugin.test.iml" filepath="$PROJECT_DIR$/.idea/modules/ExamplePlugin/CuTAPI.ExamplePlugin.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/CuTAPI.main.iml" filepath="$PROJECT_DIR$/.idea/modules/CuTAPI.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/CuTAPI-Core/xyz.mastriel.CuTAPI.CuTAPI-Core.main.iml" filepath="$PROJECT_DIR$/.idea/modules/CuTAPI-Core/xyz.mastriel.CuTAPI.CuTAPI-Core.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/CuTAPI-Core/xyz.mastriel.CuTAPI.CuTAPI-Core.test.iml" filepath="$PROJECT_DIR$/.idea/modules/CuTAPI-Core/xyz.mastriel.CuTAPI.CuTAPI-Core.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ExamplePlugin/xyz.mastriel.CuTAPI.ExamplePlugin.main.iml" filepath="$PROJECT_DIR$/.idea/modules/ExamplePlugin/xyz.mastriel.CuTAPI.ExamplePlugin.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ExamplePlugin/xyz.mastriel.CuTAPI.ExamplePlugin.test.iml" filepath="$PROJECT_DIR$/.idea/modules/ExamplePlugin/xyz.mastriel.CuTAPI.ExamplePlugin.test.iml" />
     </modules>
   </component>
 </project>

@@ -5,7 +5,7 @@ import kotlin.reflect.KClass
 
 /**
  * Used specifically to have a registry of sealed objects to consistency. Do not use on a sealed class
- * that has subclasses that are not objects please. This registry will ONLY contain objects of a sealed class.
+ * that has subclasses that are not singleton objects. This registry will ONLY contain objects of a sealed class.
  */
 open class SealedObjectRegistry<T : Identifiable>(name: String, sealedClass: KClass<T>) : IdentifierRegistry<T>("$name (sealed)") {
 

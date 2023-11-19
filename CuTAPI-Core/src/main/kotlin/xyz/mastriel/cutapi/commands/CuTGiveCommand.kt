@@ -11,13 +11,13 @@ import xyz.mastriel.cutapi.utils.chatTooltip
 import xyz.mastriel.cutapi.utils.colored
 import xyz.mastriel.cutapi.utils.playerNameList
 
-object CuTGiveCommand : TabExecutor {
-    override fun onTabComplete(
-        sender: CommandSender,
-        command: Command,
-        alias: String,
-        args: Array<out String>
-    ): MutableList<String> {
+object CuTGiveCommand : Command("cutgive") {
+
+    override fun getDescription() = "Gives a custom item to a player."
+    override fun getPermission() = "cutapi.admin.give"
+    override fun getAliases() = listOf("cgive")
+
+    override fun tabComplete(sender: CommandSender, alias: String, args: Array<out String>): MutableList<String> {
         val position = args.size
         if (position == 1) {
             return playerNameList().toMutableList()
@@ -31,9 +31,7 @@ object CuTGiveCommand : TabExecutor {
     }
 
     // /cutgive <player> <namespaced-item> [quantity]
-    override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
-        val targetArg = args.getOrNull(0)
-        val namespacedItemArg = args.getOrNull(1)
+    override fun execute(sender: CommandSender, label: String, args: Array<out String>): Boolean {
 
         val size = args.size
 
@@ -41,6 +39,11 @@ object CuTGiveCommand : TabExecutor {
             sender.sendMessage("&cUsage: /cutgive <player> <namespaced-item> [quantity]".colored)
             return true
         }
+
+        val targetArg = args.getOrNull(0)
+        val namespacedItemArg = args.getOrNull(1)
+
+
 
         var quantity: Int? = null
         if (size == 2) quantity = 1

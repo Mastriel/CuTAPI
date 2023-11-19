@@ -3,11 +3,14 @@ package xyz.mastriel.cutapi
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.plus
+import net.peanuuutz.tomlkt.Toml
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.packets.PacketManager
 import xyz.mastriel.cutapi.periodic.PeriodicManager
-import xyz.mastriel.cutapi.resourcepack.management.ResourceManager
-import xyz.mastriel.cutapi.resourcepack.management.ResourcePackManager
+import xyz.mastriel.cutapi.resources.ResourceManager
+import xyz.mastriel.cutapi.resources.ResourcePackManager
 import xyz.mastriel.cutapi.utils.ServiceManager
 
 
@@ -28,9 +31,8 @@ object CuTAPI {
     internal val packetManager = PacketManager(Plugin)
     internal val packetEventManager = packetManager.eventManager
 
-    val resourcePackManager = ResourcePackManager()
     val resourceManager = ResourceManager()
-    val packGenerator = resourcePackManager.generator
+    val resourcePackManager = ResourcePackManager()
     val periodicManager = PeriodicManager()
     val serviceManager = ServiceManager()
 
@@ -79,9 +81,10 @@ object CuTAPI {
      * @returns The descriptor used for the [plugin].
      * @see PluginDescriptor
      */
+    @Throws(IllegalStateException::class)
     fun getDescriptor(plugin: Plugin) : PluginDescriptor {
         requireRegistered(plugin)
-        return plugins[plugin] ?: error("Plugin $plugin not registered when it should be?")
+        return plugins[plugin]!!
     }
 
     /**
@@ -143,6 +146,9 @@ object CuTAPI {
         if (!namespaceRegex.matches(namespace)) {
             throw IllegalArgumentException("Namespace $namespace is not valid! (does not match ${namespaceRegex.pattern})")
         }
+        if (namespace.startsWith("_") || namespace.endsWith("_")) {
+            throw IllegalArgumentException("Namespace $namespace is not valid! (starts/ends with _)")
+        }
         // The plugin that is using this namespace, if there is one.
         val namespaceOwner = plugins.values.find { it.namespace == namespace }
 
@@ -151,6 +157,7 @@ object CuTAPI {
             error("Namespace $namespace already exists! (used by ${pluginName})")
         }
     }
+
 
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -162,5 +169,9 @@ object CuTAPI {
         ignoreUnknownKeys = true
         prettyPrint = true
         encodeDefaults = true
+    }
+
+    internal val toml = Toml {
+        ignoreUnknownKeys = true
     }
 }

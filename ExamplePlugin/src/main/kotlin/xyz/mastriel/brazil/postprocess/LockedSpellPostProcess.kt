@@ -2,8 +2,8 @@ package xyz.mastriel.brazil.postprocess
 
 import xyz.mastriel.brazil.Plugin
 import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.resourcepack.resourcetypes.Texture
-import xyz.mastriel.cutapi.resourcepack.postprocess.TexturePostProcessor
+import xyz.mastriel.cutapi.resources.resourcetypes.Texture
+import xyz.mastriel.cutapi.resources.postprocess.TexturePostProcessor
 import xyz.mastriel.cutapi.utils.TransparentColor
 import xyz.mastriel.cutapi.utils.forPixel
 

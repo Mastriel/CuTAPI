@@ -7,7 +7,7 @@ import xyz.mastriel.cutapi.Plugin
 
 internal open class WrappedPacket(val handle: PacketContainer) {
 
-    val packetType get() = handle.type
+    val packetType get() = handle.type!!
 
     fun sendPacket(target: Player): Boolean {
         try {

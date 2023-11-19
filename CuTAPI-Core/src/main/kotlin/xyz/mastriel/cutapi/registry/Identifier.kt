@@ -41,18 +41,26 @@ data class Identifier internal constructor(val namespace: String, val key: Strin
         return Identifier(namespace, "$key/$string")
     }
 
+    operator fun div(string: String) : Identifier {
+        return Identifier(namespace, "$key/$string")
+    }
+
     fun toNamespacedKey() : NamespacedKey {
         if (plugin != null) {
             return NamespacedKey(plugin!!, key)
         }
         return NamespacedKey(namespace, key)
     }
+
+    fun isUnknown() : Boolean {
+        return this == unknownID()
+    }
 }
 
 fun NamespacedKey.toIdentifier() = id("$namespace:$key")
 
 /**
- * An identifier, for any type of registrable object.
+ * An identifier, for any type of registerable object.
  *
  * @param plugin The plugin used for the namespace
  * @param id This must follow the same naming rules as namespaces. See [CuTAPI.registerPlugin] for more info.
@@ -68,9 +76,7 @@ fun id(plugin: Plugin, id: String) : Identifier {
 }
 
 /**
- * An identifier, for any type of registrable object. You should not use this manually, and instead
- * use the other overload, as supplying an invalid plugin can result in errors. This should only be used
- * to get an [Identifier] from already stored data.
+ * An identifier, for any type of registerable object.
  *
  * @param stringRepresentation The string representation of the [Identifier] you are trying to get.
  *
@@ -83,7 +89,7 @@ fun id(stringRepresentation: String) : Identifier {
 }
 
 /**
- * An identifier, for any type of registrable object. You should not use this manually, and instead
+ * An identifier, for any type of registerable object. You should not use this manually, and instead
  * use the other overload. This should only be used to get an [Identifier] from already stored data.
  *
  * @param stringRepresentation The string representation of the [Identifier] you are trying to get.

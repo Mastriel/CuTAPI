@@ -1,5 +1,6 @@
+@file:Suppress("UnstableApiUsage")
+
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
@@ -8,12 +9,14 @@ plugins {
     id("com.github.johnrengelman.shadow")
     id("org.jetbrains.kotlin.plugin.serialization")
 
+    id("xyz.jpenilla.run-paper")
+
     `maven-publish`
 }
 
 val kotlinVersion : String by properties
 group = "xyz.mastriel"
-version = "0.0.2a"
+version = "0.1.0a"
 
 repositories {
     mavenCentral()
@@ -37,24 +40,34 @@ repositories {
 }
 
 dependencies {
-    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
-    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
-    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
-    testImplementation("com.github.seeseemelk:MockBukkit-v1.19:2.119.3")
     testImplementation(kotlin("test"))
-    implementation("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")
-    implementation("com.comphenix.protocol:ProtocolLib:5.0.0-SNAPSHOT")
+    implementation("io.papermc.paper:paper-api:1.20.2-R0.1-SNAPSHOT")
+    implementation("com.comphenix.protocol:ProtocolLib:5.1.0")
 
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
-    compileOnly("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    // god hates me so we're shadowing everything
+    shadow("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
+    shadow("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
+    shadow("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    shadow("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
+    shadow("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
+    shadow("net.peanuuutz.tomlkt:tomlkt:0.3.7")
 
-    compileOnly("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.6.0")
-    compileOnly("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.6.0")
+    shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.6.0")
+    shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.6.0")
+
 }
 
+
+tasks {
+
+    runServer {
+        downloadPlugins {
+            url("https://ci.dmulloy2.net/job/ProtocolLib/lastSuccessfulBuild/artifact/build/libs/ProtocolLib.jar")
+        }
+
+        minecraftVersion("1.20.2")
+    }
+}
 
 tasks.withType<ShadowJar> {
     configurations = listOf(project.configurations.shadow.get())
@@ -65,7 +78,7 @@ tasks.withType<ShadowJar> {
 tasks.withType<ProcessResources> {
     val props = mapOf("version" to "$version", "kotlinVersion" to kotlinVersion)
     inputs.properties(props)
-    filesMatching("plugin.yml") {
+    filesMatching("paper-plugin.yml") {
         expand(props)
     }
 }
@@ -87,8 +100,4 @@ publishing {
             from(components["java"])
         }
     }
-}
-val compileKotlin: KotlinCompile by tasks
-compileKotlin.kotlinOptions {
-    languageVersion = "1.9.10"
 }

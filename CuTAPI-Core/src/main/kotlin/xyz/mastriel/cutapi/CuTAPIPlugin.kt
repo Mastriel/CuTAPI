@@ -1,9 +1,8 @@
 package xyz.mastriel.cutapi
 
 import com.github.shynixn.mccoroutine.bukkit.launch
-import org.bukkit.plugin.PluginDescriptionFile
+import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.plugin.java.JavaPluginLoader
 import org.bukkit.scheduler.BukkitRunnable
 import xyz.mastriel.cutapi.commands.CuTGiveCommand
 import xyz.mastriel.cutapi.commands.TestCommand
@@ -14,20 +13,22 @@ import xyz.mastriel.cutapi.item.PacketItemHandler
 import xyz.mastriel.cutapi.item.behaviors.ItemBehaviorEvents
 import xyz.mastriel.cutapi.item.bukkitevents.PlayerItemEvents
 import xyz.mastriel.cutapi.item.events.CustomItemEvents
-import xyz.mastriel.cutapi.resourcepack.generator.PackGenerationException
-import xyz.mastriel.cutapi.resourcepack.postprocess.GrayscalePostProcessor
-import xyz.mastriel.cutapi.resourcepack.postprocess.TexturePostProcessor
-import xyz.mastriel.cutapi.resourcepack.postprocess.TextureProcessor
-import xyz.mastriel.cutapi.resourcepack.resourcetypes.Texture
-import java.io.File
-import kotlin.time.ExperimentalTime
+import xyz.mastriel.cutapi.resources.ResourceFileLoader
+import xyz.mastriel.cutapi.resources.ResourcePackProcessor
+import xyz.mastriel.cutapi.resources.ResourceProcessor
+import xyz.mastriel.cutapi.resources.builtin.TextureResourceLoader
+import xyz.mastriel.cutapi.resources.generator.PackGenerationException
+import xyz.mastriel.cutapi.resources.postprocess.GrayscalePostProcessor
+import xyz.mastriel.cutapi.resources.postprocess.TexturePostProcessor
+import xyz.mastriel.cutapi.resources.postprocess.TextureProcessor
 import kotlin.time.measureTime
 
 
+@PublishedApi
 internal lateinit var Plugin : CuTAPIPlugin
     private set
 
-class CuTAPIPlugin : JavaPlugin {
+class CuTAPIPlugin : JavaPlugin() {
 
     override fun onEnable() {
         Plugin = this
@@ -49,42 +50,57 @@ class CuTAPIPlugin : JavaPlugin {
         CustomItem.register(CustomItem.Unknown)
         TexturePostProcessor.register(GrayscalePostProcessor)
         TexturePostProcessor.registerBuiltins()
+        ResourcePackProcessor.register(TextureProcessor)
 
         registerPacketListeners()
 
-        registerResourceTypes()
+        registerResourceLoaders()
 
         generateResourcePackWhenReady()
     }
 
-    @OptIn(ExperimentalTime::class)
     private fun generateResourcePackWhenReady() {
         object : BukkitRunnable() {
             override fun run() {
                 Plugin.launch {
                     try {
+                        for (plugin in CuTAPI.registedPlugins) {
+                            CuTAPI.resourceManager.dumpPluginResourcesToTemp(plugin)
+                            CuTAPI.resourceManager.loadPluginResources(plugin)
+                        }
+                        runResourceProcessors()
+
                         val executionTime = measureTime {
                             val generator = CuTAPI.resourcePackManager.generator
                             generator.generate()
                         }
                         info("Resource pack generated in $executionTime.")
                     } catch (ex: Exception) {
-                        throw PackGenerationException("Pack failed to generate.", ex)
+                        throw PackGenerationException("Resources failed to load.", ex)
                     }
                 }
             }
         }.runTaskLater(this, 1)
     }
 
+    private fun runResourceProcessors() {
+        val executionTime = measureTime {
+            ResourceProcessor.forEach {
+                it.processResources(CuTAPI.resourceManager)
+            }
+        }
+        info("Resource Processors (normal registry) ran in $executionTime.")
+    }
+
     private fun registerPeriodics() {
         val periodicManager = CuTAPI.periodicManager
 
         periodicManager.register(PacketItemHandler)
+
     }
 
-    private fun registerResourceTypes() {
-        val resourceManager = CuTAPI.resourceManager
-        resourceManager.addResourceType(::Texture, Texture::class, listOf("png"), TextureProcessor)
+    private fun registerResourceLoaders() {
+        ResourceFileLoader.register(TextureResourceLoader)
     }
 
     private fun registerEvents() {
@@ -98,11 +114,8 @@ class CuTAPIPlugin : JavaPlugin {
     }
 
     private fun registerCommands() {
-        getCommand("cutgive")?.setExecutor(CuTGiveCommand)
-        getCommand("cutgive")?.tabCompleter = CuTGiveCommand
-
-        getCommand("test")?.setExecutor(TestCommand)
-        getCommand("test")?.tabCompleter = TestCommand
+        Bukkit.getCommandMap().register("cutapi", CuTGiveCommand)
+        Bukkit.getCommandMap().register("cutapi", TestCommand)
     }
 
     private fun registerPacketListeners() {
@@ -116,19 +129,11 @@ class CuTAPIPlugin : JavaPlugin {
         CuTAPI.unregisterPlugin(this)
     }
 
+    @PublishedApi
     internal fun info(msg: Any?) = logger.info("$msg")
+    @PublishedApi
     internal fun warn(msg: Any?) = logger.warning("$msg")
+    @PublishedApi
     internal fun error(msg: Any?) = logger.severe("$msg")
 
-
-    @Suppress("UNUSED")
-    constructor() : super()
-
-    @Suppress("UNUSED")
-    constructor(
-        loader: JavaPluginLoader,
-        descriptionFile: PluginDescriptionFile,
-        dataFolder: File,
-        file: File
-    ) : super(loader, descriptionFile, dataFolder, file)
 }

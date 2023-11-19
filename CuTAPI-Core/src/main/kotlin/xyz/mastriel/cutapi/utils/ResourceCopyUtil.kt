@@ -39,6 +39,7 @@ private fun copyJarResourcesRecursively(destination: File, jarConnection: JarURL
                     entryInputStream = jarFile.getInputStream(entry)
                     val file = File(destination, fileName)
 
+                    File(file.parent).mkdirs()
                     file.createNewFile()
                     file.writeBytes(entryInputStream.readAllBytes())
                 } finally {
@@ -46,7 +47,7 @@ private fun copyJarResourcesRecursively(destination: File, jarConnection: JarURL
                 }
             } else {
                 val file = File(destination, fileName)
-                if (!file.exists()) file.mkdir()
+                if (!file.exists()) file.mkdirs()
             }
         }
     }

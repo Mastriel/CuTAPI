@@ -43,5 +43,3 @@ fun ItemStack.appendLore(vararg lore: Component) : ItemStack {
     }
     return this
 }
-
-internal fun <T> list(list: MutableList<T>.() -> Unit) = mutableListOf<T>().apply(list).toList()

@@ -10,7 +10,6 @@ import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
 
 open class PDCTagContainer(var container: PersistentDataContainer) : TagContainer {
 
-
     override fun <P: Any, C: Any> set(key: String, complexValue: C?, converter: TagConverter<P, C>) {
         val namespacedKey = NamespacedKey(Plugin, key)
         if (complexValue == null) return container.remove(namespacedKey)
