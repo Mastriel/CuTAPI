@@ -5,6 +5,7 @@ import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import xyz.mastriel.cutapi.commands.CuTGiveCommand
+import xyz.mastriel.cutapi.commands.PacketDebugCommand
 import xyz.mastriel.cutapi.commands.TestCommand
 import xyz.mastriel.cutapi.item.CuTItemStack
 import xyz.mastriel.cutapi.item.CustomItem
@@ -12,7 +13,7 @@ import xyz.mastriel.cutapi.item.ItemStackUtility
 import xyz.mastriel.cutapi.item.PacketItemHandler
 import xyz.mastriel.cutapi.item.behaviors.ItemBehaviorEvents
 import xyz.mastriel.cutapi.item.bukkitevents.PlayerItemEvents
-import xyz.mastriel.cutapi.item.events.CustomItemEvents
+import xyz.mastriel.cutapi.item.recipe.CraftingRecipeEvents
 import xyz.mastriel.cutapi.resources.ResourceFileLoader
 import xyz.mastriel.cutapi.resources.ResourcePackProcessor
 import xyz.mastriel.cutapi.resources.ResourceProcessor
@@ -50,7 +51,7 @@ class CuTAPIPlugin : JavaPlugin() {
         CustomItem.register(CustomItem.Unknown)
         TexturePostProcessor.register(GrayscalePostProcessor)
         TexturePostProcessor.registerBuiltins()
-        ResourcePackProcessor.register(TextureProcessor)
+        ResourcePackProcessor.register(TextureProcessor, name = "Texture Processor")
 
         registerPacketListeners()
 
@@ -64,9 +65,13 @@ class CuTAPIPlugin : JavaPlugin() {
             override fun run() {
                 Plugin.launch {
                     try {
-                        for (plugin in CuTAPI.registedPlugins) {
-                            CuTAPI.resourceManager.dumpPluginResourcesToTemp(plugin)
-                            CuTAPI.resourceManager.loadPluginResources(plugin)
+                        for (plugin in CuTAPI.registeredPlugins) {
+                            try {
+                                CuTAPI.resourceManager.dumpPluginResourcesToTemp(plugin)
+                                CuTAPI.resourceManager.loadPluginResources(plugin)
+                            } catch (e: Exception) {
+                                Plugin.error("Failed to load resources for ${plugin}!")
+                            }
                         }
                         runResourceProcessors()
 
@@ -105,8 +110,9 @@ class CuTAPIPlugin : JavaPlugin() {
 
     private fun registerEvents() {
         server.pluginManager.registerEvents(PlayerItemEvents, this)
-        server.pluginManager.registerEvents(CustomItemEvents(), this)
+
         server.pluginManager.registerEvents(PacketItemHandler, this)
+        server.pluginManager.registerEvents(CraftingRecipeEvents(), this)
 
         val itemBehaviorEvents = ItemBehaviorEvents()
         server.pluginManager.registerEvents(itemBehaviorEvents, this)
@@ -116,6 +122,7 @@ class CuTAPIPlugin : JavaPlugin() {
     private fun registerCommands() {
         Bukkit.getCommandMap().register("cutapi", CuTGiveCommand)
         Bukkit.getCommandMap().register("cutapi", TestCommand)
+        Bukkit.getCommandMap().register("cutapi", PacketDebugCommand)
     }
 
     private fun registerPacketListeners() {

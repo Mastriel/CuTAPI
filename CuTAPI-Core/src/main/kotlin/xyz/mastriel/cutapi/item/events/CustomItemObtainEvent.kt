@@ -8,6 +8,7 @@ import xyz.mastriel.cutapi.item.CuTItemStack
 data class CustomItemObtainEvent(override val item: CuTItemStack, val player: Player) : CustomItemEvent(item), Cancellable {
 
     private var cancel : Boolean = false
+    var destroyItem : Boolean = false
 
     override fun getHandlers(): HandlerList {
         return HANDLERS

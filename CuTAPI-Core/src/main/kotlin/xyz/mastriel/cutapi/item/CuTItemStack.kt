@@ -13,6 +13,7 @@ import xyz.mastriel.cutapi.item.ItemStackUtility.customIdOrNull
 import xyz.mastriel.cutapi.item.ItemStackUtility.customItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.cutItemStackType
 import xyz.mastriel.cutapi.item.ItemStackUtility.asCustomItem
+import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.pdc.tags.*
@@ -302,6 +303,31 @@ open class CuTItemStack protected constructor(
         }
 
     }
+}
+
+
+/**
+ * Represents an item that is either a normal item stack or a CuT item stack.
+ */
+sealed class AgnosticItemStack(val handle: ItemStack) {
+    fun vanilla() = handle
+
+    data class Custom internal constructor(val stack: CuTItemStack) : AgnosticItemStack(stack.handle) {
+        fun custom() = stack
+    }
+
+    data class Vanilla internal constructor(private val stack: ItemStack) : AgnosticItemStack(stack)
+}
+
+fun ItemStack.toAgnostic() : AgnosticItemStack {
+    if (isCustom) {
+        return AgnosticItemStack.Custom(wrap()!!)
+    }
+    return AgnosticItemStack.Vanilla(this)
+}
+
+fun CuTItemStack.toAgnostic() : AgnosticItemStack.Custom {
+    return AgnosticItemStack.Custom(this)
 }
 
 

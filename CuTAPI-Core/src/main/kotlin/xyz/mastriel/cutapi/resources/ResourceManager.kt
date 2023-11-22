@@ -66,7 +66,7 @@ class ResourceManager {
     }
 
     internal fun loadPluginResources(plugin: Plugin) {
-        loadResourcesFromFolder(folderRef(Plugin, ""), plugin)
+        loadResourcesFromFolder(folderRef(plugin, ""), plugin)
     }
 
     private fun folderRefToFile(folderRef: FolderRef) : File {

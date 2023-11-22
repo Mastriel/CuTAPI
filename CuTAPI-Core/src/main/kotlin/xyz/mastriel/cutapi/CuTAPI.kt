@@ -3,8 +3,6 @@ package xyz.mastriel.cutapi
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.plus
 import net.peanuuutz.tomlkt.Toml
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.packets.PacketManager
@@ -26,7 +24,7 @@ object CuTAPI {
      * A map of all plugins registered, along with their plugin descriptors.
      */
     private val plugins = mutableMapOf<Plugin, PluginDescriptor>()
-    val registedPlugins : Set<Plugin> get() = plugins.keys
+    val registeredPlugins : Set<Plugin> get() = plugins.keys
 
     internal val packetManager = PacketManager(Plugin)
     internal val packetEventManager = packetManager.eventManager

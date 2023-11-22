@@ -10,6 +10,7 @@ import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerSwapHandItemsEvent
+import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.item.events.CustomItemObtainEvent
@@ -97,9 +98,11 @@ class ItemBehaviorEvents : Listener {
     @Periodic(1)
     fun tickEvents() {
         for (player in onlinePlayers()) {
-            player.inventory.mapIndexedNotNull { index, itemStack -> itemStack.wrap() to index }
+            player.inventory.filterNotNull().mapIndexed { index, itemStack -> itemStack.wrap() to index }
                 .filter { it.first != null }
-                .forEach { it.first!!.getAllBehaviors().forEach { b -> b.onTickInInventory(player, it.first!!, it.second) } }
+                .forEach {
+                    it.first!!.getAllBehaviors().forEach { b -> b.onTickInInventory(player, it.first!!, it.second) }
+                }
 
             val mainHand = player.inventory.itemInMainHand.wrap()
             mainHand?.getAllBehaviors()?.forEach { b -> b.onTickInEitherHand(player, mainHand, HandSlot.MAIN_HAND) }
@@ -108,11 +111,12 @@ class ItemBehaviorEvents : Listener {
             offHand?.getAllBehaviors()?.forEach { b -> b.onTickInEitherHand(player, offHand, HandSlot.OFF_HAND) }
 
             val armorList = player.inventory.run { listOf(helmet, chestplate, leggings, boots) }
-            val slotList = ArmorSlot.values()
+            val slotList = ArmorSlot.entries
 
             for ((i, piece) in armorList.withIndex()) {
                 val wrappedPiece = piece?.wrap()
-                wrappedPiece?.getAllBehaviors()?.forEach { b -> b.onTickEquipped(player, wrappedPiece, slotList[i]) }
+                wrappedPiece?.getAllBehaviors()
+                    ?.forEach { b -> b.onTickEquipped(player, wrappedPiece, slotList[i]) }
             }
         }
     }

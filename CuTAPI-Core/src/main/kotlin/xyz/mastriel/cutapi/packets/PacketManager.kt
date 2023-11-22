@@ -4,7 +4,9 @@ import com.comphenix.protocol.PacketType
 import com.comphenix.protocol.ProtocolLibrary
 import com.comphenix.protocol.events.PacketContainer
 import org.bukkit.plugin.Plugin
+import xyz.mastriel.cutapi.packets.wrappers.*
 import xyz.mastriel.cutapi.packets.wrappers.ClientboundEntityEffectPacket
+import xyz.mastriel.cutapi.packets.wrappers.ClientboundOpenScreenPacket
 import xyz.mastriel.cutapi.packets.wrappers.ClientboundSetContainerContentPacket
 import xyz.mastriel.cutapi.packets.wrappers.ClientboundSetSlotPacket
 import kotlin.reflect.KClass
@@ -21,6 +23,9 @@ internal class PacketManager(val plugin: Plugin) {
         packetTypes.add(ClientboundSetSlotPacket::class)
         packetTypes.add(ClientboundEntityEffectPacket::class)
         packetTypes.add(ClientboundSetContainerContentPacket::class)
+        packetTypes.add(ClientboundOpenScreenPacket::class)
+        packetTypes.add(ClientboundCloseContainerPacket::class)
+        packetTypes.add(ServerboundCloseContainerPacket::class)
 
         ProtocolLibrary
             .getProtocolManager()

@@ -9,6 +9,7 @@ import xyz.mastriel.cutapi.item.behaviors.itemBehaviorHolder
 import xyz.mastriel.cutapi.resources.ResourceRef
 import xyz.mastriel.cutapi.resources.builtin.Texture2D
 import xyz.mastriel.cutapi.utils.Color
+import xyz.mastriel.cutapi.utils.EventHandlerList
 import xyz.mastriel.cutapi.utils.colored
 
 
@@ -28,7 +29,8 @@ class ItemDescriptor internal constructor(
      * This is always actually a MutableList<ItemBehavior>, however you should
      * not modify this unless you know what you're doing.
      */
-    val itemBehaviors: List<ItemBehavior> = mutableListOf()
+    val itemBehaviors: List<ItemBehavior> = mutableListOf(),
+    val onRegister: EventHandlerList<ItemRegisterEvent> = EventHandlerList()
 ) {
 
     infix fun with(block: ItemDescriptorBuilder.() -> Unit) : ItemDescriptor {
@@ -53,6 +55,8 @@ class ItemDescriptor internal constructor(
     }
 }
 
+data class ItemRegisterEvent(val item: CustomItem<*>)
+
 /**
  * A builder for the [ItemDescriptor], containing some useful functions to make creating
  * resources much easier.
@@ -67,6 +71,8 @@ class ItemDescriptorBuilder {
     }
 
     val itemBehaviors = mutableListOf<ItemBehavior>()
+
+    val onRegister = EventHandlerList<ItemRegisterEvent>()
 
     fun behavior(vararg behaviors: ItemBehavior) {
         for (behavior in behaviors) {
@@ -87,13 +93,15 @@ class ItemDescriptorBuilder {
     fun build(): ItemDescriptor {
         return ItemDescriptor(
             display = display,
-            itemBehaviors = itemBehaviors
+            itemBehaviors = itemBehaviors,
+            onRegister = onRegister
         )
     }
 
     fun display(block: ItemDisplayBuilder.() -> Unit) {
         display = block
     }
+
 
     fun noDisplay() {
         display = {}

@@ -41,8 +41,8 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("io.papermc.paper:paper-api:1.20.2-R0.1-SNAPSHOT")
-    implementation("com.comphenix.protocol:ProtocolLib:5.1.0")
+    compileOnly("io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT")
+    compileOnly("com.comphenix.protocol:ProtocolLib:5.1.0")
 
     // god hates me so we're shadowing everything
     shadow("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
@@ -62,10 +62,10 @@ tasks {
 
     runServer {
         downloadPlugins {
-            url("https://ci.dmulloy2.net/job/ProtocolLib/lastSuccessfulBuild/artifact/build/libs/ProtocolLib.jar")
+            url("https://github.com/dmulloy2/ProtocolLib/releases/download/5.1.0/ProtocolLib.jar")
         }
 
-        minecraftVersion("1.20.2")
+        minecraftVersion("1.20.1")
     }
 }
 

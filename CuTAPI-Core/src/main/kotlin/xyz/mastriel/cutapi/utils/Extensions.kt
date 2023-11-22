@@ -14,7 +14,7 @@ val String.colored : Component get() =
 val ItemStack.chatTooltip : Component get() =
     Component.text()
         .hoverEvent(this)
-        .append(this.itemMeta.displayName() ?: Component.translatable(this))
+        .append(this.itemMeta?.displayName() ?: Component.translatable(this))
         .build()
 
 val Instant.hasPassed : Boolean get() = this.isBefore(Instant.now())

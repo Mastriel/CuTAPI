@@ -46,9 +46,6 @@ data class Identifier internal constructor(val namespace: String, val key: Strin
     }
 
     fun toNamespacedKey() : NamespacedKey {
-        if (plugin != null) {
-            return NamespacedKey(plugin!!, key)
-        }
         return NamespacedKey(namespace, key)
     }
 

@@ -20,8 +20,6 @@ val TextureProcessor = resourceProcessor<Texture2D> {
 
     generateTexturesInPack(textures, itemModelFolder)
     generateItemJsonFiles(textures, itemModelFolder)
-
-
 }
 
 fun texturePathOf(ref: ResourceRef<*>) : String {

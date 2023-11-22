@@ -48,7 +48,7 @@ abstract class ResourcePackGenerator {
 
         File(tempPackFolder, "assets/minecraft/").mkdirs()
 
-        for (plugin in CuTAPI.registedPlugins) {
+        for (plugin in CuTAPI.registeredPlugins) {
             CuTAPI.resourcePackManager.getTexturesFolder(plugin).mkdirs()
         }
     }

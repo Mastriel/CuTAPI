@@ -16,7 +16,7 @@ open class ListRegistry <T: Any>(val name: String) : Iterable<T> {
         values += item
 
         // fixme probably doesnt print right
-        Plugin.info("[REGISTRY] A ${name ?: item::class.qualifiedName} added to '${name}'.")
+        Plugin.info("[REGISTRY] ${name ?: ("A " + item::class.qualifiedName)} added to '${this.name}'.")
     }
 
     open operator fun plusAssign(item: T) {

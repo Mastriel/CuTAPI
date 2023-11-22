@@ -36,7 +36,6 @@ abstract class ItemBehavior(
 
     open fun onLeftClick(player: Player, item: CuTItemStack, event: PlayerInteractEvent) {}
 
-    @Deprecated("Doesn't seem to be supported by Minecraft anymore.")
     open fun onMiddleClick(player: Player, item: CuTItemStack, event: PlayerInteractEvent) {}
     open fun onRightClick(player: Player, item: CuTItemStack, event: PlayerInteractEvent) {}
 

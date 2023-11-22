@@ -31,6 +31,6 @@ infix fun <E, T> Computable<E, T>.or(constantValue: T): ComputableWithDefault<E,
     return ChildComputableWithDefault(constantValue, this)
 }
 
-fun <T> computable(constantValue: T): PersonalizedWithDefault<T> {
-    return ConstantPersonalizedWithDefault(constantValue)
+fun <E, T> computable(constantValue: T): ComputableWithDefault<E, T> {
+    return ConstantComputableWithDefault(constantValue)
 }
