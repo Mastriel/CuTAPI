@@ -1,0 +1,65 @@
+#
+#       _______     ___    _ ,---------.    ____    .-------. .-./`)
+#      /   __  \  .'   |  | |\          \ .'  __ `. \  _(`)_ \\ .-.')
+#     | ,_/  \__) |   .'  | | `--.  ,---'/   '  \  \| (_ o._)|/ `-' \
+#   ,-./  )       .'  '_  | |    |   \   |___|  /  ||  (_,_) / `-'`"`
+#   \  '_ '`)     '   ( \.-.|    :_ _:      _.-`   ||   '-.-'  .---.
+#    > (_)  )  __ ' (`. _` /|    (_I_)   .'   _    ||   |      |   |
+#   (  .  .-'_/  )| (_ (_) _)   (_(=)_)  |  _( )_  ||   |      |   |
+#    `-'`-'     /  \ /  . \ /    (_I_)   \ (_ o _) //   )      |   |
+#      `._____.'    ``-'`-''     '---'    '.(_,_).' `---'      '---'
+#
+# Primarily maintained by: Mastriel#0085
+#
+# Some plugins may prevent you from changing some of these values, so if a change isn't reflected in your server
+# (after a restart!!!), then it is probably the fault of another plugin developer.
+#
+
+
+
+# This specifies the image used for the generated resource pack.
+#
+# Type: string
+# Default: pack.png
+pack-png: "pack.png"
+
+# This is the name of the resource pack generated. This is always generated in plugins/CuTAPI/
+#
+# Type: string
+# Default: pack.zip
+generated-pack-name: "pack.zip"
+
+# The description for the pack generated.
+#
+# Type: string
+# Default: CuTAPI Generated Resource Pack
+pack-description: "CuTAPI Generated Resource Pack"
+
+# The version of the pack generated. Currently supported: 9 to 18 (1.19-1.20.1)
+# "auto" will automatically choose the resource pack version based on the version the server is running.
+#
+# Type: integer | "auto"
+# Default: auto
+pack-version: auto
+
+uploader:
+  # The port for the internal server (if that's the uploader being used). You may need
+  # to port-forward this port to make the server work
+  #
+  # Type: integer
+  # Default: 32120
+  port: 32120
+
+  # The IP address of the internal server (if that's the uploader being used)
+  #
+  # Type: string
+  # Default: 0.0.0.0 (which will automatically infer your IP)
+  ip-address: 0.0.0.0
+
+  # The ID of the uploader being used.
+  # cutapi:internal is the default internal server for resource packs.
+  #
+  # Type: Identifier
+  # Default: cutapi:internal
+  id: cutapi:internal
+
