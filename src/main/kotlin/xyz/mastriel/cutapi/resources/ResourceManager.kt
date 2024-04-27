@@ -163,7 +163,7 @@ class ResourceManager {
      * @param ref The resource ref this file will be associated with
      */
     @Suppress("UNCHECKED_CAST")
-    fun loadResource(resourceFile: File, ref: ResourceRef<*>) {
+    fun loadResource(resourceFile: File, ref: ResourceRef<*>): Boolean {
         val metadataFile = File(resourceFile.absolutePath + ".meta")
 
         try {
@@ -180,25 +180,39 @@ class ResourceManager {
             loaders += ResourceFileLoader.getAllValues()
                 .filter { it.id.plugin != ref.plugin } as List<ResourceFileLoader<Resource>>
 
+            if (loaders.isEmpty()) {
+                Plugin.error("No loaders found for resource $ref.")
+                checkResourceLoading(ref.plugin)
+                return false
+            }
+
             for (loader in loaders) {
                 when (val result = loader.loadResource(ref, resourceBytes, metadataBytes)) {
                     is ResourceLoadResult.Success -> {
                         if (ref.isAvailable()) {
-                            Plugin.warn("Resource $ref is being overwritten...")
+                            Plugin.warn("Resource $ref is being overwritten in memory...")
                         }
                         register(result.resource, overwrite = true)
                         Plugin.info("Registered resource $ref [${result.resource::class.simpleName}]")
+                        return true
                     }
 
                     is ResourceLoadResult.WrongType -> continue
                     is ResourceLoadResult.Failure -> {
                         Plugin.error("Failed to load resource ${ref}.")
                         checkResourceLoading(ref.plugin)
+                        return false
                     }
                 }
             }
+            if (!resourceFile.name.endsWith(".meta")) {
+                Plugin.error("No loaders found for resource $ref. [tried ${loaders.joinToString { it.id.toString() }}]")
+                checkResourceLoading(ref.plugin)
+            }
+            return false
         } catch (e: Exception) {
             Plugin.error(e)
+            return false
         }
     }
 

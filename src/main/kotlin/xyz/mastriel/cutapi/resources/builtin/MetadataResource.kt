@@ -74,6 +74,7 @@ fun <T : MetadataResource<M>, M : CuTMeta> metadataResourceLoader(
                     return ResourceLoadResult.WrongType()
                 }
             }
+
             return ResourceLoadResult.WrongType()
         }
     }
