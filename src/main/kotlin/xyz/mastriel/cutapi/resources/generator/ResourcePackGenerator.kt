@@ -7,8 +7,8 @@ import xyz.mastriel.cutapi.resources.ResourcePackProcessor
 import xyz.mastriel.cutapi.resources.ResourceRef
 import xyz.mastriel.cutapi.resources.builtin.Texture2D
 import xyz.mastriel.cutapi.resources.pack.PackConfig
-import xyz.mastriel.cutapi.utils.*
-import xyz.mastriel.cutapi.utils.cutConfigValue
+import xyz.mastriel.cutapi.utils.appendPath
+import xyz.mastriel.cutapi.utils.createAndWrite
 import java.io.File
 import kotlin.time.measureTime
 
@@ -17,14 +17,13 @@ abstract class ResourcePackGenerator {
     /**
      * Pick the earliest version that this generator supports
      */
-    abstract val packVersion : Int
-    abstract val generationSteps : Int
+    abstract val packVersion: Int
+    abstract val generationSteps: Int
 
     val packDescription by PackConfig::PackDescription
 
     val tempPackFolder get() = Plugin.dataFolder.appendPath("pack-tmp/")
     val resourceManager get() = CuTAPI.resourceManager
-
 
 
     /**
@@ -62,12 +61,12 @@ abstract class ResourcePackGenerator {
     }
 
 
-    protected fun generationStep(message: String, currentStep: Int, step: ()->Unit) {
+    protected fun generationStep(message: String, currentStep: Int, step: () -> Unit) {
         step.invoke()
         Plugin.info("Resource Pack: ($currentStep/$generationSteps) $message")
     }
 
-    fun textureFolderPathOf(ref: ResourceRef<Texture2D>) : String {
+    fun textureFolderPathOf(ref: ResourceRef<Texture2D>): String {
         return "custom/${ref.namespace}/${ref.path(withName = true)}"
     }
 
@@ -86,7 +85,7 @@ abstract class ResourcePackGenerator {
 
 
     companion object : ListRegistry<ResourcePackGenerator>("Pack Generators") {
-        fun getByVersionNumber(range: IntRange) : ResourcePackGenerator? {
+        fun getByVersionNumber(range: IntRange): ResourcePackGenerator? {
             return values.find { it.packVersion in range }
         }
 

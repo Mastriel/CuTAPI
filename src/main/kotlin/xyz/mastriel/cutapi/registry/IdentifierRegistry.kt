@@ -10,11 +10,12 @@ enum class HookPriority(val number: Byte) {
     FIRST(0),
     MIDDLE(1),
     LAST(2),
+
     /** Don't make modifications at this level pretty please */
     READONLY(3)
 }
 
-data class HookContext<T: Identifiable>(val registry: IdentifierRegistry<T>, val item: T, var preventRegister: Boolean)
+data class HookContext<T : Identifiable>(val registry: IdentifierRegistry<T>, val item: T, var preventRegister: Boolean)
 
 /**
  * A map of [Identifier] to [T]. This is used in keeping a registry of all items, blocks, etc.
@@ -104,7 +105,7 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      * @throws IllegalStateException If this could not be found.
      */
     open fun get(id: Identifier): T {
-        return getOrNull(id) ?: error("Identifier points to nothing.")
+        return getOrNull(id) ?: error("Identifier (${id}) points to nothing in '${name}'.")
     }
 
     /**
@@ -138,14 +139,14 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
     /**
      * Check if this ID exists in this registry.
      */
-    open fun has(id: Identifier?) : Boolean {
+    open fun has(id: Identifier?): Boolean {
         return id in values.keys
     }
 
     /**
      * Gets all entries in this registry by this particular plugin.
      */
-    open fun getBy(plugin: Plugin) : Set<T> {
+    open fun getBy(plugin: Plugin): Set<T> {
         return values.values.filter { it.id.plugin == plugin }.toSet()
     }
 
@@ -158,8 +159,6 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
     open fun addHook(priority: HookPriority, func: HookFunction<T>) {
         hooks += func to priority
     }
-
-
 
     internal companion object {
         // uses weak references, although registries should probably not be

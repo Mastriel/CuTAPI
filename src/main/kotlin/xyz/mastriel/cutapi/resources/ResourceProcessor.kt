@@ -1,8 +1,6 @@
 package xyz.mastriel.cutapi.resources
 
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
 import xyz.mastriel.cutapi.registry.ListRegistry
-import kotlin.reflect.KClass
 
 
 /**
@@ -40,11 +38,10 @@ fun interface ResourceProcessor {
 object ResourcePackProcessor : ListRegistry<ResourceProcessor>("Resource Pack Processors")
 
 
-data class ResourceProcessorContext<T>(val resources: List<T>)
+data class ResourceProcessorContext<T : Resource>(val resources: List<T>)
 
 
-
-inline fun <reified T: Resource> resourceProcessor(crossinline block: ResourceProcessorContext<T>.() -> Unit) : ResourceProcessor {
+inline fun <reified T : Resource> resourceProcessor(crossinline block: ResourceProcessorContext<T>.() -> Unit): ResourceProcessor {
     return ResourceProcessor { resources ->
         val filteredResources = resources.getAllResources().filterIsInstance<T>()
         val context = ResourceProcessorContext(filteredResources)

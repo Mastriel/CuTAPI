@@ -41,6 +41,17 @@ object ItemStackUtility {
         }
 
     /**
+     * The [CustomItem] of this [ItemStack].
+     *
+     * @returns null if this doesn't have a valid custom item id, otherwise the [CustomItem].
+     */
+    val ItemStack.customItemOrNull: CustomItem<*>?
+        get() {
+            return CustomItem.getOrNull(customId)
+        }
+
+
+    /**
      * The custom id of this item. May be null.
      */
     val ItemStack.customIdOrNull: Identifier?
