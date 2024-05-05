@@ -5,6 +5,7 @@ import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.inventory.ItemStack
 import java.time.Instant
+import kotlin.math.ceil
 import kotlin.time.Duration
 
 val String.colored: Component
@@ -52,7 +53,7 @@ fun ItemStack.appendLore(vararg lore: Component): ItemStack {
 }
 
 
-val Duration.inWholeTicks: Long get() = this.inWholeMilliseconds / 50
+val Duration.inWholeTicks: Long get() = ceil(this.inWholeMilliseconds / 50.0).toLong()
 
 fun <T> List<List<T>>.trim(include: (T) -> Boolean): List<List<T>> {
     val rows = size
