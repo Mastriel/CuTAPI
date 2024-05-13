@@ -9,14 +9,16 @@ import org.bukkit.persistence.PersistentDataType
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.behavior.BehaviorHolder
 import xyz.mastriel.cutapi.item.ItemStackUtility.CUT_ID_TAG
+import xyz.mastriel.cutapi.item.ItemStackUtility.asCustomItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.customIdOrNull
 import xyz.mastriel.cutapi.item.ItemStackUtility.customItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.cutItemStackType
-import xyz.mastriel.cutapi.item.ItemStackUtility.asCustomItem
-import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
-import xyz.mastriel.cutapi.pdc.tags.*
+import xyz.mastriel.cutapi.pdc.tags.ItemTagContainer
+import xyz.mastriel.cutapi.pdc.tags.TagContainer
+import xyz.mastriel.cutapi.pdc.tags.booleanTag
+import xyz.mastriel.cutapi.pdc.tags.customItemTag
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.utils.TemporaryAPI
 import xyz.mastriel.cutapi.utils.colored
@@ -330,14 +332,15 @@ sealed class AgnosticItemStack(val handle: ItemStack) {
     data class Vanilla internal constructor(private val stack: ItemStack) : AgnosticItemStack(stack)
 }
 
-fun ItemStack.toAgnostic() : AgnosticItemStack {
-    if (isCustom) {
-        return AgnosticItemStack.Custom(wrap()!!)
+fun ItemStack.toAgnostic(): AgnosticItemStack {
+    val wrapped = wrap()
+    if (wrapped != null) {
+        return AgnosticItemStack.Custom(wrapped)
     }
     return AgnosticItemStack.Vanilla(this)
 }
 
-fun CuTItemStack.toAgnostic() : AgnosticItemStack.Custom {
+fun CuTItemStack.toAgnostic(): AgnosticItemStack.Custom {
     return AgnosticItemStack.Custom(this)
 }
 

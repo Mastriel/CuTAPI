@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.inventory.ItemStack
+import xyz.mastriel.cutapi.item.behaviors.stripToolData
 import java.time.Instant
 import kotlin.math.ceil
 import kotlin.time.Duration
@@ -15,11 +16,15 @@ val String.colored: Component
             .append(LegacyComponentSerializer.legacyAmpersand().deserialize(this))
 
 val ItemStack.chatTooltip: Component
-    get() =
-        Component.text()
-            .hoverEvent(this)
-            .append(this.itemMeta?.displayName() ?: Component.translatable(this))
+    get() {
+        // fixes a problem with Adventure not processing tool components properly
+        val item = stripToolData(clone())
+
+        return Component.text()
+            .hoverEvent(item)
+            .append(item.itemMeta?.displayName() ?: Component.translatable(item))
             .build()
+    }
 
 val Instant.hasPassed: Boolean get() = this.isBefore(Instant.now())
 

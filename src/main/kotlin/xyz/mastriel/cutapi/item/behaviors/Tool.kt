@@ -169,8 +169,11 @@ class ToolTier private constructor(
         val Netherite get() = get(id(Plugin, "netherite"))
 
 
-        fun fromVanillaBlock(block: Block) : ToolTier {
-            val material = block.type
+        fun fromVanillaBlock(block: Block): ToolTier {
+            return fromVanillaMaterial(block.type)
+        }
+
+        fun fromVanillaMaterial(material: Material): ToolTier {
             return when {
                 Tag.NEEDS_STONE_TOOL.isTagged(material) -> Stone
                 Tag.NEEDS_IRON_TOOL.isTagged(material) -> Gold
@@ -212,7 +215,7 @@ class ToolCategory private constructor(
             true
         )
         val Axe = ToolCategory(
-            id(Plugin, "pickaxe"),
+            id(Plugin, "axe"),
             ToolCategoryAttributes(
                 attackEntityItemDamage = 2,
                 breakBlockItemDamage = 1
@@ -279,15 +282,22 @@ class ToolCategory private constructor(
             register(Fists)
         }
 
-        fun vanillaProperCategoriesOf(block: Block) : List<ToolCategory> {
-            val material = block.type
+        fun vanillaProperCategoriesOf(block: Block): List<ToolCategory> {
+            return vanillaProperCategoriesOf(block.type)
+        }
+
+        fun vanillaProperCategoriesOf(material: Material): List<ToolCategory> {
             return buildList {
                 if (Tag.MINEABLE_SHOVEL.isTagged(material)) add(Shovel)
                 if (Tag.MINEABLE_PICKAXE.isTagged(material)) add(Pickaxe)
                 if (Tag.MINEABLE_AXE.isTagged(material)) add(Axe)
                 if (Tag.MINEABLE_HOE.isTagged(material)) add(Hoe)
-                if (material == Material.COBWEB || material == Material.BAMBOO_SAPLING || material == Material.BAMBOO) add(Sword)
-                if (Tag.LEAVES.isTagged(material) || Tag.WOOL.isTagged(material) || material == Material.COBWEB) add(Shears)
+                if (material == Material.COBWEB || material == Material.BAMBOO_SAPLING || material == Material.BAMBOO) add(
+                    Sword
+                )
+                if (Tag.LEAVES.isTagged(material) || Tag.WOOL.isTagged(material) || material == Material.COBWEB) add(
+                    Shears
+                )
             }
         }
     }
@@ -303,7 +313,7 @@ open class ToolCategoryAttributes(
     /**
      * Gets the breaking speed multiplier from the special breaking multipliers.
      */
-    fun getBreakingSpeedMultiplier(material: Material) : Float? {
+    fun getBreakingSpeedMultiplier(material: Material): Float? {
         return specialBreakingMultipliers.getBreakingSpeedMultiplier(material)
     }
 }
@@ -331,7 +341,7 @@ class SpecialBreakingMultipliers(
     /**
      * Returns the special breaking speed of a block, or 1 for any non-special ones.
      */
-    fun getBreakingSpeedMultiplier(material: Material) : Float? {
+    fun getBreakingSpeedMultiplier(material: Material): Float? {
         return map[material]
     }
 }

@@ -7,10 +7,8 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.CraftItemEvent
 import org.bukkit.event.inventory.PrepareItemCraftEvent
-import org.bukkit.inventory.CraftingInventory
-import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.ShapedRecipe
-import org.bukkit.inventory.ShapelessRecipe
+import org.bukkit.event.inventory.PrepareSmithingEvent
+import org.bukkit.inventory.*
 import org.bukkit.inventory.meta.Damageable
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
@@ -202,6 +200,25 @@ class CraftingRecipeEvents : Listener {
             if (customRecipe.ingredients.any { it.value.quantity > 1 }) {
                 e.isMakeAll = true
             }
+        }
+    }
+
+
+    @EventHandler
+    fun `smithing table craft event`(ev: PrepareSmithingEvent) {
+        val recipe = ev.inventory.recipe as? SmithingRecipe ?: return
+        val template = ev.inventory.inputTemplate ?: ItemStack.empty()
+        val base = ev.inventory.inputEquipment ?: ItemStack.empty()
+        val addition = ev.inventory.inputMineral ?: ItemStack.empty()
+        val customRecipe = CustomSmithingTableRecipe.getOrNull(recipe.key.toIdentifier()) ?: return
+
+        if (
+            !customRecipe.template.matches(template) ||
+            !customRecipe.base.matches(base) ||
+            !customRecipe.addition.matches(addition)
+        ) {
+            ev.inventory.result = null
+            return
         }
     }
 }

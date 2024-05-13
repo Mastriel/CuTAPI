@@ -4,9 +4,12 @@ import kotlinx.serialization.Serializable
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.event.Listener
+import org.bukkit.inventory.ItemStack
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.behavior.BehaviorHolder
+import xyz.mastriel.cutapi.item.ItemStackUtility.customItem
+import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
 import xyz.mastriel.cutapi.item.behaviors.DisplayAs
 import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.item.behaviors.StaticLore
@@ -29,7 +32,7 @@ object CustomItemSerializer : IdentifiableSerializer<CustomItem<*>>("customMater
 typealias AnyCustomItem = CustomItem<*>
 
 @Serializable(with = CustomItemSerializer::class)
-open class CustomItem<TStack: CuTItemStack>(
+open class CustomItem<TStack : CuTItemStack>(
     override val id: Identifier,
     val type: Material,
     val stackTypeClass: KClass<out TStack>,
@@ -104,7 +107,7 @@ open class CustomItem<TStack: CuTItemStack>(
             return super.getOrNull(id) ?: return Unknown
         }
 
-        override fun register(item: CustomItem<*>) : CustomItem<*> {
+        override fun register(item: CustomItem<*>): CustomItem<*> {
             val plugin = item.id.plugin
 
             if (plugin != null) Bukkit.getServer().pluginManager.registerEvents(item, plugin)
@@ -119,19 +122,48 @@ open class CustomItem<TStack: CuTItemStack>(
  */
 sealed class AgnosticMaterial {
 
+    fun matches(item: ItemStack) = item.agnosticMaterial == this
+
+    /** The expected vanilla material of this agnostic material.
+     *
+     * For vanilla items, this is always just the material of the item.
+     * For custom items, this is the material that the custom item is assigned by default.
+     */
+    abstract val expectedVanillaMaterial: Material
+
     data class Custom internal constructor(val itemType: AnyCustomItem) : AgnosticMaterial() {
         fun custom() = itemType
+
+        override val expectedVanillaMaterial: Material
+            get() = itemType.type
     }
 
     data class Vanilla internal constructor(private val material: Material) : AgnosticMaterial() {
         fun vanilla() = material
+
+        override val expectedVanillaMaterial: Material
+            get() = material
     }
 }
 
-fun Material.toAgnostic() : AgnosticMaterial.Vanilla {
+val ItemStack.agnosticMaterial: AgnosticMaterial
+    get() {
+        if (this.isCustom) {
+            return AgnosticMaterial.Custom(this.customItem)
+        }
+        return AgnosticMaterial.Vanilla(this.type)
+    }
+
+val CuTItemStack.agnosticMaterial: AgnosticMaterial
+    get() {
+        return AgnosticMaterial.Custom(this.type)
+    }
+
+
+fun Material.toAgnostic(): AgnosticMaterial.Vanilla {
     return AgnosticMaterial.Vanilla(this)
 }
 
-fun AnyCustomItem.toAgnostic() : AgnosticMaterial.Custom {
+fun AnyCustomItem.toAgnostic(): AgnosticMaterial.Custom {
     return AgnosticMaterial.Custom(this)
 }

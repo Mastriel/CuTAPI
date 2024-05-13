@@ -2,8 +2,8 @@ package xyz.mastriel.cutapi.block.breaklogic
 
 import org.bukkit.SoundGroup
 import org.bukkit.block.Block
-import org.bukkit.craftbukkit.v1_20_R3.block.CraftBlock
-import org.bukkit.craftbukkit.v1_20_R3.util.CraftMagicNumbers
+import org.bukkit.craftbukkit.block.CraftBlock
+import org.bukkit.craftbukkit.util.CraftMagicNumbers
 import org.bukkit.enchantments.Enchantment
 import org.bukkit.entity.Player
 import org.bukkit.potion.PotionEffectType
@@ -12,6 +12,7 @@ import xyz.mastriel.cutapi.item.behaviors.Tool
 import xyz.mastriel.cutapi.item.behaviors.ToolCategory
 import xyz.mastriel.cutapi.item.behaviors.ToolTier
 import xyz.mastriel.cutapi.nms.UsesNMS
+import xyz.mastriel.cutapi.nms.nms
 import xyz.mastriel.cutapi.utils.roundToDecimalPlaces
 
 /**
@@ -42,8 +43,7 @@ open class PlayerBlockBreaker(
         .maxByOrNull { it.toolSpeed.speed } ?: Tool.Fists
 
 
-
-    var hasStopped : Boolean = false
+    var hasStopped: Boolean = false
 
     val isDone: Boolean
         get() = progress >= 1.0f
@@ -77,7 +77,9 @@ open class PlayerBlockBreaker(
 
         if (!nmsBlock.requiresCorrectToolForDrops()) return true
 
-        return CraftMagicNumbers.getItem(material).isCorrectToolForDrops(nmsBlock)
+        val nmsItem = item.vanilla().nms()
+
+        return CraftMagicNumbers.getItem(material).isCorrectToolForDrops(nmsItem, nmsBlock)
     }
 
     /**
@@ -85,7 +87,7 @@ open class PlayerBlockBreaker(
      * @return The damage dealt to the block, as a percentage of the block's health from 0.0f to 1.0f.
      */
     @Suppress("DEPRECATION")
-    open fun calculateDamageDealt() : Float {
+    open fun calculateDamageDealt(): Float {
 
         // blocks under 0 are unbreakable
         if (hardness < 0f) return 0f
@@ -103,12 +105,12 @@ open class PlayerBlockBreaker(
                 .attributes
                 .getBreakingSpeedMultiplier(material) ?: utilizedTool.toolSpeed.speed
 
-            val efficiencyLevel = item.vanilla().getEnchantmentLevel(Enchantment.DIG_SPEED)
+            val efficiencyLevel = item.vanilla().getEnchantmentLevel(Enchantment.EFFICIENCY)
             if (efficiencyLevel > 0) {
                 totalSpeedMultiplier += efficiencyLevel * efficiencyLevel + 1
             }
         }
-        val hasteLevel = player.getPotionEffect(PotionEffectType.FAST_DIGGING)?.amplifier?.plus(1) ?: 0
+        val hasteLevel = player.getPotionEffect(PotionEffectType.HASTE)?.amplifier?.plus(1) ?: 0
 
         totalSpeedMultiplier *= hasteLevel * 0.2f + 1
 
@@ -129,7 +131,6 @@ open class PlayerBlockBreaker(
 
         return (totalSpeedMultiplier / hardness / correctToolBonus).roundToDecimalPlaces(3)
     }
-
 
 
 }

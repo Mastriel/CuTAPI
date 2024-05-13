@@ -27,7 +27,7 @@ object CuTAPI {
      * A map of all plugins registered, along with their plugin descriptors.
      */
     private val plugins = mutableMapOf<Plugin, PluginDescriptor>()
-    val registeredPlugins : Set<Plugin> get() = plugins.keys
+    val registeredPlugins: Set<Plugin> get() = plugins.keys
 
     val resourceManager = ResourceManager()
     val resourcePackManager = ResourcePackManager()
@@ -51,7 +51,11 @@ object CuTAPI {
      * @throws IllegalStateException If the namespace is already in use.
      * @throws IllegalStateException If the plugin is already registered.
      */
-    fun registerPlugin(plugin: Plugin, namespace: String=plugin.name.lowercase(), options: (PluginOptionsBuilder.() -> Unit)? = null) {
+    fun registerPlugin(
+        plugin: Plugin,
+        namespace: String = plugin.name.lowercase(),
+        options: (PluginOptionsBuilder.() -> Unit)? = null
+    ) {
         requireNotRegistered(plugin)
         requireValidNamespace(namespace)
 
@@ -74,6 +78,7 @@ object CuTAPI {
     fun unregisterPlugin(plugin: Plugin) {
         requireRegistered(plugin)
         IdentifierRegistry.unregisterPluginGlobally(plugin)
+        periodicManager
         plugins.remove(plugin)
     }
 
@@ -85,7 +90,7 @@ object CuTAPI {
      * @see PluginDescriptor
      */
     @Throws(IllegalStateException::class)
-    fun getDescriptor(plugin: Plugin) : PluginDescriptor {
+    fun getDescriptor(plugin: Plugin): PluginDescriptor {
         requireRegistered(plugin)
         return plugins[plugin]!!
     }
@@ -96,7 +101,7 @@ object CuTAPI {
      * @param plugin The plugin.
      * @returns true if the plugin is registered, false otherwise.
      */
-    fun isRegistered(plugin: Plugin) : Boolean {
+    fun isRegistered(plugin: Plugin): Boolean {
         return plugin in plugins
     }
 
@@ -106,7 +111,7 @@ object CuTAPI {
      *
      * @throws IllegalStateException If no plugin exists with this namespace.
      */
-    fun getPluginFromNamespace(namespace: String) : Plugin {
+    fun getPluginFromNamespace(namespace: String): Plugin {
         return plugins.values.find { it.namespace.equals(namespace, true) }?.plugin
             ?: error("Namespace $namespace not found.")
     }
@@ -134,6 +139,7 @@ object CuTAPI {
 
 
     private val namespaceRegex = "[a-zA-Z0-9/_]+".toRegex()
+
     /**
      * Validate a namespace string, to ensure that it won't cause problems. See [registerPlugin]
      * for more info about namespace requirements
@@ -160,7 +166,6 @@ object CuTAPI {
             error("Namespace $namespace already exists! (used by ${pluginName})")
         }
     }
-
 
 
     @OptIn(ExperimentalSerializationApi::class)

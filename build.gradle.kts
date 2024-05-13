@@ -10,7 +10,7 @@ plugins {
 
     `maven-publish`
 
-    id("io.papermc.paperweight.userdev") version "1.5.11"
+    id("io.papermc.paperweight.userdev") version "1.7.1"
 
 }
 
@@ -49,38 +49,41 @@ dependencies {
 
 
     // god hates me so we're shadowing everything
-    shadow("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
+    shadow("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
     shadow("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     shadow("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     shadow("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
     shadow("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
     shadow("net.peanuuutz.tomlkt:tomlkt:0.3.7")
 
-    shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.14.0")
-    shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.14.0")
+    shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.16.0")
+    shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.16.0")
 
     // used for the built-in uploader
     shadow("io.ktor:ktor-server-core:2.3.0")
     shadow("io.ktor:ktor-server-netty:2.3.0")
 
-    paperweight.paperDevBundle("1.20.4-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.20.6-R0.1-SNAPSHOT")
 }
 
 
 tasks {
 
     runServer {
-        downloadPlugins {
-            url("https://ci.dmulloy2.net/job/ProtocolLib/lastBuild/artifact/build/libs/ProtocolLib.jar")
-        }
-
-        minecraftVersion("1.20.4")
+        minecraftVersion("1.20.6")
     }
 }
+
+// use mojang mappings
+paperweight.reobfArtifactConfiguration = io.papermc.paperweight.userdev.ReobfArtifactConfiguration.MOJANG_PRODUCTION
 
 tasks.withType<ShadowJar> {
     configurations = listOf(project.configurations.shadow.get())
     // archiveFileName.set("CuTAPI-v${archiveVersion.get()}.jar")
+
+    manifest {
+        attributes["paperweight-mappings-namespace"] = "mojang"
+    }
 }
 
 
@@ -93,16 +96,21 @@ tasks.withType<ProcessResources> {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 
     withSourcesJar()
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
+tasks.reobfJar {
+}
 
 tasks.assemble {
     dependsOn(tasks.reobfJar)
-
 }
 
 publishing {

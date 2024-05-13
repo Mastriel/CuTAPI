@@ -6,23 +6,16 @@ import net.minecraft.network.protocol.game.ClientboundBlockChangedAckPacket
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket
 import net.minecraft.world.InteractionHand
 import org.bukkit.GameMode
-import org.bukkit.Location
-import org.bukkit.block.Block
-import org.bukkit.craftbukkit.v1_20_R3.event.CraftEventFactory
+import org.bukkit.craftbukkit.event.CraftEventFactory
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
-import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
-import org.bukkit.event.player.PlayerJoinEvent
-import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.potion.PotionEffectType
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.item.toAgnostic
 import xyz.mastriel.cutapi.nms.*
-import xyz.mastriel.cutapi.nms.PacketEvent
-import xyz.mastriel.cutapi.nms.PacketListener
 import xyz.mastriel.cutapi.periodic.Periodic
 import xyz.mastriel.cutapi.utils.onlinePlayers
 import java.util.concurrent.ConcurrentHashMap
@@ -38,12 +31,13 @@ class BlockBreakManager : Listener, PacketListener {
     @Periodic(1)
     fun updateEffects() {
         for (player in onlinePlayers()) {
-            if (!player.hasPotionEffect(PotionEffectType.SLOW_DIGGING)) {
+            if (!player.hasPotionEffect(PotionEffectType.MINING_FATIGUE)) {
                 player.addPotionEffect(
-                    PotionEffectType.SLOW_DIGGING
+                    PotionEffectType.MINING_FATIGUE
                         .createEffect(1000000, 100)
                         .withIcon(false)
-                        .withParticles(false))
+                        .withParticles(false)
+                )
             }
         }
     }
@@ -65,7 +59,7 @@ class BlockBreakManager : Listener, PacketListener {
     }
 
     @PacketHandler
-    internal fun onStartBreaking(ev: PacketEvent<ServerboundPlayerActionPacket>) : ServerboundPlayerActionPacket? {
+    internal fun onStartBreaking(ev: PacketEvent<ServerboundPlayerActionPacket>): ServerboundPlayerActionPacket? {
         val (player, packet) = ev
         val action = packet.action
 
@@ -74,20 +68,30 @@ class BlockBreakManager : Listener, PacketListener {
                 startBreaking(player, packet.pos, player.activeItem, packet, packet.direction, packet.sequence)
                 null
             }
+
             ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK -> {
                 // stopBreaking(player, packet)
                 null
             }
+
             ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK -> {
                 // abortBreaking(player, packet)
                 null
             }
+
             else -> packet
         }
 
     }
 
-    private fun startBreaking(player: Player, blockPosition: BlockPos, activeItem: ItemStack, packet: ServerboundPlayerActionPacket, direction: Direction, sequence: Int) {
+    private fun startBreaking(
+        player: Player,
+        blockPosition: BlockPos,
+        activeItem: ItemStack,
+        packet: ServerboundPlayerActionPacket,
+        direction: Direction,
+        sequence: Int
+    ) {
 
         val level = player.nms().level()
         val block = level.getBlockState(blockPosition)

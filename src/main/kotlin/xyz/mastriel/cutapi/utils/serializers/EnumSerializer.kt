@@ -8,7 +8,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlin.reflect.KClass
 
-class EnumSerializer<E : Enum<E>>(val kClass: KClass<E>) : KSerializer<E> {
+open class EnumSerializer<E : Enum<E>>(val kClass: KClass<E>) : KSerializer<E> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("cutapi:enum", PrimitiveKind.STRING)
 
     override fun deserialize(decoder: Decoder): E {

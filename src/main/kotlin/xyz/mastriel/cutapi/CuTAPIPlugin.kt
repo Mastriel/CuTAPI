@@ -14,7 +14,6 @@ import xyz.mastriel.cutapi.item.behaviors.ItemBehaviorEvents
 import xyz.mastriel.cutapi.item.behaviors.Unstackable
 import xyz.mastriel.cutapi.item.bukkitevents.PlayerItemEvents
 import xyz.mastriel.cutapi.item.recipe.CraftingRecipeEvents
-import xyz.mastriel.cutapi.resourcepack.uploader.UploaderJoinEvents
 import xyz.mastriel.cutapi.resources.ResourceFileLoader
 import xyz.mastriel.cutapi.resources.ResourcePackProcessor
 import xyz.mastriel.cutapi.resources.builtin.Model3DResourceLoader
@@ -24,6 +23,7 @@ import xyz.mastriel.cutapi.resources.postprocess.TexturePostProcessor
 import xyz.mastriel.cutapi.resources.postprocess.TextureProcessor
 import xyz.mastriel.cutapi.resources.uploader.BuiltinUploader
 import xyz.mastriel.cutapi.resources.uploader.Uploader
+import xyz.mastriel.cutapi.resources.uploader.UploaderJoinEvents
 
 
 @PublishedApi
@@ -76,7 +76,7 @@ class CuTAPIPlugin : JavaPlugin() {
     private fun registerPeriodics() {
         val periodicManager = CuTAPI.periodicManager
 
-        periodicManager.register(PacketItemHandler)
+        periodicManager.register(this, PacketItemHandler)
         // periodicManager.register(CuTAPI.blockBreakManager)
 
     }
@@ -99,7 +99,7 @@ class CuTAPIPlugin : JavaPlugin() {
 
         val itemBehaviorEvents = ItemBehaviorEvents()
         server.pluginManager.registerEvents(itemBehaviorEvents, this)
-        CuTAPI.periodicManager.register(itemBehaviorEvents)
+        CuTAPI.periodicManager.register(this, itemBehaviorEvents)
     }
 
     private fun registerCommands() {

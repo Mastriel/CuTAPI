@@ -2,23 +2,17 @@ package xyz.mastriel.cutapi.item
 
 import com.mojang.datafixers.util.Pair
 import net.minecraft.core.NonNullList
-import net.minecraft.network.protocol.game.ClientboundContainerClosePacket
-import net.minecraft.network.protocol.game.ClientboundContainerSetContentPacket
-import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket
-import net.minecraft.network.protocol.game.ClientboundMerchantOffersPacket
-import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket
-import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket
-import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket
-import net.minecraft.network.protocol.game.ServerboundContainerClosePacket
-import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket
+import net.minecraft.core.component.DataComponentPredicate
+import net.minecraft.network.protocol.game.*
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData.DataValue
+import net.minecraft.world.item.trading.ItemCost
 import net.minecraft.world.item.trading.MerchantOffer
 import net.minecraft.world.item.trading.MerchantOffers
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack
+import org.bukkit.craftbukkit.inventory.CraftItemStack
 import org.bukkit.entity.Player
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -26,12 +20,10 @@ import org.bukkit.event.inventory.InventoryType
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
-import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.nms.*
-import xyz.mastriel.cutapi.nms.PacketEvent
-import xyz.mastriel.cutapi.nms.nms
 import xyz.mastriel.cutapi.periodic.Periodic
+import java.util.*
 
 
 /**
@@ -44,9 +36,7 @@ internal object PacketItemHandler : Listener, PacketListener {
     @PacketHandler(EventPriority.HIGH)
     fun itemSlotChangePacketEvent(event: PacketEvent<ClientboundContainerSetSlotPacket>): ClientboundContainerSetSlotPacket {
         val item = CraftItemStack.asBukkitCopy(event.packet.item)
-        if (!item.isCustom) return event.packet
-
-        val customItemStack = CuTItemStack.wrap(item) withViewer event.player
+        val customItemStack = item.wrap()?.withViewer(event.player) ?: return event.packet
 
         val newPacket = ClientboundContainerSetSlotPacket(
             event.packet.containerId,
@@ -59,13 +49,18 @@ internal object PacketItemHandler : Listener, PacketListener {
     }
 
     @PacketHandler(EventPriority.HIGH)
-    fun handleMerchantOffers(event: PacketEvent<ClientboundMerchantOffersPacket>) : ClientboundMerchantOffersPacket {
+    fun handleMerchantOffers(event: PacketEvent<ClientboundMerchantOffersPacket>): ClientboundMerchantOffersPacket {
         val newOffers = MerchantOffers()
 
+        fun itemCost(mojangItemStack: MojangItemStack?): Optional<ItemCost> {
+            if (mojangItemStack == null) return Optional.empty<ItemCost>()
+            val componentPredicate = DataComponentPredicate.allOf(mojangItemStack.components)
+            return Optional.of(ItemCost(mojangItemStack.itemHolder, mojangItemStack.count, componentPredicate))
+        }
         for (offer in event.packet.offers) {
             newOffers += MerchantOffer(
-                renderIfNeeded(event.player, offer.baseCostA.bukkit().toAgnostic()).nms(),
-                renderIfNeeded(event.player, offer.costB.bukkit().toAgnostic()).nms(),
+                itemCost(offer.costA).get(),
+                itemCost(renderIfNeeded(event.player, offer.getCostB().bukkit().toAgnostic()).nms()),
                 renderIfNeeded(event.player, offer.result.bukkit().toAgnostic()).nms(),
                 offer.uses,
                 offer.maxUses,
@@ -92,16 +87,16 @@ internal object PacketItemHandler : Listener, PacketListener {
     fun renderPlayerInventory(player: Player): NonNullList<MojangItemStack> {
         val armorContents = player.inventory.armorContents
             .map { it?.clone() ?: ItemStack(Material.AIR) }
-            .map { if (it.isCustom) CuTItemStack.wrap(it) withViewer player else it }
+            .map { it.wrap()?.withViewer(player) ?: it }
             .reversed() // Bukkit stores these in reverse
 
         val mainContents = player.inventory.contents
             .map { it?.clone() ?: ItemStack(Material.AIR) }
-            .map { if (it.isCustom) CuTItemStack.wrap(it) withViewer player else it }
+            .map { it.wrap()?.withViewer(player) ?: it }
 
         val offhand = listOf(player.inventory.itemInOffHand)
             .map { it.clone() }
-            .map { if (it.isCustom) CuTItemStack.wrap(it) withViewer player else it }
+            .map { it.wrap()?.withViewer(player) ?: it }
 
 //        var cursor = listOf(player.itemOnCursor)
 //            .map { it.clone() }
@@ -113,7 +108,7 @@ internal object PacketItemHandler : Listener, PacketListener {
         val craftingSlots = if (player.openInventory.type == InventoryType.CRAFTING) {
             player.openInventory.topInventory.contents
                 .map { it?.clone() ?: ItemStack(Material.AIR) }
-                .map { if (it.isCustom) CuTItemStack.wrap(it) withViewer player else it }
+                .map { it.wrap()?.withViewer(player) ?: it }
         } else {
             List(5) { ItemStack(Material.AIR) }
         }
@@ -128,7 +123,7 @@ internal object PacketItemHandler : Listener, PacketListener {
     }
 
     @PacketHandler
-    fun handleContainerUpdate(event: PacketEvent<ClientboundContainerSetContentPacket>) : ClientboundContainerSetContentPacket {
+    fun handleContainerUpdate(event: PacketEvent<ClientboundContainerSetContentPacket>): ClientboundContainerSetContentPacket {
         val player = event.player
         val items = event.packet.items
 
@@ -146,7 +141,7 @@ internal object PacketItemHandler : Listener, PacketListener {
     }
 
     @PacketHandler
-    fun handleEquipmentChange(event: PacketEvent<ClientboundSetEquipmentPacket>) : ClientboundSetEquipmentPacket {
+    fun handleEquipmentChange(event: PacketEvent<ClientboundSetEquipmentPacket>): ClientboundSetEquipmentPacket {
         val player = event.player
 
         val slots = event.packet.slots.map {
@@ -159,8 +154,8 @@ internal object PacketItemHandler : Listener, PacketListener {
     }
 
     @PacketHandler
-    fun handleCreativeSetSlot(event: PacketEvent<ServerboundSetCreativeModeSlotPacket>) : ServerboundSetCreativeModeSlotPacket {
-        val item = event.packet.item
+    fun handleCreativeSetSlot(event: PacketEvent<ServerboundSetCreativeModeSlotPacket>): ServerboundSetCreativeModeSlotPacket {
+        val item = event.packet.itemStack
 
         return ServerboundSetCreativeModeSlotPacket(
             event.packet.slotNum,
@@ -198,7 +193,7 @@ internal object PacketItemHandler : Listener, PacketListener {
 
                 inventory.map { it.bukkit() }.forEachIndexed { index, item ->
 
-                    if (item.isCustom) {
+                    if (item.wrap() != null) {
                         val packet = ClientboundContainerSetSlotPacket(
                             0,
                             0,
@@ -217,9 +212,13 @@ internal object PacketItemHandler : Listener, PacketListener {
                 val bottomInventory = player.openInventory.bottomInventory
 
                 fun sendInventory(inventory: Inventory) {
+                    // anvils can be glitchy. dont have time to fix this. very quick fix
+                    // is to just make it not update. hooray!
+                    if (inventory.type == InventoryType.ANVIL) return
+
                     val contents = inventory.contents
                         .map { it?.clone() ?: ItemStack(Material.AIR) }
-                        .map { if (it.isCustom) CuTItemStack.wrap(it) withViewer player else it }
+                        .map { it.wrap()?.withViewer(player) ?: it }
                         .map { it.nms() }
                         .toNonNullList()
 
@@ -248,14 +247,12 @@ internal object PacketItemHandler : Listener, PacketListener {
 
     private fun customCursorItem(player: Player): ItemStack {
         // Bukkit.broadcast("Cursor: ${player.openInventory.cursor}".colored)
-        if (player.itemOnCursor.isCustom) {
-            return player.itemOnCursor.wrap()!! withViewer player
-        }
+        player.itemOnCursor.wrap()?.withViewer(player)?.let { return it }
         return player.itemOnCursor
     }
 
     @PacketHandler(EventPriority.HIGH)
-    fun handleEntities(event: PacketEvent<ClientboundSetEntityDataPacket>) : ClientboundSetEntityDataPacket {
+    fun handleEntities(event: PacketEvent<ClientboundSetEntityDataPacket>): ClientboundSetEntityDataPacket {
         val packet = event.packet
         val player = event.player
 
@@ -274,7 +271,7 @@ internal object PacketItemHandler : Listener, PacketListener {
         return ClientboundSetEntityDataPacket(packet.id, newItems)
     }
 
-    fun renderIfNeeded(viewer: Player, stack: AgnosticItemStack) : ItemStack {
+    fun renderIfNeeded(viewer: Player, stack: AgnosticItemStack): ItemStack {
         return when (stack) {
             is AgnosticItemStack.Custom -> stack.custom() withViewer viewer
             is AgnosticItemStack.Vanilla -> stack.vanilla()
@@ -282,13 +279,13 @@ internal object PacketItemHandler : Listener, PacketListener {
     }
 
     @PacketHandler(EventPriority.HIGH)
-    fun openWindow(event: PacketEvent<ClientboundOpenScreenPacket>) : ClientboundOpenScreenPacket {
+    fun openWindow(event: PacketEvent<ClientboundOpenScreenPacket>): ClientboundOpenScreenPacket {
         windowIds[event.player] = event.packet.containerId
         return event.packet
     }
 
     @PacketHandler(EventPriority.HIGH)
-    fun closeWindowClientbound(event: PacketEvent<ClientboundContainerClosePacket>) : ClientboundContainerClosePacket {
+    fun closeWindowClientbound(event: PacketEvent<ClientboundContainerClosePacket>): ClientboundContainerClosePacket {
         if (event.packet.containerId == windowIds[event.player]) {
             windowIds.remove(event.player)
         }
@@ -297,7 +294,7 @@ internal object PacketItemHandler : Listener, PacketListener {
     }
 
     @PacketHandler(EventPriority.HIGH)
-    fun closeWindowServerbound(event: PacketEvent<ServerboundContainerClosePacket>) : ServerboundContainerClosePacket {
+    fun closeWindowServerbound(event: PacketEvent<ServerboundContainerClosePacket>): ServerboundContainerClosePacket {
         if (event.packet.containerId == windowIds[event.player]) {
             windowIds.remove(event.player)
         }

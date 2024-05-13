@@ -91,7 +91,7 @@ object ItemStackUtility {
     val ItemStack.isCustom: Boolean
         get() {
             if (this.type.isAir) return false
-            return customIdOrNull != null
+            return customIdOrNull?.let { CustomItem.get(it) } != null
         }
 
     /**
