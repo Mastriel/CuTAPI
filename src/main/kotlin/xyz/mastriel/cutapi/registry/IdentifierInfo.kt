@@ -1,21 +1,21 @@
 package xyz.mastriel.cutapi.registry
 
-import org.bukkit.plugin.Plugin
+import xyz.mastriel.cutapi.CuTPlugin
 
 
-fun identifiable(id: Identifier) : Identifiable {
+fun identifiable(id: Identifier): Identifiable {
     return object : Identifiable {
         override val id: Identifier = id
     }
 }
 
-fun identifiable(plugin: Plugin, id: String) : Identifiable {
+fun identifiable(plugin: CuTPlugin, id: String): Identifiable {
     return object : Identifiable {
         override val id: Identifier = id(plugin, id)
     }
 }
 
-fun identifiable(stringRepresentation: String) : Identifiable {
+fun identifiable(stringRepresentation: String): Identifiable {
     return object : Identifiable {
         override val id: Identifier = id(stringRepresentation)
     }

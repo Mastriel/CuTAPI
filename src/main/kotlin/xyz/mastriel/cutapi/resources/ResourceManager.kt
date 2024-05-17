@@ -1,8 +1,8 @@
 package xyz.mastriel.cutapi.resources
 
 import org.bukkit.Bukkit
-import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
+import xyz.mastriel.cutapi.CuTPlugin
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.utils.appendPath
 import xyz.mastriel.cutapi.utils.copyResourceDirectory
@@ -14,7 +14,7 @@ class ResourceManager {
     private val folders = mutableListOf<FolderRef>()
     private val locators: List<Locator> get() = resources.keys.toList() + folders
 
-    private val resourceRoots = mutableListOf<Pair<Plugin, File>>()
+    private val resourceRoots = mutableListOf<Pair<CuTPlugin, File>>()
 
     fun register(resource: Resource, overwrite: Boolean = false) {
         if (resource.ref in resources.keys && !overwrite) {
@@ -37,7 +37,7 @@ class ResourceManager {
         return resources[ref] != null
     }
 
-    fun getFolderContents(plugin: Plugin, folderRef: FolderRef): List<Locator> {
+    fun getFolderContents(plugin: CuTPlugin, folderRef: FolderRef): List<Locator> {
         return locators.filter { it.plugin == plugin }
             .filter { it.parent == folderRef }
     }
@@ -49,7 +49,7 @@ class ResourceManager {
 
     private val tempFolder = Plugin.dataFolder.appendPath("resources-tmp/").absoluteFile
 
-    internal fun dumpPluginResourcesToTemp(plugin: Plugin) {
+    internal fun dumpPluginResourcesToTemp(plugin: CuTPlugin) {
         val descriptor = CuTAPI.getDescriptor(plugin)
         val options = descriptor.options
         val packFolder = options.packFolder
@@ -57,6 +57,10 @@ class ResourceManager {
         val dumpFolder = File(tempFolder, descriptor.namespace)
         dumpFolder.mkdir()
 
+        if (!options.isFromJar) {
+            Plugin.warn("Plugin '${plugin.namespace}' is not from a jar, so no resources will be dumped.")
+            return
+        }
         val packFolderURI = plugin::class.java.getResource("/$packFolder")
         if (packFolderURI != null) {
             Plugin.info("Pack folder found for $plugin.")
@@ -70,7 +74,7 @@ class ResourceManager {
      * Create a new resource root for your plugin. Resources are loaded from here
      * whenever the resource pack is generated.
      */
-    fun registerResourceRoot(plugin: Plugin, folder: File) {
+    fun registerResourceRoot(plugin: CuTPlugin, folder: File) {
         resourceRoots += plugin to folder
     }
 
@@ -79,7 +83,7 @@ class ResourceManager {
      *
      * @return true if a resource root was unregistered, false otherwise.
      */
-    fun unregisterResourceRoot(plugin: Plugin, folder: File): Boolean {
+    fun unregisterResourceRoot(plugin: CuTPlugin, folder: File): Boolean {
         if (plugin to folder !in resourceRoots) {
             return false
         }
@@ -90,11 +94,11 @@ class ResourceManager {
     /**
      * Remove all resource roots from your plugin.
      */
-    fun unregisterAllResourceRoots(plugin: Plugin) {
+    fun unregisterAllResourceRoots(plugin: CuTPlugin) {
         resourceRoots.removeIf { it.first == plugin }
     }
 
-    internal fun loadPluginResources(plugin: Plugin) {
+    internal fun loadPluginResources(plugin: CuTPlugin) {
         val namespace = CuTAPI.getDescriptor(plugin).namespace
 
         loadResourcesFromFolder(File(tempFolder, namespace), folderRef(plugin, ""))
@@ -227,8 +231,8 @@ class ResourceManager {
             } catch (e: ResourceCheckException) {
                 Plugin.error("$ref failed being checked! " + e.message)
                 val strictResourceLoading = CuTAPI.getDescriptor(ref.plugin).options.strictResourceLoading
-                if (strictResourceLoading) {
-                    Bukkit.getPluginManager().disablePlugin(ref.plugin)
+                if (strictResourceLoading && ref.plugin.plugin != Plugin) {
+                    Bukkit.getPluginManager().disablePlugin(ref.plugin.plugin)
                 }
             }
         }

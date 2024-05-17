@@ -1,20 +1,17 @@
 package xyz.mastriel.cutapi.resources
 
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
+import xyz.mastriel.cutapi.CuTPlugin
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.resources.data.CuTMeta
-import java.lang.StringBuilder
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -25,10 +22,9 @@ import kotlin.reflect.KProperty
  */
 @Serializable(with = ResourceRefSerializer::class)
 data class ResourceRef<out T : Resource> internal constructor(
-    override val plugin: Plugin,
+    override val plugin: CuTPlugin,
     override val pathList: List<String>
 ) : ReadOnlyProperty<Any?, T?>, Locator {
-
 
 
     fun getResource(): T? {
@@ -55,7 +51,7 @@ data class ResourceRef<out T : Resource> internal constructor(
         withNamespace: Boolean = false,
         withNamespaceAsFolder: Boolean = false,
         withName: Boolean = true
-    ) : String {
+    ): String {
         val sb = StringBuilder("")
         if (withNamespace) sb.append("${namespace}://")
         if (withNamespaceAsFolder) sb.append("${namespace}/")
@@ -63,7 +59,7 @@ data class ResourceRef<out T : Resource> internal constructor(
 
         if (withName) {
             val optionalSlash = if (pathList.size == 1) "" else "/"
-            sb.append(optionalSlash+name.split(".", limit = 2).first())
+            sb.append(optionalSlash + name.split(".", limit = 2).first())
         }
 
         if (withExtension) {
@@ -82,11 +78,12 @@ data class ResourceRef<out T : Resource> internal constructor(
             .split(".", limit = 2)
             .last()
 
-    override val parent: FolderRef? get() {
-        val list =  pathList.dropLast(2)
-        if (list.isEmpty()) return null
-        return folderRef(plugin, list.joinToString("/"))
-    }
+    override val parent: FolderRef?
+        get() {
+            val list = pathList.dropLast(2)
+            if (list.isEmpty()) return null
+            return folderRef(plugin, list.joinToString("/"))
+        }
 
     fun toIdentifier(): Identifier {
         return id(plugin, path)
@@ -108,7 +105,7 @@ fun normalizeRefPath(path: String): String {
     return path.removeSuffix("/").removePrefix("/")
 }
 
-fun <T : Resource> ref(plugin: Plugin, path: String): ResourceRef<T> {
+fun <T : Resource> ref(plugin: CuTPlugin, path: String): ResourceRef<T> {
     return ResourceRef(plugin, normalizeRefPath(path).split("/").filterNot { it.isEmpty() })
 }
 

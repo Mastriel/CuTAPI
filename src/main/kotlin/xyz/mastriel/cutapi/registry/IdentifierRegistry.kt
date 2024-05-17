@@ -1,6 +1,6 @@
 package xyz.mastriel.cutapi.registry
 
-import org.bukkit.plugin.Plugin
+import xyz.mastriel.cutapi.CuTPlugin
 import xyz.mastriel.cutapi.Plugin
 import java.lang.ref.WeakReference
 
@@ -146,7 +146,7 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
     /**
      * Gets all entries in this registry by this particular plugin.
      */
-    open fun getBy(plugin: Plugin): Set<T> {
+    open fun getBy(plugin: CuTPlugin): Set<T> {
         return values.values.filter { it.id.plugin == plugin }.toSet()
     }
 
@@ -165,7 +165,7 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
         // garbage collected at any point and should always have a strong reference
         private val usedRegistries = mutableListOf<WeakReference<IdentifierRegistry<*>>>()
 
-        internal fun unregisterPluginGlobally(plugin: Plugin) {
+        internal fun unregisterPluginGlobally(plugin: CuTPlugin) {
             usedRegistries.mapNotNull { it.get() }.forEach { registry ->
                 registry.values.keys.filter { it.plugin == plugin }.forEach { registry.unregister(it) }
             }

@@ -2,8 +2,8 @@ package xyz.mastriel.cutapi.resources
 
 import com.github.shynixn.mccoroutine.bukkit.minecraftDispatcher
 import kotlinx.coroutines.withContext
-import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
+import xyz.mastriel.cutapi.CuTPlugin
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.resources.generator.PackGenerationException
@@ -40,7 +40,7 @@ class ResourcePackManager {
      *
      * @param plugin The plugin. Will fail if this plugin is not registered in CuTAPI.
      */
-    fun getTexturesFolder(plugin: Plugin): File {
+    fun getTexturesFolder(plugin: CuTPlugin): File {
         val namespace = CuTAPI.getDescriptor(plugin).namespace
         return getTexturesFolder(namespace)
     }

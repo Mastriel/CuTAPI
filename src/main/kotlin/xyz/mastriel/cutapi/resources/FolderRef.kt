@@ -1,10 +1,10 @@
 package xyz.mastriel.cutapi.resources
 
-import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.resources.data.CuTMeta
+import xyz.mastriel.cutapi.CuTPlugin
 
-data class FolderRef internal constructor(override val plugin: Plugin, override val pathList: List<String>) : Locator {
+data class FolderRef internal constructor(override val plugin: CuTPlugin, override val pathList: List<String>) :
+    Locator {
 
     override val path: String
         get() = if (pathList.isEmpty()) "" else pathList.joinToString("/") + "/"
@@ -25,7 +25,7 @@ data class FolderRef internal constructor(override val plugin: Plugin, override 
     }
 
     override fun toString(): String {
-        return "${CuTAPI.getDescriptor(plugin).namespace}://${path}"
+        return "${plugin.namespace}://${path}"
     }
 
     operator fun div(path: String): FolderRef {
@@ -41,7 +41,7 @@ data class FolderRef internal constructor(override val plugin: Plugin, override 
     }
 }
 
-fun folderRef(plugin: Plugin, path: String): FolderRef {
+fun folderRef(plugin: CuTPlugin, path: String): FolderRef {
     return FolderRef(plugin, normalizeFolder(path).split("/").filterNot { it.isEmpty() })
 }
 

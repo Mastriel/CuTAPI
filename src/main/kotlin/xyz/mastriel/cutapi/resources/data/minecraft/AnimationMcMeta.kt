@@ -3,7 +3,6 @@ package xyz.mastriel.cutapi.resources.data.minecraft
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class AnimationMcMeta(
@@ -38,3 +37,4 @@ data class AnimationFrame(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val time: Int
 )
+

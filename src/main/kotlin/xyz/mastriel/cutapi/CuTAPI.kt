@@ -26,8 +26,8 @@ object CuTAPI {
     /**
      * A map of all plugins registered, along with their plugin descriptors.
      */
-    private val plugins = mutableMapOf<Plugin, PluginDescriptor>()
-    val registeredPlugins: Set<Plugin> get() = plugins.keys
+    private val plugins = mutableMapOf<CuTPlugin, PluginDescriptor>()
+    val registeredPlugins: Set<CuTPlugin> get() = plugins.keys
 
     val resourceManager = ResourceManager()
     val resourcePackManager = ResourcePackManager()
@@ -52,8 +52,8 @@ object CuTAPI {
      * @throws IllegalStateException If the plugin is already registered.
      */
     fun registerPlugin(
-        plugin: Plugin,
-        namespace: String = plugin.name.lowercase(),
+        plugin: CuTPlugin,
+        namespace: String,
         options: (PluginOptionsBuilder.() -> Unit)? = null
     ) {
         requireNotRegistered(plugin)
@@ -75,7 +75,7 @@ object CuTAPI {
      * @param plugin The plugin being unregistered.
      * @throws IllegalStateException If the plugin is not registered.
      */
-    fun unregisterPlugin(plugin: Plugin) {
+    fun unregisterPlugin(plugin: CuTPlugin) {
         requireRegistered(plugin)
         IdentifierRegistry.unregisterPluginGlobally(plugin)
         periodicManager
@@ -90,7 +90,7 @@ object CuTAPI {
      * @see PluginDescriptor
      */
     @Throws(IllegalStateException::class)
-    fun getDescriptor(plugin: Plugin): PluginDescriptor {
+    fun getDescriptor(plugin: CuTPlugin): PluginDescriptor {
         requireRegistered(plugin)
         return plugins[plugin]!!
     }
@@ -101,7 +101,7 @@ object CuTAPI {
      * @param plugin The plugin.
      * @returns true if the plugin is registered, false otherwise.
      */
-    fun isRegistered(plugin: Plugin): Boolean {
+    fun isRegistered(plugin: CuTPlugin): Boolean {
         return plugin in plugins
     }
 
@@ -111,7 +111,7 @@ object CuTAPI {
      *
      * @throws IllegalStateException If no plugin exists with this namespace.
      */
-    fun getPluginFromNamespace(namespace: String): Plugin {
+    fun getPluginFromNamespace(namespace: String): CuTPlugin {
         return plugins.values.find { it.namespace.equals(namespace, true) }?.plugin
             ?: error("Namespace $namespace not found.")
     }
@@ -123,8 +123,8 @@ object CuTAPI {
      * @param plugin The plugin being checked.
      * @throws IllegalStateException If the plugin isn't registered.
      */
-    internal fun requireRegistered(plugin: Plugin) {
-        if (plugin !in plugins) error("Plugin ${plugin.name} is not registered.")
+    internal fun requireRegistered(plugin: CuTPlugin) {
+        if (plugin !in plugins) error("Plugin ${plugin.descriptor.namespace} is not registered.")
     }
 
     /**
@@ -133,8 +133,8 @@ object CuTAPI {
      * @param plugin The plugin being checked.
      * @throws IllegalStateException If the plugin is registered.
      */
-    internal fun requireNotRegistered(plugin: Plugin) {
-        if (plugin in plugins) error("Plugin ${plugin.name} is already registered.")
+    internal fun requireNotRegistered(plugin: CuTPlugin) {
+        if (plugin in plugins) error("Plugin ${plugin.descriptor.namespace} is already registered.")
     }
 
 
@@ -162,8 +162,9 @@ object CuTAPI {
         val namespaceOwner = plugins.values.find { it.namespace == namespace }
 
         if (namespaceOwner != null) {
-            val pluginName = namespaceOwner.plugin.name
-            error("Namespace $namespace already exists! (used by ${pluginName})")
+            val pluginName = namespaceOwner.plugin.namespace
+            val bukkitPluginName = namespaceOwner.plugin.plugin.name
+            error("Namespace $namespace already exists! (used by ${pluginName}/${bukkitPluginName})")
         }
     }
 

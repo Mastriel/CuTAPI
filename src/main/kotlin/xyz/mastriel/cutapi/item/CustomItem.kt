@@ -110,7 +110,10 @@ open class CustomItem<TStack : CuTItemStack>(
         override fun register(item: CustomItem<*>): CustomItem<*> {
             val plugin = item.id.plugin
 
-            if (plugin != null) Bukkit.getServer().pluginManager.registerEvents(item, plugin)
+            if (plugin != null) {
+                val bukkitPlugin = plugin.plugin
+                Bukkit.getServer().pluginManager.registerEvents(item, bukkitPlugin)
+            }
             return super.register(item).also { item.descriptor.onRegister.trigger(ItemRegisterEvent(item)) }
         }
     }

@@ -6,8 +6,8 @@ import com.github.shynixn.mccoroutine.bukkit.ticks
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitRunnable
+import xyz.mastriel.cutapi.CuTPlugin
 import xyz.mastriel.cutapi.Plugin
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -35,9 +35,9 @@ class PeriodicManager {
         }
     }
 
-    private val tasks = mutableMapOf<Plugin, MutableList<PeriodicTask>>()
+    private val tasks = mutableMapOf<CuTPlugin, MutableList<PeriodicTask>>()
 
-    fun <T : Any> register(plugin: Plugin, instance: T) {
+    fun <T : Any> register(plugin: CuTPlugin, instance: T) {
         val periodicFunctions = getFunctions(instance::class)
         periodicFunctions.forEach { (function, ticks) ->
             if (function.isSuspend) {
@@ -50,7 +50,12 @@ class PeriodicManager {
         }
     }
 
-    private fun createSuspendAsyncCoroutineTask(function: KFunction<Unit>, instance: Any, plugin: Plugin, ticks: Int) {
+    private fun createSuspendAsyncCoroutineTask(
+        function: KFunction<Unit>,
+        instance: Any,
+        plugin: CuTPlugin,
+        ticks: Int
+    ) {
         val task = Plugin.launch {
             while (true) {
                 withContext(Plugin.asyncDispatcher) {
@@ -62,7 +67,7 @@ class PeriodicManager {
         tasks.getOrPut(plugin) { mutableListOf() }.add(PeriodicTask.CoroutineTask(task))
     }
 
-    private fun createSuspendCoroutineTask(function: KFunction<Unit>, instance: Any, plugin: Plugin, ticks: Int) {
+    private fun createSuspendCoroutineTask(function: KFunction<Unit>, instance: Any, plugin: CuTPlugin, ticks: Int) {
         val task = Plugin.launch {
             while (true) {
                 function.callSuspend(instance)
@@ -73,17 +78,17 @@ class PeriodicManager {
         tasks.getOrPut(plugin) { mutableListOf() }.add(PeriodicTask.CoroutineTask(task))
     }
 
-    private fun createBukkitTask(function: KFunction<Unit>, instance: Any, plugin: Plugin, ticks: Int) {
+    private fun createBukkitTask(function: KFunction<Unit>, instance: Any, plugin: CuTPlugin, ticks: Int) {
         val task = object : BukkitRunnable() {
             override fun run() {
                 function.call(instance)
             }
-        }.runTaskTimer(plugin, ticks.toLong(), ticks.toLong())
+        }.runTaskTimer(plugin.plugin, ticks.toLong(), ticks.toLong())
 
         tasks.getOrPut(plugin) { mutableListOf() }.add(PeriodicTask.BukkitTask(task))
     }
 
-    fun cancelAll(plugin: Plugin) {
+    fun cancelAll(plugin: CuTPlugin) {
         tasks[plugin]?.forEach { it.cancel() }
         tasks.remove(plugin)
     }

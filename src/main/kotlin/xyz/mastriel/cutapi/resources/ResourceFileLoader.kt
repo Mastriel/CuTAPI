@@ -3,8 +3,8 @@ package xyz.mastriel.cutapi.resources
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import org.bukkit.Bukkit
-import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
+import xyz.mastriel.cutapi.CuTPlugin
 import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.registry.Identifiable
 import xyz.mastriel.cutapi.registry.Identifier
@@ -132,10 +132,14 @@ internal fun checkIsResourceTypeOrUnknown(
     return id(metadataId.toString()) == resourceTypeId
 }
 
-internal fun checkResourceLoading(plugin: Plugin) {
+internal fun checkResourceLoading(plugin: CuTPlugin) {
     if (CuTAPI.getDescriptor(plugin).options.strictResourceLoading) {
-        Plugin.error("Strict resource loading is enabled for ${plugin.name}. Disabling ${plugin.name}...")
-        Bukkit.getPluginManager().disablePlugin(plugin)
+        Plugin.error("Strict resource loading is enabled for ${plugin.namespace}. Disabling ${plugin.namespace}...")
+        if (plugin != Plugin) {
+            Bukkit.getPluginManager().disablePlugin(plugin.plugin)
+        } else {
+            Plugin.error("Cannot disable the main CuTAPI plugin!")
+        }
         CuTAPI.unregisterPlugin(plugin)
     }
 }

@@ -1,8 +1,7 @@
 package xyz.mastriel.cutapi.resources
 
-import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.resources.data.CuTMeta
+import xyz.mastriel.cutapi.CuTPlugin
 import java.io.File
 
 sealed interface Locator {
@@ -11,8 +10,8 @@ sealed interface Locator {
      * This should only really be used when initally loading resources, and this will probably
      * be already taken care of for you.
      */
-    fun getFile() : File? = null
-    val plugin: Plugin
+    fun getFile(): File? = null
+    val plugin: CuTPlugin
 
     val namespace: String get() = CuTAPI.getDescriptor(plugin).namespace
 

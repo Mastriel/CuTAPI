@@ -8,8 +8,8 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import org.bukkit.NamespacedKey
-import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI
+import xyz.mastriel.cutapi.CuTPlugin
 import xyz.mastriel.cutapi.Plugin
 
 
@@ -23,33 +23,34 @@ data class Identifier internal constructor(val namespace: String, val key: Strin
      * If this is null, no logic will be associated with the identifiable object
      * because a plugin cannot be found to handle its logic.
      */
-    val plugin get() = try {
-        CuTAPI.getPluginFromNamespace(namespace)
-    } catch (ex: IllegalStateException) {
-        null
-    }
+    val plugin: CuTPlugin?
+        get() = try {
+            CuTAPI.getPluginFromNamespace(namespace)
+        } catch (ex: IllegalStateException) {
+            null
+        }
 
     override fun toString(): String {
         return "$namespace:$key"
     }
 
-    fun append(string: String) : Identifier {
-        return Identifier(namespace, key+string)
+    fun append(string: String): Identifier {
+        return Identifier(namespace, key + string)
     }
 
-    fun appendSubId(string: String) : Identifier {
+    fun appendSubId(string: String): Identifier {
         return Identifier(namespace, "$key/$string")
     }
 
-    operator fun div(string: String) : Identifier {
+    operator fun div(string: String): Identifier {
         return Identifier(namespace, "$key/$string")
     }
 
-    fun toNamespacedKey() : NamespacedKey {
+    fun toNamespacedKey(): NamespacedKey {
         return NamespacedKey(namespace, key)
     }
 
-    fun isUnknown() : Boolean {
+    fun isUnknown(): Boolean {
         return this == unknownID()
     }
 }
@@ -64,7 +65,7 @@ fun NamespacedKey.toIdentifier() = id("$namespace:$key")
  *
  * @see CuTAPI.registerPlugin
  */
-fun id(plugin: Plugin, id: String) : Identifier {
+fun id(plugin: CuTPlugin, id: String): Identifier {
     CuTAPI.requireRegistered(plugin)
     CuTAPI.requireValidNamespace(id)
 
@@ -79,7 +80,7 @@ fun id(plugin: Plugin, id: String) : Identifier {
  *
  * @see CuTAPI.registerPlugin
  */
-fun id(stringRepresentation: String) : Identifier {
+fun id(stringRepresentation: String): Identifier {
     require(":" in stringRepresentation) { "String identifier $stringRepresentation does not follow namespace:id format." }
     val (namespace, id) = stringRepresentation.split(":", limit = 2)
     return Identifier(namespace, id)
@@ -93,7 +94,7 @@ fun id(stringRepresentation: String) : Identifier {
  *
  * @see CuTAPI.registerPlugin
  */
-fun idOrNull(stringRepresentation: String) : Identifier? {
+fun idOrNull(stringRepresentation: String): Identifier? {
     val list = stringRepresentation.split(":")
     if (list.getOrNull(0) == null || list.getOrNull(1) == null || list.isEmpty()) return null
     return Identifier(list[0], list[1])

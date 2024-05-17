@@ -30,7 +30,7 @@ import xyz.mastriel.cutapi.resources.uploader.UploaderJoinEvents
 internal lateinit var Plugin: CuTAPIPlugin
     private set
 
-class CuTAPIPlugin : JavaPlugin() {
+class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
     override fun onEnable() {
         Plugin = this
