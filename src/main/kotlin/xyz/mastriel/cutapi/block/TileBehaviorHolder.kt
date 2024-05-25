@@ -1,27 +1,52 @@
 package xyz.mastriel.cutapi.block
 
-private class TileBehaviorHolder(block: CustomTile<*>) /*: BehaviorHolder<BlockBehavior>*/ {
+import xyz.mastriel.cutapi.behavior.BehaviorHolder
+import xyz.mastriel.cutapi.block.behaviors.BlockBehavior
+import xyz.mastriel.cutapi.block.behaviors.TileBehavior
+import xyz.mastriel.cutapi.block.behaviors.TileEntityBehavior
+import xyz.mastriel.cutapi.registry.Identifier
+import kotlin.reflect.KClass
 
-    /*
-    private val behaviors = block.descriptor.itemBehaviors
+private sealed class TileBehaviorHolder<T : TileBehavior>(block: CustomTile<*>) : BehaviorHolder<T> {
 
-    override fun hasBehavior(behavior: KClass<out ItemBehavior>): Boolean {
+    @Suppress("UNCHECKED_CAST")
+    private val behaviors = block.descriptor.behaviors as List<T>
+
+    override fun hasBehavior(behavior: KClass<out T>): Boolean {
         return getBehaviorOrNull(behavior) != null
     }
 
-    override fun <T : ItemBehavior> getBehavior(behavior: KClass<T>): T {
-        return getBehaviorOrNull(behavior) ?: error("Component ${behavior.qualifiedName} not found in component list!")
+    override fun <T2 : T> getBehavior(behavior: KClass<T2>): T2 {
+        return getBehaviorOrNull(behavior) ?: error("Behavior ${behavior.qualifiedName} not found in ${this}!")
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ItemBehavior> getBehaviorOrNull(behavior: KClass<T>): T? {
-        return behaviors.find { it::class == behavior } as? T?
+    override fun <T2 : T> getBehaviorOrNull(behavior: KClass<T2>): T2? {
+        return behaviors.find { it::class == behavior } as? T2?
     }
 
-    override fun getAllBehaviors(): Set<BlockBehavior> {
+    override fun getAllBehaviors(): Set<T> {
         return behaviors.toSet()
     }
-    */
+
+    override fun hasBehavior(behaviorId: Identifier): Boolean {
+        return behaviors.any { it.id == behaviorId }
+    }
+
+    override fun <T2 : T> getBehavior(behaviorId: Identifier): T2 {
+        return getBehaviorOrNull(behaviorId) ?: error("Behavior $behaviorId doesn't exist on this block.")
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T2 : T> getBehaviorOrNull(behaviorId: Identifier): T2? {
+        return behaviors.find { it.id == behaviorId } as? T2?
+    }
+
+    class Block(block: CustomBlock<*>) : TileBehaviorHolder<BlockBehavior>(block)
+    class TileEntity(tileEntity: CustomTileEntity<*>) : TileBehaviorHolder<TileEntityBehavior>(tileEntity)
 }
 
-// fun blockBehaviorHolder(item: CustomBlock) : BehaviorHolder<ItemBehavior> = BlockBehaviorHolder(block)
+
+fun blockBehaviorHolder(block: CustomBlock<*>): BehaviorHolder<BlockBehavior> = TileBehaviorHolder.Block(block)
+fun tileEntityBehaviorHolder(tileEntity: CustomTileEntity<*>): BehaviorHolder<TileEntityBehavior> =
+    TileBehaviorHolder.TileEntity(tileEntity)

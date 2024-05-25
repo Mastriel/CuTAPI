@@ -16,11 +16,12 @@ import xyz.mastriel.cutapi.item.bukkitevents.PlayerItemEvents
 import xyz.mastriel.cutapi.item.recipe.CraftingRecipeEvents
 import xyz.mastriel.cutapi.resources.ResourceFileLoader
 import xyz.mastriel.cutapi.resources.ResourcePackProcessor
+import xyz.mastriel.cutapi.resources.builtin.FolderApplyResourceLoader
 import xyz.mastriel.cutapi.resources.builtin.Model3DResourceLoader
 import xyz.mastriel.cutapi.resources.builtin.Texture2DResourceLoader
 import xyz.mastriel.cutapi.resources.postprocess.GrayscalePostProcessor
+import xyz.mastriel.cutapi.resources.postprocess.TextureAndModelProcessor
 import xyz.mastriel.cutapi.resources.postprocess.TexturePostProcessor
-import xyz.mastriel.cutapi.resources.postprocess.TextureProcessor
 import xyz.mastriel.cutapi.resources.uploader.BuiltinUploader
 import xyz.mastriel.cutapi.resources.uploader.Uploader
 import xyz.mastriel.cutapi.resources.uploader.UploaderJoinEvents
@@ -52,7 +53,7 @@ class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         CustomItem.register(CustomItem.Unknown)
         TexturePostProcessor.register(GrayscalePostProcessor)
         TexturePostProcessor.registerBuiltins()
-        ResourcePackProcessor.register(TextureProcessor, name = "Texture Processor")
+        ResourcePackProcessor.register(TextureAndModelProcessor, name = "Texture Processor")
         Uploader.register(BuiltinUploader())
 
         CuTAPI.packetEventManager.registerPacketListener(PacketItemHandler)
@@ -82,6 +83,7 @@ class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
     }
 
     private fun registerResourceLoaders() {
+        ResourceFileLoader.register(FolderApplyResourceLoader)
         ResourceFileLoader.register(Texture2DResourceLoader)
         ResourceFileLoader.register(Model3DResourceLoader)
     }

@@ -80,7 +80,6 @@ class CraftingRecipeEvents : Listener {
 
         val context = IngredientCraftContext(item.toAgnostic()).apply(onCraft)
 
-        println(context.dontConsume)
 
         if (context.dontConsume) {
             item.amount += quantity

@@ -27,6 +27,9 @@ data class ResourceRef<out T : Resource> internal constructor(
 ) : ReadOnlyProperty<Any?, T?>, Locator {
 
 
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Resource> cast() = this as ResourceRef<T>
+
     fun getResource(): T? {
         return CuTAPI.resourceManager.getResourceOrNull(this)
     }
@@ -80,7 +83,7 @@ data class ResourceRef<out T : Resource> internal constructor(
 
     override val parent: FolderRef?
         get() {
-            val list = pathList.dropLast(2)
+            val list = pathList.dropLast(1)
             if (list.isEmpty()) return null
             return folderRef(plugin, list.joinToString("/"))
         }

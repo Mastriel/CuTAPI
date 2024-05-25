@@ -3,6 +3,9 @@ package xyz.mastriel.cutapi.pdc.tags
 import kotlinx.serialization.KSerializer
 import org.bukkit.Location
 import org.bukkit.OfflinePlayer
+import xyz.mastriel.cutapi.block.CustomBlock
+import xyz.mastriel.cutapi.block.CustomTile
+import xyz.mastriel.cutapi.block.CustomTileEntity
 import xyz.mastriel.cutapi.item.CustomItem
 import xyz.mastriel.cutapi.pdc.tags.converters.*
 import xyz.mastriel.cutapi.registry.Identifier
@@ -132,10 +135,28 @@ fun TagContainer.nullableIdentifierTag(key: String, default: Identifier? = null)
     NullableTag(key, this, default, IdentifierTagConverter)
 
 fun TagContainer.customItemTag(key: String, default: CustomItem<*>) =
-    NotNullTag(key, this, default, CustomItemTagConverter)
+    NotNullTag(key, this, default, IdentifiableTagConverter.CustomItem)
 
 fun TagContainer.nullableCustomItemTag(key: String, default: CustomItem<*>? = null) =
-    NullableTag(key, this, default, CustomItemTagConverter)
+    NullableTag(key, this, default, IdentifiableTagConverter.CustomItem)
+
+fun TagContainer.customBlockTag(key: String, default: CustomBlock<*>) =
+    NotNullTag(key, this, default, IdentifiableTagConverter.CustomBlock)
+
+fun TagContainer.nullableCustomBlockTag(key: String, default: CustomBlock<*>? = null) =
+    NullableTag(key, this, default, IdentifiableTagConverter.CustomBlock)
+
+fun TagContainer.customBlockTag(key: String, default: CustomTile<*>) =
+    NotNullTag(key, this, default, IdentifiableTagConverter.CustomTile)
+
+fun TagContainer.nullableCustomBlockTag(key: String, default: CustomTile<*>? = null) =
+    NullableTag(key, this, default, IdentifiableTagConverter.CustomTile)
+
+fun TagContainer.customTileEntityTag(key: String, default: CustomTileEntity<*>) =
+    NotNullTag(key, this, default, IdentifiableTagConverter.CustomTileEntity)
+
+fun TagContainer.nullableTileEntityTag(key: String, default: CustomTileEntity<*>? = null) =
+    NullableTag(key, this, default, IdentifiableTagConverter.CustomTileEntity)
 
 fun TagContainer.stringTag(key: String, default: String) =
     NotNullTag(key, this, default, PrimitiveTagConverter.String)

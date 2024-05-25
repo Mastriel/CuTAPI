@@ -6,6 +6,7 @@ import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
 import xyz.mastriel.cutapi.utils.personalized.withViewer
+import kotlin.reflect.KClass
 
 
 fun customItem(
@@ -19,8 +20,16 @@ fun customItem(
     return CustomItem(id, bukkitMaterial, CuTItemStack::class, descriptor)
 }
 
+fun customItem(
+    id: Identifier,
+    bukkitMaterial: Material,
+    descriptor: ItemDescriptor
+): CustomItem<CuTItemStack> {
+    return CustomItem(id, bukkitMaterial, CuTItemStack::class, descriptor)
+}
+
 @JvmName("customItemWithStackType")
-inline fun <reified T: CuTItemStack> customItem(
+inline fun <reified T : CuTItemStack> customItem(
     id: Identifier,
     bukkitMaterial: Material,
     noinline block: (ItemDescriptorBuilder.() -> Unit)?
@@ -31,8 +40,21 @@ inline fun <reified T: CuTItemStack> customItem(
     return CustomItem(id, bukkitMaterial, T::class, descriptor)
 }
 
+@JvmName("customItemWithStackType")
+fun <T : CuTItemStack> typedCustomItem(
+    id: Identifier,
+    bukkitMaterial: Material,
+    itemStackClass: KClass<T>,
+    block: (ItemDescriptorBuilder.() -> Unit)?
+): CustomItem<T> {
+    if (block == null) return CustomItem(id, bukkitMaterial, itemStackClass, defaultItemDescriptor())
+    val descriptor = ItemDescriptorBuilder().apply(block).build()
+
+    return CustomItem(id, bukkitMaterial, itemStackClass, descriptor)
+}
+
 @JvmName("registerCustomItemWithStackType")
-inline fun <reified T: CuTItemStack> registerCustomItem(
+inline fun <reified T : CuTItemStack> registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
     noinline block: (ItemDescriptorBuilder.() -> Unit)?
@@ -82,13 +104,22 @@ fun registerCustomItem(
 fun registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
+    descriptor: ItemDescriptor
+): CustomItem<CuTItemStack> {
+    val customItem = customItem(id, bukkitMaterial, descriptor)
+    CustomItem.register(customItem)
+    return customItem
+}
+
+fun registerCustomItem(
+    id: Identifier,
+    bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>
 ): CustomItem<CuTItemStack> {
     val customItem = customItem(id, bukkitMaterial, name)
     CustomItem.register(customItem)
     return customItem
 }
-
 
 
 fun registerCustomItem(

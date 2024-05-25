@@ -32,7 +32,16 @@ class ResourcePackManager {
      * @param namespace The namespace of the plugin.
      */
     fun getTexturesFolder(namespace: String): File {
-        return File(tempFolder, "assets/minecraft/textures/item/$namespace")
+        return File(tempFolder, "assets/$namespace/textures/item")
+    }
+
+    /**
+     * Gets the textures folder of a plugin in the resource pack.
+     *
+     * @param namespace The namespace of the plugin.
+     */
+    fun getModelsFolder(namespace: String): File {
+        return File(tempFolder, "assets/$namespace/models/item")
     }
 
     /**
@@ -42,7 +51,7 @@ class ResourcePackManager {
      */
     fun getTexturesFolder(plugin: CuTPlugin): File {
         val namespace = CuTAPI.getDescriptor(plugin).namespace
-        return getTexturesFolder(namespace)
+        return getTexturesFolder(namespace).also { it.mkdirs() }
     }
 
 

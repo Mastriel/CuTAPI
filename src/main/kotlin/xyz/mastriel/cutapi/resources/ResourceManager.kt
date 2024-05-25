@@ -1,10 +1,14 @@
 package xyz.mastriel.cutapi.resources
 
+import kotlinx.serialization.encodeToString
+import net.peanuuutz.tomlkt.TomlTable
 import org.bukkit.Bukkit
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.CuTPlugin
 import xyz.mastriel.cutapi.Plugin
+import xyz.mastriel.cutapi.resources.builtin.FolderApplyResource
 import xyz.mastriel.cutapi.utils.appendPath
+import xyz.mastriel.cutapi.utils.combine
 import xyz.mastriel.cutapi.utils.copyResourceDirectory
 import java.io.File
 
@@ -148,16 +152,19 @@ class ResourceManager {
      * would load the `texture.png` file into 'cutapi://abc/texture.png'
      */
     private fun loadResourcesFromFolder(root: File, folder: FolderRef) {
-        folderRefToFile(root, folder).listFiles()?.toList()?.forEach { file ->
-            val name = folder / file.name
+        folderRefToFile(root, folder).listFiles()?.toList()
+            ?.sortedByDescending { if (it.name == "apply.meta.folder") 1 else 0 }
+            ?.forEach { file ->
 
-            if (file.isDirectory) {
-                loadResourcesFromFolder(root, name)
-                return@forEach
+                val name = folder / file.name
+
+                if (file.isDirectory) {
+                    loadResourcesFromFolder(root, name)
+                    return@forEach
+                }
+
+                loadResource(file, folder.child<Resource>(file.name))
             }
-
-            loadResource(file, folder.child<Resource>(file.name))
-        }
     }
 
     /**
@@ -173,16 +180,25 @@ class ResourceManager {
         try {
             val resourceBytes = resourceFile.readBytes()
             val metadataBytes = try {
-                metadataFile.readBytes()
+                val folderTable = getFolderDefaultTable(ref)
+                if (folderTable == null) {
+                    metadataFile.readBytes()
+                } else {
+                    val metadataTable = if (metadataFile.exists())
+                        CuTAPI.toml.parseToTomlTable(metadataFile.readText())
+                    else
+                        TomlTable()
+
+                    val newTable = folderTable.combine(metadataTable, false)
+                    CuTAPI.toml.encodeToString(newTable).toByteArray(Charsets.UTF_8)
+                }
             } catch (e: Exception) {
                 null
             }
 
-            // try this plugin's loaders first
-            val loaders =
-                ResourceFileLoader.getBy(ref.plugin).toMutableList() as MutableList<ResourceFileLoader<Resource>>
-            loaders += ResourceFileLoader.getAllValues()
-                .filter { it.id.plugin != ref.plugin } as List<ResourceFileLoader<Resource>>
+
+            // make sure that the loaders are sorted by dependencies
+            val loaders = ResourceFileLoader.getDependencySortedLoaders() as List<ResourceFileLoader<Resource>>
 
             if (loaders.isEmpty()) {
                 Plugin.error("No loaders found for resource $ref.")
@@ -218,6 +234,13 @@ class ResourceManager {
             Plugin.error(e)
             return false
         }
+    }
+
+    private fun getFolderDefaultTable(ref: ResourceRef<*>): TomlTable? {
+        val parent = ref.parent ?: return null
+
+        val resource = parent.child<FolderApplyResource>("apply.meta.folder")
+        return resource.getResource()?.metadata?.applyTable
     }
 
 

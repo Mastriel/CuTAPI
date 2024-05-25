@@ -2,12 +2,16 @@ package xyz.mastriel.cutapi.item
 
 import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
+import xyz.mastriel.cutapi.CuTPlugin
 import xyz.mastriel.cutapi.behavior.BehaviorHolder
 import xyz.mastriel.cutapi.behavior.isRepeatable
 import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.item.behaviors.itemBehaviorHolder
 import xyz.mastriel.cutapi.resources.ResourceRef
+import xyz.mastriel.cutapi.resources.builtin.CustomModelDataAllocated
+import xyz.mastriel.cutapi.resources.builtin.Model3D
 import xyz.mastriel.cutapi.resources.builtin.Texture2D
+import xyz.mastriel.cutapi.resources.ref
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.EventHandlerList
 import xyz.mastriel.cutapi.utils.colored
@@ -33,12 +37,12 @@ class ItemDescriptor internal constructor(
     val onRegister: EventHandlerList<ItemRegisterEvent> = EventHandlerList()
 ) {
 
-    infix fun with(block: ItemDescriptorBuilder.() -> Unit) : ItemDescriptor {
+    infix fun with(block: ItemDescriptorBuilder.() -> Unit): ItemDescriptor {
         val other = ItemDescriptorBuilder().apply(block).build()
         return this + other
     }
 
-    operator fun plus(other: ItemDescriptor) : ItemDescriptor {
+    operator fun plus(other: ItemDescriptor): ItemDescriptor {
         return itemDescriptor {
             display = other.display ?: this@ItemDescriptor.display
 
@@ -82,7 +86,7 @@ class ItemDescriptorBuilder {
             if (this._itemBehaviors.any { it.id == behavior.id } && !behavior.isRepeatable())
                 error("${behavior.id} lacks a RepeatableBehavior annotation to be repeatable.")
             _itemBehaviors.add(behavior)
-            with (behavior) {
+            with(behavior) {
                 modifyDescriptor()
             }
         }
@@ -111,6 +115,37 @@ class ItemDescriptorBuilder {
     }
 }
 
+sealed class ItemTexture : CustomModelDataAllocated {
+
+    abstract fun isAvailable(): Boolean
+
+    data class Texture(val texture: ResourceRef<Texture2D>) : ItemTexture() {
+        override val customModelData: Int
+            get() = texture.getResource()!!.customModelData
+
+        override fun isAvailable() = texture.isAvailable()
+    }
+
+    data class Model(val model: ResourceRef<Model3D>) : ItemTexture() {
+        override val customModelData: Int
+            get() = model.getResource()!!.customModelData
+
+        override fun isAvailable() = model.isAvailable()
+    }
+}
+
+fun itemTexture(texture: ResourceRef<Texture2D>) = ItemTexture.Texture(texture)
+
+fun itemModel(model: ResourceRef<Model3D>) = ItemTexture.Model(model)
+
+fun itemTexture(plugin: CuTPlugin, path: String) = ItemTexture.Texture(ref(plugin, path))
+
+fun itemModel(plugin: CuTPlugin, path: String) = ItemTexture.Model(ref(plugin, path))
+
+fun itemTexture(stringPath: String) = ItemTexture.Texture(ref(stringPath))
+
+fun itemModel(stringPath: String) = ItemTexture.Model(ref(stringPath))
+
 /**
  * A class for creating dynamic displays (lore, name, etc.) for [CuTItemStack]s.
  * Whenever the server sends an ItemStack to the client for any reason, this will be
@@ -123,9 +158,9 @@ open class ItemDisplayBuilder(val itemStack: CuTItemStack, val viewer: Player?) 
     val type get() = itemStack.type
 
     private val lines = mutableListOf<Component>()
-    var name : Component? = null
+    var name: Component? = null
 
-    var texture: ResourceRef<Texture2D>? = null
+    var texture: ItemTexture? = null
 
     /**
      * Adds a Component to this item description.
@@ -163,9 +198,9 @@ open class ItemDisplayBuilder(val itemStack: CuTItemStack, val viewer: Player?) 
         return lines.toList()
     }
 
-    inline fun <reified B: ItemBehavior> hasBehavior() = hasBehavior(B::class)
-    inline fun <reified B: ItemBehavior> getBehavior() = getBehavior(B::class)
-    inline fun <reified B: ItemBehavior> getBehaviorOrNull() = getBehaviorOrNull(B::class)
+    inline fun <reified B : ItemBehavior> hasBehavior() = hasBehavior(B::class)
+    inline fun <reified B : ItemBehavior> getBehavior() = getBehavior(B::class)
+    inline fun <reified B : ItemBehavior> getBehaviorOrNull() = getBehaviorOrNull(B::class)
 
 }
 

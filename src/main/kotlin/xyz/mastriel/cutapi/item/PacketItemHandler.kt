@@ -12,6 +12,7 @@ import net.minecraft.world.item.trading.MerchantOffers
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.craftbukkit.inventory.CraftItemStack
 import org.bukkit.entity.Player
 import org.bukkit.event.EventPriority
@@ -20,9 +21,13 @@ import org.bukkit.event.inventory.InventoryType
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
+import org.bukkit.persistence.PersistentDataType
+import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.nms.*
+import xyz.mastriel.cutapi.pdc.tags.converters.ItemStackTagConverter
 import xyz.mastriel.cutapi.periodic.Periodic
+import xyz.mastriel.cutapi.utils.colored
 import java.util.*
 
 
@@ -156,6 +161,27 @@ internal object PacketItemHandler : Listener, PacketListener {
     @PacketHandler
     fun handleCreativeSetSlot(event: PacketEvent<ServerboundSetCreativeModeSlotPacket>): ServerboundSetCreativeModeSlotPacket {
         val item = event.packet.itemStack
+        val pdc = item.bukkit().itemMeta?.persistentDataContainer
+        val isRendered = pdc?.get(
+            NamespacedKey(Plugin, "IsDisplay"),
+            PersistentDataType.BOOLEAN
+        ) == true
+
+        val wrapped = event.packet.itemStack.bukkit().wrap()
+        if (isRendered && wrapped != null) {
+            val amount = event.packet.itemStack.count
+            val itemStack = wrapped.getPrerenderItemStack(amount)
+
+
+            if (itemStack == null) {
+                Plugin.warn("ItemStack Prerender is null! This is a bug!".colored)
+            } else {
+                return ServerboundSetCreativeModeSlotPacket(
+                    event.packet.slotNum,
+                    itemStack.nms()
+                )
+            }
+        }
 
         return ServerboundSetCreativeModeSlotPacket(
             event.packet.slotNum,
@@ -304,6 +330,19 @@ internal object PacketItemHandler : Listener, PacketListener {
     private val windowIds = mutableMapOf<Player, Int>()
 
     internal val Player.openWindowId get() = windowIds[player]
+
+    internal fun CuTItemStack.setPrerenderItemStack(prerender: ItemStack) {
+
+        set("PrerenderItemStack", prerender.clone().also { it.amount = 1 }, ItemStackTagConverter)
+    }
+
+    internal fun CuTItemStack.getPrerenderItemStack(amount: Int): ItemStack? {
+        return get("PrerenderItemStack", ItemStackTagConverter)?.also { it.amount = amount }
+    }
+
+    internal fun CuTItemStack.hasPrerenderStack(): Boolean {
+        return has("PrerenderItemStack")
+    }
 
     /*
     @EventHandler

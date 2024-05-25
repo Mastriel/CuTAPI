@@ -70,6 +70,8 @@ dependencies {
 tasks {
 
     runServer {
+        pluginJars("../CuTAPI/build/libs/CuTAPI-0.1.0a-reobf.jar")
+
         minecraftVersion("1.20.6")
     }
 }

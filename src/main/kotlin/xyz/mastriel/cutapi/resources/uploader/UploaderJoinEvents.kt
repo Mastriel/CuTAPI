@@ -17,7 +17,6 @@ internal class UploaderJoinEvents : Listener {
     @EventHandler
     fun onJoin(e: PlayerJoinEvent) {
         val (packUrl, packHash) = CuTAPI.resourcePackManager.packInfo ?: return
-        println(packHash)
         e.player.sendResourcePacks(
             ResourcePackRequest.resourcePackRequest()
                 .packs(ResourcePackInfo.resourcePackInfo(PACK_ID, URI(packUrl), packHash))

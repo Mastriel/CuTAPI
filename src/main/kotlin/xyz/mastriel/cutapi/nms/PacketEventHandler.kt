@@ -4,14 +4,12 @@ import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelPromise
 import net.minecraft.network.protocol.game.ClientboundBundlePacket
-import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket
-import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket
 import org.bukkit.entity.Player
 import xyz.mastriel.cutapi.CuTAPI
 
 
 @UsesNMS
-internal class PacketEventHandler(val player : Player) : ChannelDuplexHandler() {
+internal class PacketEventHandler(val player: Player) : ChannelDuplexHandler() {
 
     // outgoing packets (clientbound)
     override fun write(ctx: ChannelHandlerContext?, msg: Any?, promise: ChannelPromise?) {
@@ -34,12 +32,16 @@ internal class PacketEventHandler(val player : Player) : ChannelDuplexHandler() 
 
     // incoming packets (serverbound)
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
-        val packet = msg as MojangPacket<*>
+        try {
+            val packet = msg as? MojangPacket<*> ?: return
 
-        val event = PacketEvent(player, packet)
+            val event = PacketEvent(player, packet)
 
-        val newPacket = CuTAPI.packetEventManager.trigger(event)
+            val newPacket = CuTAPI.packetEventManager.trigger(event)
 
-        if (newPacket != null) super.channelRead(ctx, newPacket)
+            if (newPacket != null) super.channelRead(ctx, newPacket)
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+        }
     }
 }

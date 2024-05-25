@@ -14,6 +14,8 @@ import xyz.mastriel.cutapi.item.ItemStackUtility.customIdOrNull
 import xyz.mastriel.cutapi.item.ItemStackUtility.customItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.cutItemStackType
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
+import xyz.mastriel.cutapi.item.PacketItemHandler.hasPrerenderStack
+import xyz.mastriel.cutapi.item.PacketItemHandler.setPrerenderItemStack
 import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
 import xyz.mastriel.cutapi.pdc.tags.ItemTagContainer
 import xyz.mastriel.cutapi.pdc.tags.TagContainer
@@ -108,11 +110,11 @@ open class CuTItemStack protected constructor(
     }
 
     var name: Component
-        get() = handle.displayName()
+        get() = handle.itemMeta.itemName()
         set(value) {
             nameHasChanged = true
             val meta = handle.itemMeta
-            meta.displayName(value)
+            meta.itemName(value)
             handle.itemMeta = meta
         }
 
@@ -202,11 +204,20 @@ open class CuTItemStack protected constructor(
     open fun getRenderedItemStack(viewer: Player?): ItemStack {
         val itemStack = handle.clone()
 
+        val rewrap = wrap(itemStack)
+        if (!rewrap.hasPrerenderStack()) {
+            rewrap.setPrerenderItemStack(itemStack)
+        }
+
         itemStack.editMeta { meta ->
 
             if (descriptor.display != null) {
-                val display = ItemDisplayBuilder(this, viewer).apply(descriptor.display!!)
-
+                val display = try {
+                    ItemDisplayBuilder(this, viewer).apply(descriptor.display!!)
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    return@editMeta
+                }
                 meta.lore(getLore(viewer))
 
                 if (nameHasChanged) {
@@ -215,15 +226,24 @@ open class CuTItemStack protected constructor(
                     meta.displayName(display.name ?: "&c${type.id}".colored)
                 }
 
-                val textureRef = display.texture
+                when (val itemTexture = display.texture) {
+                    is ItemTexture.Texture -> if (itemTexture.texture.isAvailable()) {
+                        val customModelData = itemTexture.customModelData
+                        meta.setCustomModelData(customModelData)
+                    }
 
-                if (textureRef != null && textureRef.isAvailable()) {
-                    val customModelData = textureRef.getResource()!!.customModelData
-                    meta.setCustomModelData(customModelData)
+                    // TODO
+                    is ItemTexture.Model -> if (itemTexture.model.isAvailable()) {
+                        val customModelData = itemTexture.customModelData
+                        meta.setCustomModelData(customModelData)
+                    }
+
+                    else -> Unit
                 }
             }
 
             meta.persistentDataContainer.set(NamespacedKey(Plugin, "IsDisplay"), PersistentDataType.BYTE, 1)
+
         }
 
         getAllBehaviors().forEach { it.onRender(viewer, itemStack.wrap()!!) }
@@ -250,9 +270,9 @@ open class CuTItemStack protected constructor(
             if (this@CuTItemStack.descriptor.display != null) {
                 val display = ItemDisplayBuilder(this@CuTItemStack, viewer).apply(descriptor.display!!)
 
-                val textureRef = display.texture
-                if (textureRef != null && textureRef.isAvailable()) {
-                    val customModelData = textureRef.getResource()!!.customModelData
+                val itemTexture = display.texture
+                if (itemTexture != null && itemTexture.isAvailable()) {
+                    val customModelData = itemTexture.customModelData
                     meta.setCustomModelData(customModelData)
                 }
             }

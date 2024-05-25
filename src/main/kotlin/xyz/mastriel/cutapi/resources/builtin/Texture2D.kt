@@ -14,11 +14,14 @@ import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.id
 import xyz.mastriel.cutapi.registry.unknownID
-import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.ByteArraySerializable
+import xyz.mastriel.cutapi.resources.Resource
+import xyz.mastriel.cutapi.resources.ResourceRef
 import xyz.mastriel.cutapi.resources.data.CuTMeta
 import xyz.mastriel.cutapi.resources.data.minecraft.Animation
 import xyz.mastriel.cutapi.resources.data.minecraft.ItemModelData
 import xyz.mastriel.cutapi.resources.postprocess.TexturePostProcessor
+import xyz.mastriel.cutapi.resources.resourceLoader
 import xyz.mastriel.cutapi.utils.combine
 import xyz.mastriel.cutapi.utils.toJson
 import java.awt.image.BufferedImage
@@ -27,13 +30,11 @@ import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
 
-private var textureCmdCounter = 32120
-
 open class Texture2D(
     override val ref: ResourceRef<Texture2D>,
     data: BufferedImage,
     override val metadata: Metadata
-) : Resource(ref), ByteArraySerializable {
+) : Resource(ref), ByteArraySerializable, CustomModelDataAllocated, TextureLike {
 
 
     @Serializable
@@ -54,19 +55,25 @@ open class Texture2D(
         val modelFile: ResourceRef<@Contextual JsonResource>? = null
     ) : CuTMeta()
 
-    fun createItemModelData() : JsonObject {
+    override val materials: List<String>
+        get() = metadata.materials
+
+    override val resource: Resource
+        get() = this
+
+    override fun createItemModelData(): JsonObject {
         val internalJson = CuTAPI.toml.encodeToTomlElement(metadata.itemModelData).asTomlTable().toJson()
-        var jsonObject : JsonObject = internalJson
+        var jsonObject: JsonObject = internalJson
         if (metadata.modelFile != null && metadata.modelFile!!.isAvailable()) {
             val (fileJson) = metadata.modelFile?.getResource()!!
             jsonObject = internalJson.combine(fileJson)
 
         }
-        val path = ref.path(withExtension = false, withNamespaceAsFolder = true)
+        val path = ref.path(withExtension = false, withNamespaceAsFolder = false)
         val texturesObject = jsonObject["textures"]?.jsonObject
         val textures = texturesObject?.toMutableMap() ?: mutableMapOf()
 
-        textures["layer0"] = JsonPrimitive("item/$path")
+        textures["layer0"] = JsonPrimitive("${ref.namespace}:item/$path")
 
         val combinedAsMap = jsonObject.toMutableMap()
         combinedAsMap["textures"] = JsonObject(textures)
@@ -95,10 +102,7 @@ open class Texture2D(
         return stream.toByteArray()
     }
 
-    val customModelData by lazy {
-        textureCmdCounter += 1
-        textureCmdCounter - 1
-    }
+    override val customModelData = allocateCustomModelData()
 
 
 }

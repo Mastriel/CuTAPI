@@ -3,11 +3,12 @@ package xyz.mastriel.cutapi.resources.data
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import net.peanuuutz.tomlkt.*
+import net.peanuuutz.tomlkt.TomlTable
+import net.peanuuutz.tomlkt.asTomlTable
+import net.peanuuutz.tomlkt.encodeToTomlElement
 import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.unknownID
-import xyz.mastriel.cutapi.resources.ResourceRef
 import xyz.mastriel.cutapi.resources.builtin.SerializableTemplateMetadataRef
 import xyz.mastriel.cutapi.utils.combine
 
@@ -25,17 +26,17 @@ open class CuTMeta {
     open val cloneBlock = listOf<CuTMeta>()
 
     @SerialName("res_type")
-    val resourceType : Identifier = unknownID()
+    val resourceType: Identifier = unknownID()
 
     @SerialName("extends")
-    val extends : List<SerializableTemplateMetadataRef> = emptyList()
+    val extends: List<SerializableTemplateMetadataRef> = emptyList()
 
 
     /**
      * Create a new CuTMeta, using this as a base,
      * and applying properties from [other] as needed.
      */
-    fun <T: CuTMeta> apply(other: T, otherSerializer: KSerializer<T>) : T {
+    fun <T : CuTMeta> apply(other: T, otherSerializer: KSerializer<T>): T {
         val thisSerial = CuTAPI.toml.encodeToTomlElement(this).asTomlTable()
         val otherSerial = CuTAPI.toml.encodeToTomlElement(otherSerializer, other).asTomlTable()
 
@@ -43,10 +44,8 @@ open class CuTMeta {
 
         return CuTAPI.toml.decodeFromTomlElement(otherSerializer, newTable)
     }
-
-
-
 }
+
 
 @Serializable
 open class GenerateBlock {
@@ -54,7 +53,7 @@ open class GenerateBlock {
     open val generatorId = unknownID()
 
     @SerialName("options")
-    open val options : TomlTable = TomlTable()
+    open val options: TomlTable = TomlTable()
 }
 
 

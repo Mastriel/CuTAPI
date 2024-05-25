@@ -14,9 +14,52 @@ import xyz.mastriel.cutapi.resources.data.CuTMeta
 
 
 interface ResourceFileLoader<T : Resource> : Identifiable {
+    /**
+     * The dependencies of this loader. These are the loaders that must run before this one.
+     * Circular dependencies are not allowed.
+     * If a loader has no dependencies, it will be loaded first.
+     * If a loader has dependencies, it will be loaded after all of its dependencies.
+     */
+    val dependencies: List<ResourceFileLoader<*>> get() = listOf()
+
     fun loadResource(ref: ResourceRef<T>, data: ByteArray, metadata: ByteArray?): ResourceLoadResult<T>
 
-    companion object : IdentifierRegistry<ResourceFileLoader<*>>("Resource File Loaders")
+    companion object : IdentifierRegistry<ResourceFileLoader<*>>("Resource File Loaders") {
+
+        fun getDependencySortedLoaders(): List<ResourceFileLoader<*>> {
+            val sorted = mutableListOf<ResourceFileLoader<*>>()
+            val visited = mutableSetOf<ResourceFileLoader<*>>()
+            val recursionStack = mutableSetOf<ResourceFileLoader<*>>()
+
+            fun visit(loader: ResourceFileLoader<*>): Boolean {
+                if (loader in recursionStack) {
+                    return false // Circular dependency detected
+                }
+
+                if (loader in visited) return true
+
+                visited.add(loader)
+                recursionStack.add(loader)
+
+                for (dependency in loader.dependencies) {
+                    if (!visit(dependency)) return false
+                }
+
+                recursionStack.remove(loader)
+                sorted.add(loader)
+
+                return true
+            }
+
+            for (loader in values) {
+                if (!visit(loader.value)) {
+                    throw IllegalStateException("Circular dependencies are not allowed in resource loaders!")
+                }
+            }
+
+            return sorted
+        }
+    }
 }
 
 
@@ -46,7 +89,8 @@ private class WrongResourceTypeException : Exception()
 class ResourceFileLoaderContext<T : Resource, M : CuTMeta>(
     val ref: ResourceRef<T>,
     val data: ByteArray,
-    val metadata: M?
+    val metadata: M?,
+    val metadataBytes: ByteArray? = null
 ) {
     val dataAsString by lazy { data.toString(Charsets.UTF_8) }
 
@@ -64,10 +108,13 @@ fun <T : Resource, M : CuTMeta> resourceLoader(
     extensions: Collection<String>,
     resourceTypeId: Identifier,
     metadataSerializer: KSerializer<M>?,
+    dependencies: List<ResourceFileLoader<*>> = listOf(),
     func: ResourceFileLoaderContext<T, M>.() -> ResourceLoadResult<T>
 ): ResourceFileLoader<T> {
 
     return object : ResourceFileLoader<T> {
+
+        override val dependencies: List<ResourceFileLoader<*>> = dependencies
         override val id: Identifier = resourceTypeId
 
         override fun loadResource(ref: ResourceRef<T>, data: ByteArray, metadata: ByteArray?): ResourceLoadResult<T> {
@@ -76,7 +123,7 @@ fun <T : Resource, M : CuTMeta> resourceLoader(
                 try {
                     if (metadataText == null) {
                         Plugin.warn("$ref is being interpretted as $resourceTypeId implicitly. (no metadata)")
-                        return func(ResourceFileLoaderContext(ref, data, null))
+                        return func(ResourceFileLoaderContext(ref, data, null, metadata))
                     }
 
                     if (!checkIsResourceTypeOrUnknown(ref, metadataText, resourceTypeId)) {
@@ -85,9 +132,9 @@ fun <T : Resource, M : CuTMeta> resourceLoader(
 
                     if (metadataSerializer != null) {
                         val parsedMetadata = CuTAPI.toml.decodeFromString(metadataSerializer, metadataText)
-                        return func(ResourceFileLoaderContext(ref, data, parsedMetadata))
+                        return func(ResourceFileLoaderContext(ref, data, parsedMetadata, metadata))
                     } else {
-                        return func(ResourceFileLoaderContext(ref, data, null))
+                        return func(ResourceFileLoaderContext(ref, data, null, metadata))
                     }
 
                 } catch (e: IllegalArgumentException) {

@@ -2,18 +2,9 @@ package xyz.mastriel.cutapi.nms
 
 import net.minecraft.network.protocol.Packet
 import org.bukkit.event.EventPriority
-import xyz.mastriel.cutapi.CuTAPI
 import xyz.mastriel.cutapi.Plugin
 import java.lang.reflect.Method
 import java.lang.reflect.ParameterizedType
-import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.functions
-import kotlin.reflect.javaType
-import kotlin.reflect.jvm.javaMethod
-import kotlin.reflect.jvm.javaType
-import kotlin.reflect.jvm.jvmErasure
 
 
 internal interface PacketListener
@@ -22,8 +13,8 @@ private data class PacketListenerFunctionDefinition(
     private val parent: PacketListener,
     private val function: Method
 ) {
-    operator fun invoke(event: PacketEvent<*>): MojangPacket<*> {
-        return function.invoke(parent, event) as MojangPacket<*>
+    operator fun invoke(event: PacketEvent<*>): MojangPacket<*>? {
+        return function.invoke(parent, event) as? MojangPacket<*>?
     }
 }
 
@@ -76,8 +67,8 @@ internal class PacketEventManager {
             } catch (ex: Exception) {
                 Plugin.warn(
                     "Failed to register packet listener for ${listener::class.simpleName}#${function.name}. " +
-                            "The function must have a parameter of type PacketEvent with any MojangPacket (not an *) as the " +
-                            "type parameter, and must return a MojangPacket of the same type as the PacketEvent."
+                        "The function must have a parameter of type PacketEvent with any MojangPacket (not an *) as the " +
+                        "type parameter, and must return a MojangPacket of the same type as the PacketEvent."
                 )
                 ex.printStackTrace()
             }
@@ -100,13 +91,13 @@ internal class PacketEventManager {
      * @return the packet after all listeners have been triggered. May be the same packet or a new one.
      */
     @Suppress("UNCHECKED_CAST")
-    internal fun <T: MojangPacket<*>> trigger(packetEvent: PacketEvent<T>) : T? {
+    internal fun <T : MojangPacket<*>> trigger(packetEvent: PacketEvent<T>): T? {
 
-        var packet : T? = packetEvent.packet
+        var packet: T? = packetEvent.packet
         for (listener in packetListeners.sortedBy { it.priority.slot }) {
-            if (packet == null) break
+            if (packet == null) return null
             if (listener.packetType == packet::class.java) {
-                packet = listener.function(packetEvent) as? T
+                packet = listener.function(packetEvent) as? T?
             }
         }
         return packet

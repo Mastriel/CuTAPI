@@ -24,7 +24,7 @@ open class MetadataResource<M : CuTMeta>(
             resourceTypeId = Identifier("cutapi", "metadata"),
             serializer = CuTMeta.serializer()
         ) {
-            ResourceLoadResult.Success(MetadataResource(it.ref, it.metadata))
+            ResourceLoadResult.Success(MetadataResource(ref, metadata))
         }
     }
 }
@@ -34,11 +34,14 @@ fun <T : MetadataResource<M>, M : CuTMeta> metadataResourceLoader(
     extensions: Collection<String>,
     resourceTypeId: Identifier,
     serializer: KSerializer<M>,
-    func: (ResourceFileLoaderContext<T, M>) -> ResourceLoadResult<T>
+    dependencies: List<ResourceFileLoader<*>> = listOf(),
+    func: ResourceFileLoaderContext<T, M>.() -> ResourceLoadResult<T>
 ): ResourceFileLoader<T> {
     // in this case, a metadata resource should *probably* have no metadata,
     // so we ignore it.
     return object : ResourceFileLoader<T> {
+
+        override val dependencies: List<ResourceFileLoader<*>> = dependencies
         override val id: Identifier = resourceTypeId
 
         override fun loadResource(
@@ -55,7 +58,7 @@ fun <T : MetadataResource<M>, M : CuTMeta> metadataResourceLoader(
                     }
 
                     val parsedMetadata = CuTAPI.toml.decodeFromString(serializer, metadataText)
-                    return func(ResourceFileLoaderContext(ref, data, parsedMetadata))
+                    return func(ResourceFileLoaderContext(ref, data, parsedMetadata, data))
 
                 } catch (e: IllegalArgumentException) {
                     Plugin.error("Metadata of $ref is not valid. Skipping! " + e.message)

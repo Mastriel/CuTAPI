@@ -26,6 +26,7 @@ typealias ToolComponentRule = net.minecraft.world.item.component.Tool.Rule
 class VanillaTool(
     vararg val tools: Tool,
     val defaultMiningSpeed: ToolSpeed = ToolSpeed.Fists,
+    val specialBreakingMultipliers: SpecialBreakingMultipliers = SpecialBreakingMultipliers(),
     val itemDamage: Int = 1
 ) : ItemBehavior(id(Plugin, "vanilla_tool_component")) {
 
@@ -40,7 +41,9 @@ class VanillaTool(
                 val isProper = ToolCategory.vanillaProperCategoriesOf(material).any { it == tool.category }
                 if (!isProper) continue
 
-                val special = tool.category.attributes.getBreakingSpeedMultiplier(material)
+                val special = specialBreakingMultipliers.getBreakingSpeedMultiplier(material)
+                    ?: tool.category.attributes.getBreakingSpeedMultiplier(material)
+
                 val minToolTier = ToolTier.fromVanillaMaterial(material)
                 val correctToolForDrops = minToolTier.breakingLevel <= tool.tier.breakingLevel
 

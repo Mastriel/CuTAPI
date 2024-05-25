@@ -5,6 +5,7 @@ import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.json.Json
 import net.peanuuutz.tomlkt.Toml
 import org.bukkit.plugin.Plugin
+import xyz.mastriel.cutapi.block.CustomBlockManager
 import xyz.mastriel.cutapi.block.breaklogic.BlockBreakManager
 import xyz.mastriel.cutapi.nms.PacketEventManager
 import xyz.mastriel.cutapi.nms.PlayerPacketManager
@@ -33,6 +34,7 @@ object CuTAPI {
     val resourcePackManager = ResourcePackManager()
     val periodicManager = PeriodicManager()
     val serviceManager = ServiceManager()
+    val blockManager by lazy { CustomBlockManager() }
 
     internal val playerPacketManager = PlayerPacketManager()
     internal val packetEventManager = PacketEventManager()
@@ -44,7 +46,7 @@ object CuTAPI {
      *
      * @param plugin The plugin being registered.
      * @param namespace The namespace being used for the plugin. By default, this is just the plugin's name
-     * in all lowercase. A namespace must follow Regex `[a-z0-9_]+`, must be between 3 and 64 characters, and must
+     * in all lowercase. A namespace must follow Regex `[a-zA-Z0-9/_+]+`, must be between 1 and 1024 characters, and must
      * not start or end with an underscore (_). Also, namespaces must be unique between plugins, and cannot be shared.
      * @param options The additional (optional) options that this plugin can have to alter behavior.
      * @throws IllegalArgumentException If the namespace is invalid.
@@ -124,7 +126,7 @@ object CuTAPI {
      * @throws IllegalStateException If the plugin isn't registered.
      */
     internal fun requireRegistered(plugin: CuTPlugin) {
-        if (plugin !in plugins) error("Plugin ${plugin.descriptor.namespace} is not registered.")
+        if (plugin !in plugins) error("Plugin $plugin is not registered.")
     }
 
     /**
@@ -134,11 +136,11 @@ object CuTAPI {
      * @throws IllegalStateException If the plugin is registered.
      */
     internal fun requireNotRegistered(plugin: CuTPlugin) {
-        if (plugin in plugins) error("Plugin ${plugin.descriptor.namespace} is already registered.")
+        if (plugin in plugins) error("Plugin $plugin is already registered.")
     }
 
 
-    private val namespaceRegex = "[a-zA-Z0-9/_]+".toRegex()
+    private val namespaceRegex = "[a-zA-Z0-9/_+]+".toRegex()
 
     /**
      * Validate a namespace string, to ensure that it won't cause problems. See [registerPlugin]
@@ -150,7 +152,7 @@ object CuTAPI {
      * @throws IllegalStateException If the namespace is already in use.
      * */
     internal fun requireValidNamespace(namespace: String) {
-        if (namespace.length !in 1..64) throw IllegalArgumentException("Namespace $namespace is not valid! (not within 1-64 chars)")
+        if (namespace.length !in 1..1024) throw IllegalArgumentException("Namespace $namespace is not valid! (not within 1-1024 chars)")
 
         if (!namespaceRegex.matches(namespace)) {
             throw IllegalArgumentException("Namespace $namespace is not valid! (does not match ${namespaceRegex.pattern})")
