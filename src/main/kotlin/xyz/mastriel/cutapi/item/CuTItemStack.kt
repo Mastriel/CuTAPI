@@ -1,13 +1,13 @@
 package xyz.mastriel.cutapi.item
 
-import net.kyori.adventure.text.Component
-import org.bukkit.NamespacedKey
-import org.bukkit.enchantments.Enchantment
-import org.bukkit.entity.Player
-import org.bukkit.inventory.ItemStack
-import org.bukkit.persistence.PersistentDataType
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.behavior.BehaviorHolder
+import net.kyori.adventure.text.*
+import org.bukkit.*
+import org.bukkit.enchantments.*
+import org.bukkit.entity.*
+import org.bukkit.inventory.*
+import org.bukkit.persistence.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.behavior.*
 import xyz.mastriel.cutapi.item.ItemStackUtility.CUT_ID_TAG
 import xyz.mastriel.cutapi.item.ItemStackUtility.asCustomItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.customIdOrNull
@@ -16,19 +16,13 @@ import xyz.mastriel.cutapi.item.ItemStackUtility.cutItemStackType
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.item.PacketItemHandler.hasPrerenderStack
 import xyz.mastriel.cutapi.item.PacketItemHandler.setPrerenderItemStack
-import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
-import xyz.mastriel.cutapi.pdc.tags.ItemTagContainer
-import xyz.mastriel.cutapi.pdc.tags.TagContainer
-import xyz.mastriel.cutapi.pdc.tags.booleanTag
-import xyz.mastriel.cutapi.pdc.tags.customItemTag
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.utils.TemporaryAPI
-import xyz.mastriel.cutapi.utils.colored
-import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
-import kotlin.reflect.KClass
-import kotlin.reflect.jvm.ExperimentalReflectionOnLambdas
-import kotlin.reflect.jvm.isAccessible
-import kotlin.reflect.jvm.reflect
+import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.pdc.tags.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.*
+import xyz.mastriel.cutapi.utils.personalized.*
+import kotlin.reflect.*
+import kotlin.reflect.jvm.*
 
 
 /**
@@ -89,12 +83,12 @@ import kotlin.reflect.jvm.reflect
  * @param handle The ItemStack that is being wrapped.
  *
  */
-open class CuTItemStack protected constructor(
+public open class CuTItemStack protected constructor(
     /**
      * The item stack being wrapped. If you want to have a vanilla item stack to mess with,
      * use this. Any changes made to this class will be automatically reflected to the handle.
      */
-    val handle: ItemStack
+    public val handle: ItemStack
 ) : TagContainer by ItemTagContainer(handle),
     BehaviorHolder<ItemBehavior> by handle.customItem,
     PersonalizedWithDefault<ItemStack> {
@@ -102,14 +96,14 @@ open class CuTItemStack protected constructor(
     /**
      * Equivalent to [handle].
      */
-    fun vanilla() = handle
+    public fun vanilla(): ItemStack = handle
 
     init {
         require(handle.customIdOrNull != null) { "ItemStack not wrappable into a CuTItemStack." }
         require(CustomItem.has(handle.customIdOrNull)) { "${handle.customIdOrNull} is not a registered Custom Item." }
     }
 
-    var name: Component
+    public var name: Component
         get() = handle.itemMeta.itemName()
         set(value) {
             nameHasChanged = true
@@ -125,8 +119,8 @@ open class CuTItemStack protected constructor(
      */
     protected open fun onCreate() {}
 
-    var type by customItemTag("CuTID", CustomItem.Unknown)
-    var nameHasChanged: Boolean by booleanTag("NameHasChanged", false)
+    public var type: CustomItem<*> by customItemTag("CuTID", CustomItem.Unknown)
+    public var nameHasChanged: Boolean by booleanTag("NameHasChanged", false)
 
     internal var lore by loreTag("lore")
 
@@ -136,14 +130,14 @@ open class CuTItemStack protected constructor(
      *
      * @see ItemDescriptor
      */
-    val descriptor get() = type.descriptor
+    public val descriptor: ItemDescriptor get() = type.descriptor
 
     /**
      * The material of the item. This is equivalent to [ItemStack.type], or [handle].type.
      *
      * @see org.bukkit.Material
      */
-    var material by handle::type
+    public var material: Material by handle::type
 
     /**
      * The enchantments of the [handle].
@@ -151,7 +145,7 @@ open class CuTItemStack protected constructor(
      * @see ItemStack.getEnchantments
      */
     @TemporaryAPI
-    val enchantments: MutableMap<Enchantment, Int>
+    public val enchantments: MutableMap<Enchantment, Int>
         get() = handle.enchantments
 
     /**
@@ -163,7 +157,7 @@ open class CuTItemStack protected constructor(
      * viewer, or it can't be determined.
      * @return A list of components, representing the lore.
      */
-    fun getLore(viewer: Player?): List<Component> {
+    public fun getLore(viewer: Player?): List<Component> {
         val lore = mutableListOf<Component>()
         val display = descriptor.display
         if (display != null && displayLoreVisible) {
@@ -201,7 +195,7 @@ open class CuTItemStack protected constructor(
      * The rendered item stack returned will have the key "cutapi:IsDisplay" byte in the persistent
      * data container set to 1, to indicate that it's a display item.
      */
-    open fun getRenderedItemStack(viewer: Player?): ItemStack {
+    public open fun getRenderedItemStack(viewer: Player?): ItemStack {
         val itemStack = handle.clone()
 
         val rewrap = wrap(itemStack)
@@ -221,9 +215,9 @@ open class CuTItemStack protected constructor(
                 meta.lore(getLore(viewer))
 
                 if (nameHasChanged) {
-                    meta.displayName(name)
+                    meta.itemName(name)
                 } else {
-                    meta.displayName(display.name ?: "&c${type.id}".colored)
+                    meta.itemName(display.name ?: "&c${type.id}".colored)
                 }
 
                 when (val itemTexture = display.texture) {
@@ -261,7 +255,7 @@ open class CuTItemStack protected constructor(
      * in a place that you might not expect. Also allows you to just interact with this like a normal
      * [ItemStack], which can be useful.
      */
-    fun getStaticItemStack(viewer: Player?): ItemStack {
+    public fun getStaticItemStack(viewer: Player?): ItemStack {
         return getRenderedItemStack(viewer).apply {
             val meta = itemMeta
             meta.persistentDataContainer.remove(CUT_ID_TAG)
@@ -281,16 +275,16 @@ open class CuTItemStack protected constructor(
         }
     }
 
-    companion object {
+    public companion object {
         internal val CONSTRUCTOR = ::CuTItemStack // allow for internal visibility as well
         private val types = mutableMapOf<Identifier, ItemStackType>()
 
 
-        fun getType(id: Identifier): KClass<out CuTItemStack>? {
+        public fun getType(id: Identifier): KClass<out CuTItemStack>? {
             return types[id]?.kClass
         }
 
-        fun getType(kClass: KClass<out CuTItemStack>): Identifier? {
+        public fun getType(kClass: KClass<out CuTItemStack>): Identifier? {
             return types.toList().firstOrNull { it.second.kClass == kClass }?.first
         }
 
@@ -304,13 +298,13 @@ open class CuTItemStack protected constructor(
          * returns [T].
          */
         @OptIn(ExperimentalReflectionOnLambdas::class)
-        fun <T : CuTItemStack> registerType(id: Identifier, kClass: KClass<out T>, constructor: PrimaryCISCtor) {
+        public fun <T : CuTItemStack> registerType(id: Identifier, kClass: KClass<out T>, constructor: PrimaryCISCtor) {
             types[id] = ItemStackType(kClass, constructor)
             constructor.reflect()?.isAccessible = true
         }
 
 
-        fun wrap(handle: ItemStack): CuTItemStack {
+        public fun wrap(handle: ItemStack): CuTItemStack {
             val id = handle.cutItemStackType
             val type = types[id] ?: error("$id is not a registered CuTItemStack type.")
 
@@ -319,18 +313,18 @@ open class CuTItemStack protected constructor(
 
         @JvmName("wrapWithType")
         @Suppress("UNCHECKED_CAST")
-        fun <T : CuTItemStack> wrap(handle: ItemStack): T {
+        public fun <T : CuTItemStack> wrap(handle: ItemStack): T {
             return wrap(handle) as? T ?: error("ItemStack could not be cast into this class.")
         }
 
-        fun create(customItem: CustomItem<*>, quantity: Int = 1): CuTItemStack {
+        public fun create(customItem: CustomItem<*>, quantity: Int = 1): CuTItemStack {
             return wrap(ItemStack(customItem.type, quantity).asCustomItem(customItem))
                 .also { it.getAllBehaviors().forEach { b -> b.onCreate(it) }; it.onCreate() }
 
         }
 
         @JvmName("createWithType")
-        fun <T : CuTItemStack> create(customItem: CustomItem<T>, quantity: Int = 1): T {
+        public fun <T : CuTItemStack> create(customItem: CustomItem<T>, quantity: Int = 1): T {
             return wrap<T>(ItemStack(customItem.type, quantity).asCustomItem(customItem))
                 .also { it.getAllBehaviors().forEach { b -> b.onCreate(it) }; it.onCreate() }
         }
@@ -342,17 +336,17 @@ open class CuTItemStack protected constructor(
 /**
  * Represents an item that is either a normal item stack or a CuT item stack.
  */
-sealed class AgnosticItemStack(val handle: ItemStack) {
-    fun vanilla() = handle
+public sealed class AgnosticItemStack(public val handle: ItemStack) {
+    public fun vanilla(): ItemStack = handle
 
-    data class Custom internal constructor(val stack: CuTItemStack) : AgnosticItemStack(stack.handle) {
-        fun custom() = stack
+    public data class Custom internal constructor(val stack: CuTItemStack) : AgnosticItemStack(stack.handle) {
+        public fun custom(): CuTItemStack = stack
     }
 
-    data class Vanilla internal constructor(private val stack: ItemStack) : AgnosticItemStack(stack)
+    public data class Vanilla internal constructor(private val stack: ItemStack) : AgnosticItemStack(stack)
 }
 
-fun ItemStack.toAgnostic(): AgnosticItemStack {
+public fun ItemStack.toAgnostic(): AgnosticItemStack {
     val wrapped = wrap()
     if (wrapped != null) {
         return AgnosticItemStack.Custom(wrapped)
@@ -360,12 +354,12 @@ fun ItemStack.toAgnostic(): AgnosticItemStack {
     return AgnosticItemStack.Vanilla(this)
 }
 
-fun CuTItemStack.toAgnostic(): AgnosticItemStack.Custom {
+public fun CuTItemStack.toAgnostic(): AgnosticItemStack.Custom {
     return AgnosticItemStack.Custom(this)
 }
 
 
-typealias PrimaryCISCtor = (ItemStack) -> CuTItemStack
+public typealias PrimaryCISCtor = (ItemStack) -> CuTItemStack
 
 private data class ItemStackType(
     val kClass: KClass<out CuTItemStack>,

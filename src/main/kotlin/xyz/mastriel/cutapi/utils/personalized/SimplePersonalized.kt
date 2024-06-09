@@ -1,8 +1,7 @@
 package xyz.mastriel.cutapi.utils.personalized
 
-import org.bukkit.entity.Player
-import xyz.mastriel.cutapi.utils.computable.Computable
-import xyz.mastriel.cutapi.utils.computable.SimpleComputable
+import org.bukkit.entity.*
+import xyz.mastriel.cutapi.utils.computable.*
 
 @Suppress("UNCHECKED_CAST")
 internal class SimplePersonalized<T>(block: Personalized<T>.(Player) -> T) :

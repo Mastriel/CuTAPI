@@ -1,12 +1,9 @@
 package xyz.mastriel.cutapi.resources.data.minecraft
 
-import kotlinx.serialization.EncodeDefault
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 
 @Serializable
-data class ItemModelData (
+public data class ItemModelData(
     val parent: String = "minecraft:item/generated",
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -19,13 +16,13 @@ data class ItemModelData (
 )
 
 @Serializable
-data class ItemOverrides(
+public data class ItemOverrides(
     val predicate: ItemPredicates,
     val model: String
 )
 
 @Serializable
-data class ItemPredicates(
+public data class ItemPredicates(
     @SerialName("custom_model_data")
     val customModelData: Int
 )

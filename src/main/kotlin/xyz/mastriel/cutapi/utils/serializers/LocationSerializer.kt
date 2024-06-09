@@ -1,14 +1,11 @@
 package xyz.mastriel.cutapi.utils.serializers
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.descriptors.buildClassSerialDescriptor
-import kotlinx.serialization.descriptors.element
+import kotlinx.serialization.*
+import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
-import org.bukkit.Bukkit
-import org.bukkit.Location
+import org.bukkit.*
 
-object LocationSerializer : KSerializer<Location> {
+public object LocationSerializer : KSerializer<Location> {
     override fun deserialize(decoder: Decoder): Location =
         decoder.decodeStructure(descriptor) {
             var x = 0.0

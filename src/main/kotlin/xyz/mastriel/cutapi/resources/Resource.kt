@@ -1,17 +1,23 @@
 package xyz.mastriel.cutapi.resources
 
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.encodeToString
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.CuTPlugin
-import xyz.mastriel.cutapi.resources.data.CuTMeta
-import java.io.File
+import kotlinx.serialization.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.resources.data.*
+import java.io.*
 
-open class Resource(open val ref: ResourceRef<*>, open val metadata: CuTMeta? = null) {
+public open class Resource(
+    public open val ref: ResourceRef<*>,
+    public open val metadata: CuTMeta? = null
+) {
 
-    val plugin: CuTPlugin get() = ref.plugin
+    public val plugin: CuTPlugin get() = ref.plugin
 
+    // these are set by the resource manager
+    // these are also purely for the clone block
+    // and processing cloning resources.
+    internal var loadedFromFile: File? = null
+    internal val loadedFromMetadata: File?
+        get() = if (loadedFromFile == null) null else File(loadedFromFile?.absolutePath + ".meta")
 
     /**
      * When all resources are done loading, you can run specific checks to ensure this resource is logically correct.
@@ -21,7 +27,8 @@ open class Resource(open val ref: ResourceRef<*>, open val metadata: CuTMeta? = 
      * @throws ResourceCheckException
      * @see requireValidRef
      */
-    open fun check() {}
+    public open fun check() {}
+
 
     /**
      * Throws a [ResourceCheckException] if a specified [ResourceRef] is not available.
@@ -32,19 +39,19 @@ open class Resource(open val ref: ResourceRef<*>, open val metadata: CuTMeta? = 
 }
 
 
-class ResourceCheckException(reason: String?) : Exception(reason)
+public class ResourceCheckException(reason: String?) : Exception(reason)
 
-interface ByteArraySerializable {
-    fun toBytes(): ByteArray
+public interface ByteArraySerializable {
+    public fun toBytes(): ByteArray
 }
 
-fun <T> T.saveTo(file: File) where T : ByteArraySerializable, T : Resource {
+public fun <T> T.saveTo(file: File) where T : ByteArraySerializable, T : Resource {
     file.parentFile.mkdirs()
     if (!file.exists()) file.createNewFile()
     file.writeBytes(toBytes())
 }
 
-fun <T> T.saveWithMetadata(
+public fun <T> T.saveWithMetadata(
     file: File,
     metadataSerializer: KSerializer<in CuTMeta>? = null
 ) where T : ByteArraySerializable, T : Resource {
@@ -60,10 +67,10 @@ fun <T> T.saveWithMetadata(
     saveTo(file)
 }
 
-fun Resource.isSerializable() = this is ByteArraySerializable
+public fun Resource.isSerializable(): Boolean = this is ByteArraySerializable
 
 
 @OptIn(ExperimentalSerializationApi::class)
-fun <T : Resource> T.cborSerialize(serializer: KSerializer<T>): ByteArray {
+public fun <T : Resource> T.cborSerialize(serializer: KSerializer<T>): ByteArray {
     return CuTAPI.cbor.encodeToByteArray(serializer, this)
 }

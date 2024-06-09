@@ -11,4 +11,4 @@ package xyz.mastriel.cutapi.utils
  * just to mark that a better way of using what you're trying to use will be implemented.
  */
 @Retention(AnnotationRetention.SOURCE)
-annotation class TemporaryAPI()
+public annotation class TemporaryAPI()

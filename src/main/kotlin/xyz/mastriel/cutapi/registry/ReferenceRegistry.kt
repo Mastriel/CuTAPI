@@ -6,15 +6,15 @@ import kotlin.reflect.full.companionObjectInstance
 
 // what the fuck is this
 // -Mastriel (who also wrote this)
-open class ReferenceRegistry <T: Any> {
-    protected val values = mutableMapOf<Identifier, KClass<out T>>()
+public open class ReferenceRegistry<T : Any> {
+    protected val values: MutableMap<Identifier, KClass<out T>> = mutableMapOf<Identifier, KClass<out T>>()
 
     /**
      * Register an object with this map to allow for it to be identified.
      *
      * @param item The object which the association is being made for.
      */
-    open fun register(item: KClass<out T>) {
+    public open fun register(item: KClass<out T>) {
         val identifiable = item.companionObjectInstance
         require(identifiable != null) { "${item.simpleName} must have a companion object that implements Identifiable." }
         require(identifiable is Identifiable) { "${item.simpleName}'s companion object does not implement Identifiable." }
@@ -30,7 +30,7 @@ open class ReferenceRegistry <T: Any> {
      * @return The object
      * @throws IllegalStateException If this could not be found.
      */
-    fun get(id: Identifier) : KClass<out T> {
+    public fun get(id: Identifier): KClass<out T> {
         return getOrNull(id) ?: error("Identifier points to nothing.")
     }
 
@@ -40,7 +40,7 @@ open class ReferenceRegistry <T: Any> {
      * @param id The [Identifier] associated with this [T]
      * @return The object, or null if it could not be found.
      */
-    fun getOrNull(id: Identifier) : KClass<out T>? {
+    public fun getOrNull(id: Identifier): KClass<out T>? {
         return values[id]
     }
 
@@ -49,11 +49,11 @@ open class ReferenceRegistry <T: Any> {
      *
      * @return A set of the [Identifier]s.
      */
-    fun getAllIds() : Set<Identifier> {
+    public fun getAllIds(): Set<Identifier> {
         return values.keys
     }
 
-    fun isRegistered(kClass: KClass<out T>) : Boolean {
+    public fun isRegistered(kClass: KClass<out T>): Boolean {
         return values.values.contains(kClass)
     }
 }

@@ -1,37 +1,25 @@
 package xyz.mastriel.cutapi
 
-import com.github.shynixn.mccoroutine.bukkit.launch
-import org.bukkit.Bukkit
-import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitRunnable
-import xyz.mastriel.cutapi.commands.CuTGiveCommand
-import xyz.mastriel.cutapi.commands.TestCommand
-import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.item.CustomItem
-import xyz.mastriel.cutapi.item.ItemStackUtility
-import xyz.mastriel.cutapi.item.PacketItemHandler
-import xyz.mastriel.cutapi.item.behaviors.ItemBehaviorEvents
-import xyz.mastriel.cutapi.item.behaviors.Unstackable
-import xyz.mastriel.cutapi.item.bukkitevents.PlayerItemEvents
-import xyz.mastriel.cutapi.item.recipe.CraftingRecipeEvents
-import xyz.mastriel.cutapi.resources.ResourceFileLoader
-import xyz.mastriel.cutapi.resources.ResourcePackProcessor
-import xyz.mastriel.cutapi.resources.builtin.FolderApplyResourceLoader
-import xyz.mastriel.cutapi.resources.builtin.Model3DResourceLoader
-import xyz.mastriel.cutapi.resources.builtin.Texture2DResourceLoader
-import xyz.mastriel.cutapi.resources.postprocess.GrayscalePostProcessor
-import xyz.mastriel.cutapi.resources.postprocess.TextureAndModelProcessor
-import xyz.mastriel.cutapi.resources.postprocess.TexturePostProcessor
-import xyz.mastriel.cutapi.resources.uploader.BuiltinUploader
-import xyz.mastriel.cutapi.resources.uploader.Uploader
-import xyz.mastriel.cutapi.resources.uploader.UploaderJoinEvents
+import com.github.shynixn.mccoroutine.bukkit.*
+import org.bukkit.*
+import org.bukkit.plugin.java.*
+import org.bukkit.scheduler.*
+import xyz.mastriel.cutapi.commands.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.item.bukkitevents.*
+import xyz.mastriel.cutapi.item.recipe.*
+import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.builtin.*
+import xyz.mastriel.cutapi.resources.process.*
+import xyz.mastriel.cutapi.resources.uploader.*
 
 
 @PublishedApi
 internal lateinit var Plugin: CuTAPIPlugin
     private set
 
-class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
+public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
     override fun onEnable() {
         Plugin = this
@@ -52,6 +40,8 @@ class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         )
         CustomItem.register(CustomItem.Unknown)
         TexturePostProcessor.register(GrayscalePostProcessor)
+        TexturePostProcessor.register(PaletteSwapPostProcessor)
+        TexturePostProcessor.register(MultiplyOpaquePixelsProcessor)
         TexturePostProcessor.registerBuiltins()
         ResourcePackProcessor.register(TextureAndModelProcessor, name = "Texture Processor")
         Uploader.register(BuiltinUploader())
@@ -83,9 +73,14 @@ class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
     }
 
     private fun registerResourceLoaders() {
+        ResourceGenerator.register(HorizontalAtlasTextureGenerator)
+
         ResourceFileLoader.register(FolderApplyResourceLoader)
+        ResourceFileLoader.register(TemplateResourceLoader)
         ResourceFileLoader.register(Texture2DResourceLoader)
         ResourceFileLoader.register(Model3DResourceLoader)
+        ResourceFileLoader.register(MetadataResource.Loader)
+        ResourceFileLoader.register(PostProcessDefinitionsResource.Loader)
     }
 
     private fun registerEvents() {
@@ -115,12 +110,12 @@ class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
     }
 
     @PublishedApi
-    internal fun info(msg: Any?) = logger.info("$msg")
+    internal fun info(msg: Any?): Unit = logger.info("$msg")
 
     @PublishedApi
-    internal fun warn(msg: Any?) = logger.warning("$msg")
+    internal fun warn(msg: Any?): Unit = logger.warning("$msg")
 
     @PublishedApi
-    internal fun error(msg: Any?) = logger.severe("$msg")
+    internal fun error(msg: Any?): Unit = logger.severe("$msg")
 
 }

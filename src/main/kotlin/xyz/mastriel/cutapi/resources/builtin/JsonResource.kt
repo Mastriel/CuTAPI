@@ -1,16 +1,14 @@
 package xyz.mastriel.cutapi.resources.builtin
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.registry.id
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 
-open class JsonResource(
+public open class JsonResource(
     override val ref: ResourceRef<JsonResource>,
-    val data: JsonObject
+    public val data: JsonObject
 ) : Resource(ref), ByteArraySerializable {
 
     override fun toBytes(): ByteArray {
@@ -18,10 +16,10 @@ open class JsonResource(
         return str.toByteArray(Charsets.UTF_8)
     }
 
-    operator fun component1() = data
+    public operator fun component1(): JsonObject = data
 }
 
-val JsonResourceLoader = resourceLoader<JsonResource, Nothing>(
+public val JsonResourceLoader: ResourceFileLoader<JsonResource> = resourceLoader<JsonResource, Nothing>(
     extensions = listOf("json"),
     resourceTypeId = id(Plugin, "json"),
     metadataSerializer = null

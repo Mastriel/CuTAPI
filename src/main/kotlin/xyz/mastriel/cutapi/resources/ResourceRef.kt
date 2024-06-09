@@ -1,19 +1,13 @@
 package xyz.mastriel.cutapi.resources
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.CuTPlugin
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.resources.data.CuTMeta
-import kotlin.properties.ReadOnlyProperty
-import kotlin.reflect.KProperty
+import kotlinx.serialization.*
+import kotlinx.serialization.descriptors.*
+import kotlinx.serialization.encoding.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.data.*
+import kotlin.properties.*
+import kotlin.reflect.*
 
 
 /**
@@ -21,24 +15,34 @@ import kotlin.reflect.KProperty
  * Use getResource to get the actual resource this is referring to (if it exists)
  */
 @Serializable(with = ResourceRefSerializer::class)
-data class ResourceRef<out T : Resource> internal constructor(
+public data class ResourceRef<out T : Resource> internal constructor(
     override val plugin: CuTPlugin,
+    override val rootAlias: String?,
     override val pathList: List<String>
 ) : ReadOnlyProperty<Any?, T?>, Locator {
 
 
+    /**
+     * This doesn't actually ever hold anything of the type T, so this is a safe cast
+     * You might want to make sure that the resource is actually of type T before using this.
+     */
     @Suppress("UNCHECKED_CAST")
-    fun <T : Resource> cast() = this as ResourceRef<T>
+    public fun <T : Resource> cast(): ResourceRef<T> = this as ResourceRef<T>
 
-    fun getResource(): T? {
+    public fun getResource(): T? {
         return CuTAPI.resourceManager.getResourceOrNull(this)
     }
 
-    fun getMetadata(): CuTMeta? {
+    val resourceType: KClass<out T>?
+        get(): KClass<out T>? {
+            return getResource()?.let { it::class }
+        }
+
+    public fun getMetadata(): CuTMeta? {
         return getResource()?.metadata
     }
 
-    fun isAvailable(): Boolean {
+    public fun isAvailable(): Boolean {
         return CuTAPI.resourceManager.isAvailable(this)
     }
 
@@ -47,16 +51,22 @@ data class ResourceRef<out T : Resource> internal constructor(
     }
 
 
-    override val path get() = pathList.joinToString("/")
+    override val path: String get() = pathList.joinToString("/")
 
-    fun path(
+    public fun path(
         withExtension: Boolean = false,
+        withRootFolder: Boolean = false,
         withNamespace: Boolean = false,
         withNamespaceAsFolder: Boolean = false,
         withName: Boolean = true
     ): String {
         val sb = StringBuilder("")
-        if (withNamespace) sb.append("${namespace}://")
+        if (withNamespace) {
+            if (rootAlias != null && withRootFolder)
+                sb.append("${namespace}$${rootAlias}://")
+            else
+                sb.append("${namespace}://")
+        }
         if (withNamespaceAsFolder) sb.append("${namespace}/")
         if (pathList.size != 1) sb.append(pathList.dropLast(1).joinToString("/"))
 
@@ -71,12 +81,12 @@ data class ResourceRef<out T : Resource> internal constructor(
         return sb.toString().removeSuffix("/")
     }
 
-    val name
+    val name: String
         get() = path
             .split("/")
             .last()
 
-    val extension
+    val extension: String
         get() = name
             .split(".", limit = 2)
             .last()
@@ -88,39 +98,58 @@ data class ResourceRef<out T : Resource> internal constructor(
             return folderRef(plugin, list.joinToString("/"))
         }
 
-    fun toIdentifier(): Identifier {
+    public fun toIdentifier(): Identifier {
         return id(plugin, path)
     }
 
 
     override fun toString(): String {
-        return "${CuTAPI.getDescriptor(plugin).namespace}://${path}"
+        return path(withExtension = true, withRootFolder = false, withNamespace = true)
     }
 }
 
-fun <T : Resource> Identifier.toResourceRef(): ResourceRef<T> {
+public fun <T : Resource> Identifier.toResourceRef(): ResourceRef<T> {
     if (plugin == null) error("Identifier doesn't have an associated plugin.")
     return ref(plugin!!, key)
 }
 
 
-fun normalizeRefPath(path: String): String {
+public fun normalizeRefPath(path: String): String {
     return path.removeSuffix("/").removePrefix("/")
 }
 
-fun <T : Resource> ref(plugin: CuTPlugin, path: String): ResourceRef<T> {
-    return ResourceRef(plugin, normalizeRefPath(path).split("/").filterNot { it.isEmpty() })
+public fun <T : Resource> ref(plugin: CuTPlugin, path: String): ResourceRef<T> {
+    return ResourceRef(plugin, null, normalizeRefPath(path).split("/").filterNot { it.isEmpty() })
 }
 
-fun <T : Resource> ref(stringPath: String): ResourceRef<T> {
+public data class PluginWithRootFolder(val plugin: CuTPlugin, val rootFolder: String?)
+
+public infix fun CuTPlugin.root(alias: String?): PluginWithRootFolder {
+    return PluginWithRootFolder(this, alias)
+}
+
+public fun <T : Resource> ref(pluginAndRoot: PluginWithRootFolder, path: String): ResourceRef<T> {
+    return ResourceRef(
+        pluginAndRoot.plugin,
+        pluginAndRoot.rootFolder,
+        normalizeRefPath(path).split("/").filterNot { it.isEmpty() }
+    )
+}
+
+
+public fun <T : Resource> ref(stringPath: String): ResourceRef<T> {
     require("://" in stringPath) { "String ResourceRef $stringPath does not follow namespace://path format." }
-    val (namespace, path) = stringPath.split("://", limit = 2)
+    val (start, path) = stringPath.split("://", limit = 2)
+    val startSplit = start.split("$", limit = 2)
+    val namespace = startSplit[0]
+    val root = startSplit.getOrNull(1)
+
     val plugin = CuTAPI.getPluginFromNamespace(namespace)
-    return ref(plugin, path)
+    return ref(plugin root root, path)
 }
 
 
-object ResourceRefSerializer : KSerializer<ResourceRef<*>> {
+public object ResourceRefSerializer : KSerializer<ResourceRef<*>> {
 
     override val descriptor: SerialDescriptor
         get() = PrimitiveSerialDescriptor(this::class.qualifiedName!!, PrimitiveKind.STRING)

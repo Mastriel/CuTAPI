@@ -6,20 +6,17 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.bukkit.Bukkit
+import kotlinx.coroutines.*
+import org.bukkit.*
 import xyz.mastriel.cutapi.*
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.utils.cutConfigValue
-import java.io.File
-import java.net.InetAddress
-import kotlin.concurrent.Volatile
-import kotlin.concurrent.thread
-import kotlin.random.Random
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.*
+import java.io.*
+import java.net.*
+import kotlin.concurrent.*
+import kotlin.random.*
 
-class BuiltinUploader : Uploader {
+public class BuiltinUploader : Uploader {
     override val id: Identifier = id(Plugin, "internal")
 
     private var thread: Thread? = null
@@ -38,7 +35,7 @@ class BuiltinUploader : Uploader {
         return url
     }
 
-    private suspend fun inferIp() : String {
+    private suspend fun inferIp(): String {
         var ip = ServerIp
         if (ip == "0.0.0.0") {
             ip = Bukkit.getIp()
@@ -72,8 +69,8 @@ class BuiltinUploader : Uploader {
         engine = null
     }
 
-    companion object {
-        val ServerIp by cutConfigValue("uploader.ip-address", "0.0.0.0")
-        val PackPort by cutConfigValue("uploader.port", 32120)
+    public companion object {
+        public val ServerIp: String by cutConfigValue("uploader.ip-address", "0.0.0.0")
+        public val PackPort: Int by cutConfigValue("uploader.port", 32120)
     }
 }

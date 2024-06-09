@@ -1,6 +1,6 @@
 package xyz.mastriel.cutapi.behavior
 
-import kotlin.reflect.full.hasAnnotation
+import kotlin.reflect.full.*
 
 /**
  * By default, behaviors are not repeatable in any sort of behavior holder. However,
@@ -15,7 +15,7 @@ import kotlin.reflect.full.hasAnnotation
  */
 @Target(AnnotationTarget.CLASS)
 @MustBeDocumented
-annotation class RepeatableBehavior
+public annotation class RepeatableBehavior
 
-fun Behavior.isRepeatable() =
+public fun Behavior.isRepeatable(): Boolean =
     this::class.hasAnnotation<RepeatableBehavior>()

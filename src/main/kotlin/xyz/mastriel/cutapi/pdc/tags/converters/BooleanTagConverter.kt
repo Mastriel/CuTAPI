@@ -1,6 +1,6 @@
 package xyz.mastriel.cutapi.pdc.tags.converters
 
-object BooleanTagConverter :
+public object BooleanTagConverter :
     TagConverter<Byte, Boolean>(Byte::class, Boolean::class) {
 
     override fun fromPrimitive(primitive: Byte): Boolean {

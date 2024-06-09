@@ -1,54 +1,59 @@
 package xyz.mastriel.cutapi.utils
 
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.TextDecoration
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.item.behaviors.stripToolData
-import java.time.Instant
-import kotlin.math.ceil
+import net.kyori.adventure.text.*
+import net.kyori.adventure.text.format.*
+import net.kyori.adventure.text.serializer.legacy.*
+import org.bukkit.inventory.*
+import org.bukkit.inventory.meta.*
+import xyz.mastriel.cutapi.item.behaviors.*
+import java.time.*
+import kotlin.math.*
 import kotlin.time.Duration
 
-val String.colored: Component
+public val String.colored: Component
     get() =
         Component.empty()
             .decoration(TextDecoration.ITALIC, false)
             .append(LegacyComponentSerializer.legacyAmpersand().deserialize(this))
 
-val ItemStack.chatTooltip: Component
+public val ItemStack.chatTooltip: Component
     get() {
         // fixes a problem with Adventure not processing tool components properly
         val item = stripToolData(clone())
 
         return Component.text()
             .hoverEvent(item)
-            .append(item.itemMeta?.displayName() ?: Component.translatable(item))
+            .append(item.itemMeta?.displayName() ?: item.itemMeta.itemNameOrNull() ?: Component.translatable(item))
             .build()
     }
 
-val Instant.hasPassed: Boolean get() = this.isBefore(Instant.now())
+private fun ItemMeta.itemNameOrNull(): Component? {
+    return if (hasItemName()) itemName() else null
+}
 
-fun ItemStack.emptyName(): ItemStack {
+public val Instant.hasPassed: Boolean get() = this.isBefore(Instant.now())
+
+public fun ItemStack.emptyName(): ItemStack {
     this.editMeta { it.displayName("&7".colored) }
     return this
 }
 
-fun ItemStack.withName(name: Component): ItemStack {
+public fun ItemStack.withName(name: Component): ItemStack {
     this.editMeta { it.displayName(name) }
     return this
 }
 
-fun ItemStack.withLore(lore: List<Component>): ItemStack {
+public fun ItemStack.withLore(lore: List<Component>): ItemStack {
     this.editMeta { it.lore(lore) }
     return this
 }
 
-fun ItemStack.withLore(vararg lore: Component): ItemStack {
+public fun ItemStack.withLore(vararg lore: Component): ItemStack {
     this.editMeta { it.lore(lore.toList()) }
     return this
 }
 
-fun ItemStack.appendLore(vararg lore: Component): ItemStack {
+public fun ItemStack.appendLore(vararg lore: Component): ItemStack {
     this.editMeta {
         val l = it.lore()?.toMutableList() ?: mutableListOf()
         l.addAll(lore)
@@ -58,9 +63,9 @@ fun ItemStack.appendLore(vararg lore: Component): ItemStack {
 }
 
 
-val Duration.inWholeTicks: Long get() = ceil(this.inWholeMilliseconds / 50.0).toLong()
+public val Duration.inWholeTicks: Long get() = ceil(this.inWholeMilliseconds / 50.0).toLong()
 
-fun <T> List<List<T>>.trim(include: (T) -> Boolean): List<List<T>> {
+public fun <T> List<List<T>>.trim(include: (T) -> Boolean): List<List<T>> {
     val rows = size
     val cols = this[0].size
 

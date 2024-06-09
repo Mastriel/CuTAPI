@@ -12,12 +12,12 @@ import kotlinx.serialization.encoding.Encoder
 /**
  * An interface that marks a class as identifiable using an [Identifier].
  */
-interface Identifiable {
-    val id: Identifier
+public interface Identifiable {
+    public val id: Identifier
 }
 
 
-open class IdentifiableSerializer<T: Identifiable>(val serialName: String, val map: IdentifierRegistry<T>) : KSerializer<T> {
+public open class IdentifiableSerializer<T: Identifiable>(public val serialName: String, public val map: IdentifierRegistry<T>) : KSerializer<T> {
     override val descriptor: SerialDescriptor
         get() = PrimitiveSerialDescriptor(serialName, PrimitiveKind.STRING)
 

@@ -1,19 +1,11 @@
 package xyz.mastriel.cutapi.block
 
-import org.bukkit.Chunk
-import org.bukkit.Location
-import org.bukkit.World
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.pdc.tags.BlockDataTagContainer
-import xyz.mastriel.cutapi.pdc.tags.TagContainer
-import xyz.mastriel.cutapi.pdc.tags.getIdentifier
-import xyz.mastriel.cutapi.pdc.tags.setIdentifier
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.registry.unknownID
-import xyz.mastriel.cutapi.utils.inheritsFrom
-import kotlin.reflect.KClass
+import org.bukkit.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.pdc.tags.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.*
+import kotlin.reflect.*
 
 private typealias BukkitBlock = org.bukkit.block.Block
 
@@ -26,13 +18,13 @@ private sealed class CustomTileType<T : CuTPlacedTile>(val kClass: KClass<out T>
         CustomTileType<CuTPlacedTileEntity>(kClass, constructor)
 }
 
-class CustomBlockManager {
+public class CustomBlockManager {
 
-    val tileEntityTypeId = id(Plugin, "builtin_tile_entity")
-    val blockTypeId = id(Plugin, "builtin_block")
+    public val tileEntityTypeId: Identifier = id(Plugin, "builtin_tile_entity")
+    public val blockTypeId: Identifier = id(Plugin, "builtin_block")
     private val types = mutableMapOf<Identifier, CustomTileType<*>>()
 
-    fun getPlacedTile(block: BukkitBlock): CuTPlacedTile {
+    public fun getPlacedTile(block: BukkitBlock): CuTPlacedTile {
         val type = types[block.customId] ?: error("Block ${block.customId} is not a custom block!")
         return type.constructor(block)
     }
@@ -54,16 +46,15 @@ class CustomBlockManager {
                 block
             }
 
-    fun getType(id: Identifier): KClass<out CuTPlacedTile>? {
+    public fun getType(id: Identifier): KClass<out CuTPlacedTile>? {
         return types[id]?.kClass
     }
 
-    fun getType(kClass: KClass<out CuTPlacedTile>): Identifier? {
+    public fun getType(kClass: KClass<out CuTPlacedTile>): Identifier? {
         return types.toList().firstOrNull { it.second.kClass == kClass }?.first
     }
 
-    @Suppress("UNCHECKED_CAST")
-    fun <T : CuTPlacedTile> placeTile(location: Location, tile: CustomTile<T>): CuTPlacedTile {
+    public fun <T : CuTPlacedTile> placeTile(location: Location, tile: CustomTile<T>): CuTPlacedTile {
         val block = location.block
 
         block.tags.setIdentifier(CUT_ID_KEY, tile.id)
@@ -84,16 +75,16 @@ class CustomBlockManager {
             .mapNotNull { it.wrap<T>() }
 
 
-    fun getTileEntities(chunk: Chunk): Collection<CuTPlacedTileEntity> {
+    public fun getTileEntities(chunk: Chunk): Collection<CuTPlacedTileEntity> {
         return chunkCustomTiles<CuTPlacedTileEntity>(chunk)
     }
 
     @JvmName("getTileEntitiesByType")
-    inline fun <reified T : CuTPlacedTileEntity> getTileEntities(chunk: Chunk): Collection<T> {
+    public inline fun <reified T : CuTPlacedTileEntity> getTileEntities(chunk: Chunk): Collection<T> {
         return getTileEntities(chunk).filterIsInstance<T>()
     }
 
-    fun getLoadedTileEntities(world: World): List<CuTPlacedTileEntity> {
+    public fun getLoadedTileEntities(world: World): List<CuTPlacedTileEntity> {
         return world.loadedChunks.flatMap { chunk ->
             getTileEntities(chunk)
         }
@@ -101,13 +92,13 @@ class CustomBlockManager {
 
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : CuTPlacedTile> registerPlacedTileType(
+    public fun <T : CuTPlacedTile> registerPlacedTileType(
         id: Identifier,
         kClass: KClass<T>,
         constructor: (BukkitBlock) -> T
     ) {
-        val isTileEntity = kClass.inheritsFrom(CuTPlacedTileEntity::class)
-        val isBlock = kClass.inheritsFrom(CuTPlacedBlock::class)
+        val isTileEntity = kClass isAtleast CuTPlacedTileEntity::class
+        val isBlock = kClass isAtleast CuTPlacedBlock::class
 
         if (isTileEntity && isBlock) error("Class $kClass inherits from both CuTPlacedTileEntity and CuTPlacedBlock! What the fuck?")
 
@@ -126,23 +117,23 @@ class CustomBlockManager {
         types[id] = tileType
     }
 
-    inline fun <reified T : CuTPlacedTile> registerPlacedTileType(
+    public inline fun <reified T : CuTPlacedTile> registerPlacedTileType(
         id: Identifier,
         noinline constructor: (BukkitBlock) -> T
-    ) = registerPlacedTileType(id, T::class, constructor)
+    ): Unit = registerPlacedTileType(id, T::class, constructor)
 
-    companion object {
-        const val CUT_ID_KEY = "cutapi.CuTID"
-        const val CUT_TYPE_KEY = "cutapi.CuTType"
+    public companion object {
+        public const val CUT_ID_KEY: String = "cutapi.CuTID"
+        public const val CUT_TYPE_KEY: String = "cutapi.CuTType"
 
 
-        val BukkitBlock.isCustom: Boolean
+        public val BukkitBlock.isCustom: Boolean
             get() = this.tags.getIdentifier(CUT_ID_KEY) != null
 
-        val BukkitBlock.customId: Identifier
+        public val BukkitBlock.customId: Identifier
             get() = this.tags.getIdentifier(CUT_ID_KEY) ?: unknownID()
 
-        val BukkitBlock.customTypeId: Identifier
+        public val BukkitBlock.customTypeId: Identifier
             get() {
                 val id = this.tags.getIdentifier(CUT_TYPE_KEY)
                 if (id != null) return id
@@ -155,17 +146,17 @@ class CustomBlockManager {
             }
 
 
-        val BukkitBlock.customTile: CustomTile<*>
+        public val BukkitBlock.customTile: CustomTile<*>
             get() = CustomTile.get(customId)
 
-        val BukkitBlock.customTileOrNull: CustomTile<*>?
+        public val BukkitBlock.customTileOrNull: CustomTile<*>?
             get() = CustomTile.getOrNull(customId)
 
-        val BukkitBlock.tags: TagContainer
+        public val BukkitBlock.tags: TagContainer
             get() = BlockDataTagContainer(this)
 
         @Suppress("UNCHECKED_CAST")
-        fun <T : CuTPlacedTile> BukkitBlock.wrap(): T? {
+        public fun <T : CuTPlacedTile> BukkitBlock.wrap(): T? {
             return CuTAPI.blockManager.getPlacedTile(this) as? T
         }
     }

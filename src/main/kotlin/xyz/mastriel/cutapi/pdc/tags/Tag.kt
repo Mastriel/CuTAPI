@@ -1,15 +1,15 @@
 package xyz.mastriel.cutapi.pdc.tags
 
-interface Tag<T> {
+public interface Tag<T> {
 
-    fun store(value: T)
-    fun get(): T
+    public fun store(value: T)
+    public fun get(): T
 
-    val default: T?
-    val key: String
-    var container: TagContainer
+    public val default: T?
+    public val key: String
+    public var container: TagContainer
 
-    companion object {
-        const val NULL = "\u0000NULL"
+    public companion object {
+        public const val NULL: String = "\u0000NULL"
     }
 }

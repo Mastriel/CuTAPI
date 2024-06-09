@@ -1,10 +1,10 @@
 package xyz.mastriel.cutapi.pdc.tags.converters
 
-import kotlin.reflect.KClass
+import kotlin.reflect.*
 
 
-abstract class TagConverter<P : Any, C : Any>(val primitiveClass: KClass<P>, val complexClass: KClass<C>) {
+public abstract class TagConverter<P : Any, C : Any>(public val primitiveClass: KClass<P>, public val complexClass: KClass<C>) {
 
-    abstract fun fromPrimitive(primitive: P) : C
-    abstract fun toPrimitive(complex: C) : P
+    public abstract fun fromPrimitive(primitive: P) : C
+    public abstract fun toPrimitive(complex: C) : P
 }

@@ -1,8 +1,8 @@
 package xyz.mastriel.cutapi.pdc.tags.converters
 
-import kotlin.reflect.KClass
+import kotlin.reflect.*
 
-class EnumTagConverter<T : Enum<T>>(kClass: KClass<T>) :
+public class EnumTagConverter<T : Enum<T>>(kClass: KClass<T>) :
     TagConverter<String, T>(String::class, kClass) {
 
 

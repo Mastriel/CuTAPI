@@ -1,8 +1,6 @@
 package xyz.mastriel.cutapi.nms
 
-import net.minecraft.network.protocol.Packet
-import org.bukkit.event.EventPriority
-import kotlin.reflect.KClass
+import org.bukkit.event.*
 
 @Retention(AnnotationRetention.RUNTIME)
-annotation class PacketHandler(val priority: EventPriority = EventPriority.NORMAL)
+public annotation class PacketHandler(val priority: EventPriority = EventPriority.NORMAL)

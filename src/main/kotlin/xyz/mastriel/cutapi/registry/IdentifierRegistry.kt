@@ -6,7 +6,7 @@ import java.lang.ref.WeakReference
 
 private typealias HookFunction<T> = HookContext<T>.() -> Unit
 
-enum class HookPriority(val number: Byte) {
+public enum class HookPriority(public val number: Byte) {
     FIRST(0),
     MIDDLE(1),
     LAST(2),
@@ -15,23 +15,24 @@ enum class HookPriority(val number: Byte) {
     READONLY(3)
 }
 
-data class HookContext<T : Identifiable>(val registry: IdentifierRegistry<T>, val item: T, var preventRegister: Boolean)
+public data class HookContext<T : Identifiable>(val registry: IdentifierRegistry<T>, val item: T, var preventRegister: Boolean)
 
 /**
  * A map of [Identifier] to [T]. This is used in keeping a registry of all items, blocks, etc.
  *
  * @param T The identifiable that is being tracked.
  */
-open class IdentifierRegistry<T : Identifiable>(val name: String) {
-    protected val values = mutableMapOf<Identifier, T>()
-    protected val hooks = mutableListOf<Pair<HookFunction<T>, HookPriority>>()
+public open class IdentifierRegistry<T : Identifiable>(public val name: String) {
+    protected val values: MutableMap<Identifier, T> = mutableMapOf()
+    protected val hooks: MutableList<Pair<HookContext<T>.() -> Unit, HookPriority>> =
+        mutableListOf()
 
     /**
      * Register an object with this map to allow for it to be identified.
      *
      * @param item The object which the association is being made for.
      */
-    open fun register(item: T): T {
+    public open fun register(item: T): T {
         // add this to the list of used registries if it's not already there. keeps track of all registries
         // for when a plugin is disabled.
         if (!usedRegistries.any { it.get() == this }) {
@@ -67,7 +68,7 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      *
      * @param item The object being removed.
      */
-    open fun unregister(item: T) = unregister(item.id)
+    public open fun unregister(item: T): Unit = unregister(item.id)
 
     /**
      * Remove an object from this registry.
@@ -82,7 +83,7 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      *
      * @param id The object being removed.
      */
-    open fun unregister(id: Identifier) {
+    public open fun unregister(id: Identifier) {
         if (!values.containsKey(id)) {
             Plugin.warn("[REGISTRY] $id tried to be removed from '${this.name}', but it doesn't exist in this registry.")
             return
@@ -104,7 +105,7 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      * @return The object
      * @throws IllegalStateException If this could not be found.
      */
-    open fun get(id: Identifier): T {
+    public open fun get(id: Identifier): T {
         return getOrNull(id) ?: error("Identifier (${id}) points to nothing in '${name}'.")
     }
 
@@ -114,7 +115,7 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      * @param id The [Identifier] associated with this [T]
      * @return The object, or null if it could not be found.
      */
-    open fun getOrNull(id: Identifier): T? {
+    public open fun getOrNull(id: Identifier): T? {
         return values[id]
     }
 
@@ -123,7 +124,7 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      *
      * @return A set of the [Identifier]s.
      */
-    open fun getAllIds(): Set<Identifier> {
+    public open fun getAllIds(): Set<Identifier> {
         return values.keys
     }
 
@@ -132,21 +133,21 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      *
      * @return A set of the [Identifiable]s.
      */
-    open fun getAllValues(): Set<T> {
+    public open fun getAllValues(): Set<T> {
         return values.values.toSet()
     }
 
     /**
      * Check if this ID exists in this registry.
      */
-    open fun has(id: Identifier?): Boolean {
+    public open fun has(id: Identifier?): Boolean {
         return id in values.keys
     }
 
     /**
      * Gets all entries in this registry by this particular plugin.
      */
-    open fun getBy(plugin: CuTPlugin): Set<T> {
+    public open fun getBy(plugin: CuTPlugin): Set<T> {
         return values.values.filter { it.id.plugin == plugin }.toSet()
     }
 
@@ -156,7 +157,7 @@ open class IdentifierRegistry<T : Identifiable>(val name: String) {
      * If you set [HookContext.preventRegister] to true, then it will immediately unregister
      * the identifiable and prevent any other hooks from running.
      */
-    open fun addHook(priority: HookPriority, func: HookFunction<T>) {
+    public open fun addHook(priority: HookPriority, func: HookFunction<T>) {
         hooks += func to priority
     }
 

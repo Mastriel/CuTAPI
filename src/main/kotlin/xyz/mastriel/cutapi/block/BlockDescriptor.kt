@@ -1,59 +1,56 @@
 package xyz.mastriel.cutapi.block
 
-import net.kyori.adventure.text.Component
-import xyz.mastriel.cutapi.behavior.ListBehaviorHolder
-import xyz.mastriel.cutapi.behavior.requireRepeatableIfExists
-import xyz.mastriel.cutapi.block.behaviors.BlockBehavior
-import xyz.mastriel.cutapi.block.behaviors.TileBehavior
-import xyz.mastriel.cutapi.block.behaviors.TileEntityBehavior
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.utils.EventHandlerList
-import xyz.mastriel.cutapi.utils.personalized.Personalized
+import net.kyori.adventure.text.*
+import xyz.mastriel.cutapi.behavior.*
+import xyz.mastriel.cutapi.block.behaviors.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.*
+import xyz.mastriel.cutapi.utils.personalized.*
 
 
-sealed interface TileDescriptor {
-    val behaviors: List<TileBehavior>
-    val blockStrategy: BlockStrategy
-    val name: Personalized<Component>?
-    val itemPolicy: BlockItemPolicy
+public sealed interface TileDescriptor {
+    public val behaviors: List<TileBehavior>
+    public val blockStrategy: BlockStrategy
+    public val name: Personalized<Component>?
+    public val itemPolicy: BlockItemPolicy
 }
 
 
-class BlockDescriptor(
+public class BlockDescriptor(
     override val behaviors: List<BlockBehavior> = mutableListOf(),
     override val blockStrategy: BlockStrategy,
     override val name: Personalized<Component>?,
     override val itemPolicy: BlockItemPolicy
 ) : TileDescriptor
 
-class TileEntityDescriptor(
+public class TileEntityDescriptor(
     override val behaviors: List<TileEntityBehavior> = mutableListOf(),
     override val blockStrategy: BlockStrategy,
     override val name: Personalized<Component>?,
     override val itemPolicy: BlockItemPolicy
 ) : TileDescriptor
 
-abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor, C : CustomTile<*>> {
+public abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor, C : CustomTile<*>> {
 
-    open val behaviors = ListBehaviorHolder<B>()
+    public open val behaviors: ListBehaviorHolder<B> = ListBehaviorHolder<B>()
 
-    open val onRegister = EventHandlerList<C>()
+    public open val onRegister: EventHandlerList<C> = EventHandlerList<C>()
 
-    open var blockStrategy: BlockStrategy = BlockStrategy.Mushroom
-    open var itemPolicy: BlockItemPolicy = BlockItemPolicy.Generate {
+    public open var blockStrategy: BlockStrategy = BlockStrategy.Mushroom
+    public open var itemPolicy: BlockItemPolicy = BlockItemPolicy.Generate {
 
     }
 
-    open var name: Personalized<Component>? = null
+    public open var name: Personalized<Component>? = null
 
-    open fun behavior(vararg behaviors: B) {
+    public open fun behavior(vararg behaviors: B) {
         for (behavior in behaviors) {
             this.behaviors.requireRepeatableIfExists(behavior)
             this.behaviors += behavior
         }
     }
 
-    open fun behavior(behaviors: Collection<B>) {
+    public open fun behavior(behaviors: Collection<B>) {
         for (behavior in behaviors) {
             this.behaviors.requireRepeatableIfExists(behavior)
             this.behaviors += behavior
@@ -61,12 +58,12 @@ abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor, C : C
     }
 
 
-    abstract fun build(): T
+    public abstract fun build(): T
 
 }
 
 
-class BlockDescriptorBuilder : TileDescriptorBuilder<BlockBehavior, BlockDescriptor, CustomBlock<*>>() {
+public class BlockDescriptorBuilder : TileDescriptorBuilder<BlockBehavior, BlockDescriptor, CustomBlock<*>>() {
     override fun build(): BlockDescriptor {
         return BlockDescriptor(behaviors, blockStrategy, name, itemPolicy)
     }
@@ -80,11 +77,11 @@ private fun BlockBehavior.tileEntity(): TileEntityBehavior {
     }
 }
 
-class TileEntityDescriptorBuilder :
+public class TileEntityDescriptorBuilder :
     TileDescriptorBuilder<TileEntityBehavior, TileEntityDescriptor, CustomTileEntity<*>>() {
 
     @JvmName("tileBehavior")
-    fun behavior(vararg behaviors: TileBehavior) {
+    public fun behavior(vararg behaviors: TileBehavior) {
         for (behavior in behaviors) {
             this.behaviors.requireRepeatableIfExists(behavior)
 
@@ -102,7 +99,7 @@ class TileEntityDescriptorBuilder :
     }
 
     @JvmName("blockBehavior")
-    fun behavior(behaviors: Collection<TileBehavior>) {
+    public fun behavior(behaviors: Collection<TileBehavior>) {
         behavior(*behaviors.toTypedArray())
     }
 
@@ -111,10 +108,10 @@ class TileEntityDescriptorBuilder :
     }
 }
 
-fun blockDescriptor(block: BlockDescriptorBuilder.() -> Unit): BlockDescriptor {
+public fun blockDescriptor(block: BlockDescriptorBuilder.() -> Unit): BlockDescriptor {
     return BlockDescriptorBuilder().apply(block).build()
 }
 
-fun tileEntityDescriptor(block: TileEntityDescriptorBuilder.() -> Unit): TileEntityDescriptor {
+public fun tileEntityDescriptor(block: TileEntityDescriptorBuilder.() -> Unit): TileEntityDescriptor {
     return TileEntityDescriptorBuilder().apply(block).build()
 }

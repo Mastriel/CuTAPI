@@ -1,9 +1,9 @@
 package xyz.mastriel.cutapi.pdc.tags.converters
 
-import xyz.mastriel.cutapi.pdc.tags.TagContainer
-import kotlin.reflect.KClass
+import kotlin.reflect.*
 
-class PrimitiveTagConverter<P: Any> private constructor(kClass: KClass<P>) : TagConverter<P, P>(kClass, kClass) {
+public class PrimitiveTagConverter<P : Any> private constructor(kClass: KClass<P>) :
+    TagConverter<P, P>(kClass, kClass) {
 
     override fun fromPrimitive(primitive: P): P {
         return primitive
@@ -13,15 +13,15 @@ class PrimitiveTagConverter<P: Any> private constructor(kClass: KClass<P>) : Tag
         return complex
     }
 
-    companion object {
-        val String = PrimitiveTagConverter(String::class)
-        val ByteArray = PrimitiveTagConverter(ByteArray::class)
-        val Int = PrimitiveTagConverter(Int::class)
-        val Long = PrimitiveTagConverter(Long::class)
-        val Byte = PrimitiveTagConverter(Byte::class)
-        val IntArray = PrimitiveTagConverter(IntArray::class)
-        val Float = PrimitiveTagConverter(Float::class)
-        val Double = PrimitiveTagConverter(Double::class)
-        val Short = PrimitiveTagConverter(Short::class)
+    public companion object {
+        public val String: PrimitiveTagConverter<String> = PrimitiveTagConverter(kotlin.String::class)
+        public val ByteArray: PrimitiveTagConverter<ByteArray> = PrimitiveTagConverter(kotlin.ByteArray::class)
+        public val Int: PrimitiveTagConverter<Int> = PrimitiveTagConverter(kotlin.Int::class)
+        public val Long: PrimitiveTagConverter<Long> = PrimitiveTagConverter(kotlin.Long::class)
+        public val Byte: PrimitiveTagConverter<Byte> = PrimitiveTagConverter(kotlin.Byte::class)
+        public val IntArray: PrimitiveTagConverter<IntArray> = PrimitiveTagConverter(kotlin.IntArray::class)
+        public val Float: PrimitiveTagConverter<Float> = PrimitiveTagConverter(kotlin.Float::class)
+        public val Double: PrimitiveTagConverter<Double> = PrimitiveTagConverter(kotlin.Double::class)
+        public val Short: PrimitiveTagConverter<Short> = PrimitiveTagConverter(kotlin.Short::class)
     }
 }

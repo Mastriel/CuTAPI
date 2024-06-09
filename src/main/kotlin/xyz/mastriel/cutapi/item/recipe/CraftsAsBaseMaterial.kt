@@ -1,8 +1,7 @@
 package xyz.mastriel.cutapi.item.recipe
 
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
-import xyz.mastriel.cutapi.registry.id
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.registry.*
 
-object CraftsAsBaseMaterial : ItemBehavior(id(Plugin, "crafts_as_base_material")) {
-}
+public object CraftsAsBaseMaterial : ItemBehavior(id(Plugin, "crafts_as_base_material"))

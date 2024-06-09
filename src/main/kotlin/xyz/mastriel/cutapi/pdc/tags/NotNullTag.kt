@@ -1,9 +1,9 @@
 package xyz.mastriel.cutapi.pdc.tags
 
-import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
-import kotlin.reflect.KProperty
+import xyz.mastriel.cutapi.pdc.tags.converters.*
+import kotlin.reflect.*
 
-open class NotNullTag<P: Any, C : Any>(
+public open class NotNullTag<P: Any, C : Any>(
     override val key: String,
     override var container: TagContainer,
     override val default: C,
@@ -29,11 +29,11 @@ open class NotNullTag<P: Any, C : Any>(
         return value
     }
 
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): C {
+    public operator fun getValue(thisRef: Any?, property: KProperty<*>): C {
         return get()
     }
 
-    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: C) {
+    public operator fun setValue(thisRef: Any?, property: KProperty<*>, value: C) {
         store(value)
     }
 

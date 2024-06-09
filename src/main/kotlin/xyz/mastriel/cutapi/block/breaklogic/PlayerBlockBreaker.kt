@@ -1,19 +1,16 @@
 package xyz.mastriel.cutapi.block.breaklogic
 
-import org.bukkit.SoundGroup
-import org.bukkit.block.Block
-import org.bukkit.craftbukkit.block.CraftBlock
-import org.bukkit.craftbukkit.util.CraftMagicNumbers
-import org.bukkit.enchantments.Enchantment
-import org.bukkit.entity.Player
-import org.bukkit.potion.PotionEffectType
-import xyz.mastriel.cutapi.item.AgnosticItemStack
-import xyz.mastriel.cutapi.item.behaviors.Tool
-import xyz.mastriel.cutapi.item.behaviors.ToolCategory
-import xyz.mastriel.cutapi.item.behaviors.ToolTier
-import xyz.mastriel.cutapi.nms.UsesNMS
-import xyz.mastriel.cutapi.nms.nms
-import xyz.mastriel.cutapi.utils.roundToDecimalPlaces
+import org.bukkit.*
+import org.bukkit.block.*
+import org.bukkit.craftbukkit.block.*
+import org.bukkit.craftbukkit.util.*
+import org.bukkit.enchantments.*
+import org.bukkit.entity.*
+import org.bukkit.potion.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.nms.*
+import xyz.mastriel.cutapi.utils.*
 
 /**
  * Exists only when a player is breaking a block. Controlled by the [BlockBreakManager].
@@ -23,37 +20,37 @@ import xyz.mastriel.cutapi.utils.roundToDecimalPlaces
  * @param item The item being used to break the block.
  */
 @UsesNMS
-open class PlayerBlockBreaker(
-    val block: Block,
-    val player: Player,
-    val item: AgnosticItemStack
+public open class PlayerBlockBreaker(
+    public val block: Block,
+    public val player: Player,
+    public val item: AgnosticItemStack
 ) {
 
-    protected val soundGroup: SoundGroup? = block.blockSoundGroup
-    protected val material = block.type
+    protected val soundGroup: SoundGroup = block.blockSoundGroup
+    protected val material: Material = block.type
     protected val hardness: Float = material.hardness
     protected val tools: List<Tool> = Tool.from(item)
-    protected val toolCategories = tools.map { it.category }
-    protected val correctToolCategories = ToolCategory.vanillaProperCategoriesOf(block)
+    protected val toolCategories: List<ToolCategory> = tools.map { it.category }
+    protected val correctToolCategories: List<ToolCategory> = ToolCategory.vanillaProperCategoriesOf(block)
 
-    protected val correctToolIsUsed = correctToolCategories.any { it in toolCategories }
+    protected val correctToolIsUsed: Boolean = correctToolCategories.any { it in toolCategories }
 
-    protected val utilizedTool = tools
+    protected val utilizedTool: Tool = tools
         .filter { it.category in correctToolCategories }
         .maxByOrNull { it.toolSpeed.speed } ?: Tool.Fists
 
 
-    var hasStopped: Boolean = false
+    public var hasStopped: Boolean = false
 
-    val isDone: Boolean
+    public val isDone: Boolean
         get() = progress >= 1.0f
 
-    var progress: Float = 0.0f
+    public var progress: Float = 0.0f
         private set(value) {
             field = value.coerceIn(0.0f, 1.0f)
         }
 
-    open fun tick() {
+    public open fun tick() {
         if (isDone) return
 
     }
@@ -87,7 +84,7 @@ open class PlayerBlockBreaker(
      * @return The damage dealt to the block, as a percentage of the block's health from 0.0f to 1.0f.
      */
     @Suppress("DEPRECATION")
-    open fun calculateDamageDealt(): Float {
+    public open fun calculateDamageDealt(): Float {
 
         // blocks under 0 are unbreakable
         if (hardness < 0f) return 0f

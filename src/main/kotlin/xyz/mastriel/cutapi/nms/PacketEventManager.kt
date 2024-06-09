@@ -1,10 +1,9 @@
 package xyz.mastriel.cutapi.nms
 
-import net.minecraft.network.protocol.Packet
-import org.bukkit.event.EventPriority
-import xyz.mastriel.cutapi.Plugin
-import java.lang.reflect.Method
-import java.lang.reflect.ParameterizedType
+import net.minecraft.network.protocol.*
+import org.bukkit.event.*
+import xyz.mastriel.cutapi.*
+import java.lang.reflect.*
 
 
 internal interface PacketListener

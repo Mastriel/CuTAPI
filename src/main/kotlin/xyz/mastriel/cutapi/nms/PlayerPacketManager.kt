@@ -1,10 +1,8 @@
 package xyz.mastriel.cutapi.nms
 
-import org.bukkit.entity.Player
-import org.bukkit.event.EventHandler
-import org.bukkit.event.Listener
-import org.bukkit.event.player.PlayerJoinEvent
-import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.entity.*
+import org.bukkit.event.*
+import org.bukkit.event.player.*
 
 /**
  * Manages packet handlers for all players. This is used to inject packet handlers into the player's pipeline.

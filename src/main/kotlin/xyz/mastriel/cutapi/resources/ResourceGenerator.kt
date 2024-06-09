@@ -1,29 +1,45 @@
 package xyz.mastriel.cutapi.resources
 
-import kotlinx.serialization.KSerializer
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
-import xyz.mastriel.cutapi.resources.data.GenerateBlock
+import kotlinx.serialization.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.data.*
+
+
+public enum class ResourceGenerationStage {
+    BeforeProcessors,
+    AfterProcessors,
+    BeforePackProcessors,
+    AfterPackProcessors
+}
 
 /**
  * This is called after the server has finished initialization, but before CuTAPI has run the ResourceProcessors.
  * This should be used to
  */
-abstract class ResourceGenerator(
-    override val id: Identifier
+public abstract class ResourceGenerator(
+    override val id: Identifier,
+    public val stage: ResourceGenerationStage = ResourceGenerationStage.BeforeProcessors
 ) : Identifiable {
 
     /**
-     * [context] and resources generated through [ResourceGeneratorContext.registrar] can NOT have the same [ResourceRef]!
+     * [context.resource] and resources generated through [ResourceGeneratorContext.register] can NOT have the same [ResourceRef]!
+     * Use subId to differentiate between them using [ResourceRef.subId]
      */
-    abstract fun generate(context: ResourceGeneratorContext<Resource>)
+    public abstract fun generate(context: ResourceGeneratorContext<Resource>)
 
-    companion object : IdentifierRegistry<ResourceGenerator>("Resource Generators")
+    public companion object : IdentifierRegistry<ResourceGenerator>("Resource Generators") {
+        public fun getByStage(stage: ResourceGenerationStage): List<ResourceGenerator> =
+            getAllValues().filter { it.stage == stage }
+    }
 }
 
-data class ResourceGeneratorContext<out T : Resource>(val resource: T, val generateBlock: GenerateBlock, val registrar: (Resource) -> Unit) {
+public data class ResourceGeneratorContext<out T : Resource>(
+    val resource: T,
+    val generateBlock: GenerateBlock,
+    val suppliedSubId: String,
+    val register: (Resource) -> Unit
+) {
 
     /**
      * Deserialize the options for this generator into a new object.
@@ -31,7 +47,7 @@ data class ResourceGeneratorContext<out T : Resource>(val resource: T, val gener
      * @param S The type you're deserializing into.
      * @param serializer The serializer for [S].
      */
-    fun <S> castOptions(serializer: KSerializer<S>) : S {
+    public fun <S> castOptions(serializer: KSerializer<S>): S {
         return CuTAPI.toml.decodeFromTomlElement(serializer, generateBlock.options)
     }
 }
@@ -39,8 +55,12 @@ data class ResourceGeneratorContext<out T : Resource>(val resource: T, val gener
 /**
  * Ran for ALL resources that exist.
  */
-fun resourceGenerator(id: Identifier, block: ResourceGeneratorContext<Resource>.() -> Resource?): ResourceGenerator {
-    return object : ResourceGenerator(id) {
+public fun resourceGenerator(
+    id: Identifier,
+    priority: ResourceGenerationStage = ResourceGenerationStage.BeforeProcessors,
+    block: ResourceGeneratorContext<Resource>.() -> Resource?
+): ResourceGenerator {
+    return object : ResourceGenerator(id, priority) {
         override fun generate(context: ResourceGeneratorContext<Resource>) {
             block(context)
         }
@@ -51,11 +71,12 @@ fun resourceGenerator(id: Identifier, block: ResourceGeneratorContext<Resource>.
  * Ran only for resources of a certain type that has [id] in its `generate` metadata section.
  */
 @JvmName("resourceGeneratorWithType")
-inline fun <reified T : Resource> resourceGenerator(
+public inline fun <reified T : Resource> resourceGenerator(
     id: Identifier,
-    crossinline block: ResourceGeneratorContext<T>.() -> T?
+    priority: ResourceGenerationStage = ResourceGenerationStage.BeforeProcessors,
+    crossinline block: ResourceGeneratorContext<T>.() -> Unit
 ): ResourceGenerator {
-    return object : ResourceGenerator(id) {
+    return object : ResourceGenerator(id, priority) {
         override fun generate(context: ResourceGeneratorContext<Resource>) {
             if (context.resource is T) {
                 // very nasty

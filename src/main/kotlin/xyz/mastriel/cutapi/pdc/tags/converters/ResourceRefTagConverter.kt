@@ -1,12 +1,10 @@
 package xyz.mastriel.cutapi.pdc.tags.converters
 
-import xyz.mastriel.cutapi.resources.Resource
-import xyz.mastriel.cutapi.resources.ResourceRef
-import xyz.mastriel.cutapi.resources.ref
-import kotlin.reflect.KClass
+import xyz.mastriel.cutapi.resources.*
+import kotlin.reflect.*
 
 @Suppress("UNCHECKED_CAST")
-class ResourceRefTagConverter<T: Resource>() :
+public class ResourceRefTagConverter<T: Resource>() :
     TagConverter<String, ResourceRef<T>>(String::class, ResourceRef::class as KClass<ResourceRef<T>>) {
 
     override fun fromPrimitive(primitive: String): ResourceRef<T> {

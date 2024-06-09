@@ -1,6 +1,6 @@
 package xyz.mastriel.cutapi.behavior
 
-import xyz.mastriel.cutapi.registry.Identifiable
+import xyz.mastriel.cutapi.registry.*
 
-interface Behavior : Identifiable {
+public interface Behavior : Identifiable {
 }

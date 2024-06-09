@@ -1,32 +1,31 @@
 package xyz.mastriel.cutapi.item.recipe
 
-import org.bukkit.Bukkit
-import org.bukkit.Material
-import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.ShapelessRecipe
-import xyz.mastriel.cutapi.item.AgnosticItemStack
-import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.item.CustomItem
-import xyz.mastriel.cutapi.item.ItemDescriptorBuilder
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
-import xyz.mastriel.cutapi.utils.computable.Computable
-import xyz.mastriel.cutapi.utils.computable.computable
+import org.bukkit.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.computable.*
 
-data class ShapelessRecipeIngredient(
-    val material: Material,
-    val quantity: Int = 1,
-    val itemRequirement: Computable<AgnosticItemStack, Boolean>,
-    val onCraft: IngredientCraftContext.() -> Unit
+public open class ShapelessRecipeIngredient(
+    public val material: Material,
+    public val quantity: Int = 1,
+    public val itemRequirement: Computable<AgnosticItemStack, Boolean>,
+    public val onCraft: IngredientCraftContext.() -> Unit
 )
 
-data class CustomShapelessRecipe(
+public class CustomShapelessRecipeIngredient(
+    material: Material,
+    quantity: Int = 1,
+    itemRequirement: Computable<AgnosticItemStack, Boolean>,
+    onCraft: IngredientCraftContext.() -> Unit
+) : ShapelessRecipeIngredient(material, quantity, itemRequirement, onCraft)
+
+public data class CustomShapelessRecipe(
     override val id: Identifier,
     val ingredients: List<ShapelessRecipeIngredient>,
     val result: ItemStack
 ) : Identifiable {
-    companion object : IdentifierRegistry<CustomShapelessRecipe>("Shapeless Recipes") {
+    public companion object : IdentifierRegistry<CustomShapelessRecipe>("Shapeless Recipes") {
 
         override fun register(item: CustomShapelessRecipe): CustomShapelessRecipe {
             val itemResult = item.result
@@ -42,16 +41,16 @@ data class CustomShapelessRecipe(
     }
 }
 
-class ShapelessRecipeBuilder(
-    val result: ItemStack,
+public class ShapelessRecipeBuilder(
+    public val result: ItemStack,
     override val id: Identifier
 ) : CraftingRecipeBuilder<CustomShapelessRecipe>, Identifiable {
 
-    constructor(result: CuTItemStack, id: Identifier) : this(result.handle, id)
+    public constructor(result: CuTItemStack, id: Identifier) : this(result.handle, id)
 
     private val ingredients = mutableListOf<ShapelessRecipeIngredient>()
 
-    fun ingredient(
+    public fun ingredient(
         material: Material,
         quantity: Int = 1,
         slotsRequired: Int = 1,
@@ -63,14 +62,19 @@ class ShapelessRecipeBuilder(
         }
     }
 
-    fun ingredient(
+    public fun ingredient(
         item: CustomItem<*>,
         quantity: Int = 1,
         slotsRequired: Int = 1,
         onCraft: IngredientCraftContext.() -> Unit = {}
     ) {
         repeat(slotsRequired) {
-            ingredients += ShapelessRecipeIngredient(item.type, quantity, IngredientPredicates.isItem(item), onCraft)
+            ingredients += CustomShapelessRecipeIngredient(
+                item.type,
+                quantity,
+                IngredientPredicates.isItem(item),
+                onCraft
+            )
         }
     }
 
@@ -81,14 +85,18 @@ class ShapelessRecipeBuilder(
 }
 
 
-fun ItemDescriptorBuilder.shapelessRecipe(id: Identifier, amount: Int = 1, block: ShapelessRecipeBuilder.() -> Unit) {
+public fun ItemDescriptorBuilder.shapelessRecipe(
+    id: Identifier,
+    amount: Int = 1,
+    block: ShapelessRecipeBuilder.() -> Unit
+) {
     onRegister += {
         val builder = ShapelessRecipeBuilder(item.createItemStack(amount), id).apply(block)
         CustomShapelessRecipe.register(builder.build())
     }
 }
 
-fun shapelessRecipe(
+public fun shapelessRecipe(
     id: Identifier,
     result: ItemStack,
     block: ShapelessRecipeBuilder.() -> Unit
@@ -97,8 +105,8 @@ fun shapelessRecipe(
     return builder.build()
 }
 
-fun registerShapelessRecipe(
+public fun registerShapelessRecipe(
     id: Identifier,
     result: ItemStack,
     block: ShapelessRecipeBuilder.() -> Unit
-) = CustomShapelessRecipe.register(shapelessRecipe(id, result, block))
+): CustomShapelessRecipe = CustomShapelessRecipe.register(shapelessRecipe(id, result, block))

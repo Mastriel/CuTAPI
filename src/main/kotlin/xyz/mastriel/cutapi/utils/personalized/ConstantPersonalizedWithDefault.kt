@@ -1,7 +1,7 @@
 package xyz.mastriel.cutapi.utils.personalized
 
-import org.bukkit.entity.Player
-import xyz.mastriel.cutapi.utils.computable.ConstantComputableWithDefault
+import org.bukkit.entity.*
+import xyz.mastriel.cutapi.utils.computable.*
 
 internal class ConstantPersonalizedWithDefault<T>(constantDefault: T) :
     PersonalizedWithDefault<T>,

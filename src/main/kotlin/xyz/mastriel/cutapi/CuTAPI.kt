@@ -1,19 +1,18 @@
 package xyz.mastriel.cutapi
 
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.cbor.Cbor
-import kotlinx.serialization.json.Json
-import net.peanuuutz.tomlkt.Toml
+import kotlinx.serialization.*
+import kotlinx.serialization.cbor.*
+import kotlinx.serialization.json.*
+import net.peanuuutz.tomlkt.*
 import org.bukkit.plugin.Plugin
-import xyz.mastriel.cutapi.block.CustomBlockManager
-import xyz.mastriel.cutapi.block.breaklogic.BlockBreakManager
-import xyz.mastriel.cutapi.nms.PacketEventManager
-import xyz.mastriel.cutapi.nms.PlayerPacketManager
-import xyz.mastriel.cutapi.periodic.PeriodicManager
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
-import xyz.mastriel.cutapi.resources.ResourceManager
-import xyz.mastriel.cutapi.resources.ResourcePackManager
-import xyz.mastriel.cutapi.utils.ServiceManager
+import xyz.mastriel.cutapi.block.*
+import xyz.mastriel.cutapi.block.breaklogic.*
+import xyz.mastriel.cutapi.nms.*
+import xyz.mastriel.cutapi.periodic.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.utils.*
+import kotlin.collections.set
 
 
 /**
@@ -22,19 +21,19 @@ import xyz.mastriel.cutapi.utils.ServiceManager
  * @see Plugin
  * @see PluginDescriptor
  */
-object CuTAPI {
+public object CuTAPI {
 
     /**
      * A map of all plugins registered, along with their plugin descriptors.
      */
     private val plugins = mutableMapOf<CuTPlugin, PluginDescriptor>()
-    val registeredPlugins: Set<CuTPlugin> get() = plugins.keys
+    public val registeredPlugins: Set<CuTPlugin> get() = plugins.keys
 
-    val resourceManager = ResourceManager()
-    val resourcePackManager = ResourcePackManager()
-    val periodicManager = PeriodicManager()
-    val serviceManager = ServiceManager()
-    val blockManager by lazy { CustomBlockManager() }
+    public val resourceManager: ResourceManager = ResourceManager()
+    public val resourcePackManager: ResourcePackManager = ResourcePackManager()
+    public val periodicManager: PeriodicManager = PeriodicManager()
+    public val serviceManager: ServiceManager = ServiceManager()
+    public val blockManager: CustomBlockManager by lazy { CustomBlockManager() }
 
     internal val playerPacketManager = PlayerPacketManager()
     internal val packetEventManager = PacketEventManager()
@@ -53,7 +52,7 @@ object CuTAPI {
      * @throws IllegalStateException If the namespace is already in use.
      * @throws IllegalStateException If the plugin is already registered.
      */
-    fun registerPlugin(
+    public fun registerPlugin(
         plugin: CuTPlugin,
         namespace: String,
         options: (PluginOptionsBuilder.() -> Unit)? = null
@@ -77,10 +76,10 @@ object CuTAPI {
      * @param plugin The plugin being unregistered.
      * @throws IllegalStateException If the plugin is not registered.
      */
-    fun unregisterPlugin(plugin: CuTPlugin) {
+    public fun unregisterPlugin(plugin: CuTPlugin) {
         requireRegistered(plugin)
         IdentifierRegistry.unregisterPluginGlobally(plugin)
-        periodicManager
+        periodicManager.cancelAll(plugin)
         plugins.remove(plugin)
     }
 
@@ -92,7 +91,7 @@ object CuTAPI {
      * @see PluginDescriptor
      */
     @Throws(IllegalStateException::class)
-    fun getDescriptor(plugin: CuTPlugin): PluginDescriptor {
+    public fun getDescriptor(plugin: CuTPlugin): PluginDescriptor {
         requireRegistered(plugin)
         return plugins[plugin]!!
     }
@@ -103,7 +102,7 @@ object CuTAPI {
      * @param plugin The plugin.
      * @returns true if the plugin is registered, false otherwise.
      */
-    fun isRegistered(plugin: CuTPlugin): Boolean {
+    public fun isRegistered(plugin: CuTPlugin): Boolean {
         return plugin in plugins
     }
 
@@ -113,7 +112,7 @@ object CuTAPI {
      *
      * @throws IllegalStateException If no plugin exists with this namespace.
      */
-    fun getPluginFromNamespace(namespace: String): CuTPlugin {
+    public fun getPluginFromNamespace(namespace: String): CuTPlugin {
         return plugins.values.find { it.namespace.equals(namespace, true) }?.plugin
             ?: error("Namespace $namespace not found.")
     }

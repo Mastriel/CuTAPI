@@ -1,13 +1,11 @@
 package xyz.mastriel.cutapi.resources.uploader
 
-import net.kyori.adventure.resource.ResourcePackInfo
-import net.kyori.adventure.resource.ResourcePackRequest
-import org.bukkit.event.EventHandler
-import org.bukkit.event.Listener
-import org.bukkit.event.player.PlayerJoinEvent
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.utils.colored
-import java.net.URI
+import net.kyori.adventure.resource.*
+import org.bukkit.event.*
+import org.bukkit.event.player.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.utils.*
+import java.net.*
 import java.util.*
 
 internal class UploaderJoinEvents : Listener {

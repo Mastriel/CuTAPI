@@ -1,13 +1,17 @@
 package xyz.mastriel.cutapi.pdc.tags.converters
 
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
-import xyz.mastriel.cutapi.registry.id
-import kotlin.reflect.KClass
+import xyz.mastriel.cutapi.registry.*
+import kotlin.reflect.*
 
 
-class IdentifiableTagConverter<T : Identifiable>(
-    val registry: IdentifierRegistry<T>,
+private typealias CustomItemRegistry = xyz.mastriel.cutapi.item.CustomItem<*>
+private typealias CustomBlockRegistry = xyz.mastriel.cutapi.block.CustomBlock<*>
+private typealias CustomTileRegistry = xyz.mastriel.cutapi.block.CustomTile<*>
+private typealias CustomTileEntityRegistry = xyz.mastriel.cutapi.block.CustomTileEntity<*>
+
+
+public class IdentifiableTagConverter<T : Identifiable>(
+    public val registry: IdentifierRegistry<T>,
     identifiableKClass: KClass<T>
 ) : TagConverter<String, T>(String::class, identifiableKClass) {
 
@@ -19,18 +23,18 @@ class IdentifiableTagConverter<T : Identifiable>(
         return complex.id.toString()
     }
 
-    companion object {
-        val CustomItem = IdentifiableTagConverter(CustomItemRegistry)
-        val CustomBlock = IdentifiableTagConverter(CustomBlockRegistry)
-        val CustomTile = IdentifiableTagConverter(CustomTileRegistry)
-        val CustomTileEntity = IdentifiableTagConverter(CustomTileEntityRegistry)
+    public companion object {
+        public val CustomItem: IdentifiableTagConverter<CustomItemRegistry> =
+            IdentifiableTagConverter(CustomItemRegistry)
+        public val CustomBlock: IdentifiableTagConverter<CustomBlockRegistry> =
+            IdentifiableTagConverter(CustomBlockRegistry)
+        public val CustomTile: IdentifiableTagConverter<CustomTileRegistry> =
+            IdentifiableTagConverter(CustomTileRegistry)
+        public val CustomTileEntity: IdentifiableTagConverter<CustomTileEntityRegistry> =
+            IdentifiableTagConverter(CustomTileEntityRegistry)
     }
 }
 
-private typealias CustomItemRegistry = xyz.mastriel.cutapi.item.CustomItem<*>
-private typealias CustomBlockRegistry = xyz.mastriel.cutapi.block.CustomBlock<*>
-private typealias CustomTileRegistry = xyz.mastriel.cutapi.block.CustomTile<*>
-private typealias CustomTileEntityRegistry = xyz.mastriel.cutapi.block.CustomTileEntity<*>
 
-inline fun <reified T : Identifiable> IdentifiableTagConverter(registry: IdentifierRegistry<T>) =
+public inline fun <reified T : Identifiable> IdentifiableTagConverter(registry: IdentifierRegistry<T>): IdentifiableTagConverter<T> =
     IdentifiableTagConverter(registry, T::class)

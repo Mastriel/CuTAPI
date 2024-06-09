@@ -1,17 +1,15 @@
 package xyz.mastriel.cutapi.resources.data.minecraft
 
-import kotlinx.serialization.EncodeDefault
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 
 @Serializable
-data class AnimationMcMeta(
+public data class AnimationMcMeta(
     val animation: Animation
 )
 
 @Serializable
 @OptIn(ExperimentalSerializationApi::class)
-data class Animation(
+public data class Animation(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val interpolate: Boolean? = null,
 
@@ -30,7 +28,7 @@ data class Animation(
 
 @Serializable
 @OptIn(ExperimentalSerializationApi::class)
-data class AnimationFrame(
+public data class AnimationFrame(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val index: Int,
 

@@ -1,40 +1,34 @@
 package xyz.mastriel.cutapi.item
 
-import kotlinx.serialization.Serializable
-import org.bukkit.Bukkit
-import org.bukkit.Material
-import org.bukkit.event.Listener
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.behavior.BehaviorHolder
+import kotlinx.serialization.*
+import org.bukkit.*
+import org.bukkit.event.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.behavior.*
 import xyz.mastriel.cutapi.item.ItemStackUtility.customItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
-import xyz.mastriel.cutapi.item.behaviors.DisplayAs
-import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
-import xyz.mastriel.cutapi.item.behaviors.StaticLore
-import xyz.mastriel.cutapi.item.behaviors.itemBehaviorHolder
-import xyz.mastriel.cutapi.pdc.tags.ItemBehaviorTagContainer
-import xyz.mastriel.cutapi.pdc.tags.TagContainer
+import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
-import xyz.mastriel.cutapi.utils.colored
-import kotlin.reflect.KClass
+import xyz.mastriel.cutapi.utils.*
+import kotlin.reflect.*
 
 
-object CustomItemSerializer : IdentifiableSerializer<CustomItem<*>>("customMaterial", CustomItem)
+public object CustomItemSerializer : IdentifiableSerializer<CustomItem<*>>("customMaterial", CustomItem)
 
 /**
  * An alias for a [CustomItem<*>](CustomItem). This has a CuTItemStack as its stack type.
  *
  * @see CustomItem
  */
-typealias AnyCustomItem = CustomItem<*>
+public typealias AnyCustomItem = CustomItem<*>
 
 @Serializable(with = CustomItemSerializer::class)
-open class CustomItem<TStack : CuTItemStack>(
+public open class CustomItem<TStack : CuTItemStack>(
     override val id: Identifier,
-    val type: Material,
-    val stackTypeClass: KClass<out TStack>,
+    public val type: Material,
+    public val stackTypeClass: KClass<out TStack>,
     descriptor: ItemDescriptor? = null
 ) : Identifiable, Listener, BehaviorHolder<ItemBehavior> {
 
@@ -43,7 +37,7 @@ open class CustomItem<TStack : CuTItemStack>(
      * The descriptor that describes the custom material's default values, such
      * as a default name, default lore, behaviors, etc.
      */
-    open val descriptor = descriptor ?: defaultItemDescriptor()
+    public open val descriptor: ItemDescriptor = descriptor ?: defaultItemDescriptor()
 
     init {
         if (descriptor != null) {
@@ -61,36 +55,36 @@ open class CustomItem<TStack : CuTItemStack>(
         behaviors.add(DisplayAs(autoDisplayAs))
     }
 
-    fun createItemStack(quantity: Int = 1) =
+    public fun createItemStack(quantity: Int = 1): TStack =
         CuTItemStack.create<TStack>(this, quantity)
 
-    open fun onCreate(item: CuTItemStack) {}
+    public open fun onCreate(item: CuTItemStack) {}
 
     private val behaviorHolder by lazy { itemBehaviorHolder(this) }
 
-    override fun hasBehavior(behavior: KClass<out ItemBehavior>) = behaviorHolder.hasBehavior(behavior)
-    override fun <T : ItemBehavior> getBehavior(behavior: KClass<T>) = behaviorHolder.getBehavior(behavior)
-    override fun <T : ItemBehavior> getBehaviorOrNull(behavior: KClass<T>) =
+    override fun hasBehavior(behavior: KClass<out ItemBehavior>): Boolean = behaviorHolder.hasBehavior(behavior)
+    override fun <T : ItemBehavior> getBehavior(behavior: KClass<T>): T = behaviorHolder.getBehavior(behavior)
+    override fun <T : ItemBehavior> getBehaviorOrNull(behavior: KClass<T>): T? =
         behaviorHolder.getBehaviorOrNull(behavior)
 
-    override fun hasBehavior(behaviorId: Identifier) = behaviorHolder.hasBehavior(behaviorId)
-    override fun <T : ItemBehavior> getBehavior(behaviorId: Identifier) = behaviorHolder.getBehavior<T>(behaviorId)
-    override fun <T : ItemBehavior> getBehaviorOrNull(behaviorId: Identifier) =
+    override fun hasBehavior(behaviorId: Identifier): Boolean = behaviorHolder.hasBehavior(behaviorId)
+    override fun <T : ItemBehavior> getBehavior(behaviorId: Identifier): T = behaviorHolder.getBehavior<T>(behaviorId)
+    override fun <T : ItemBehavior> getBehaviorOrNull(behaviorId: Identifier): T? =
         behaviorHolder.getBehaviorOrNull<T>(behaviorId)
 
     override fun getAllBehaviors(): Set<ItemBehavior> = behaviorHolder.getAllBehaviors()
 
-    inline fun <reified B : ItemBehavior> hasBehavior() = hasBehavior(B::class)
-    inline fun <reified B : ItemBehavior> getBehavior() = getBehavior(B::class)
-    inline fun <reified B : ItemBehavior> getBehaviorOrNull() = getBehaviorOrNull(B::class)
+    public inline fun <reified B : ItemBehavior> hasBehavior(): Boolean = hasBehavior(B::class)
+    public inline fun <reified B : ItemBehavior> getBehavior(): B = getBehavior(B::class)
+    public inline fun <reified B : ItemBehavior> getBehaviorOrNull(): B? = getBehaviorOrNull(B::class)
 
     protected fun getData(item: CuTItemStack): TagContainer {
         return ItemBehaviorTagContainer(item.handle, id.copy(namespace = id.namespace, key = id.key + "/data"))
     }
 
 
-    companion object : IdentifierRegistry<CustomItem<*>>("Custom Items") {
-        val Unknown = customItem(
+    public companion object : IdentifierRegistry<CustomItem<*>>("Custom Items") {
+        public val Unknown: CustomItem<CuTItemStack> = customItem(
             unknownID(),
             Material.ANVIL
         ) {
@@ -122,33 +116,33 @@ open class CustomItem<TStack : CuTItemStack>(
 /**
  * Represents an item that is either a normal item stack or a CuT item stack.
  */
-sealed class AgnosticMaterial {
+public sealed class AgnosticMaterial {
 
-    fun matches(item: ItemStack) = item.agnosticMaterial == this
+    public fun matches(item: ItemStack): Boolean = item.agnosticMaterial == this
 
     /** The expected vanilla material of this agnostic material.
      *
      * For vanilla items, this is always just the material of the item.
      * For custom items, this is the material that the custom item is assigned by default.
      */
-    abstract val expectedVanillaMaterial: Material
+    public abstract val expectedVanillaMaterial: Material
 
-    data class Custom internal constructor(val itemType: AnyCustomItem) : AgnosticMaterial() {
-        fun custom() = itemType
+    public data class Custom internal constructor(val itemType: AnyCustomItem) : AgnosticMaterial() {
+        public fun custom(): CustomItem<*> = itemType
 
         override val expectedVanillaMaterial: Material
             get() = itemType.type
     }
 
-    data class Vanilla internal constructor(private val material: Material) : AgnosticMaterial() {
-        fun vanilla() = material
+    public data class Vanilla internal constructor(private val material: Material) : AgnosticMaterial() {
+        public fun vanilla(): Material = material
 
         override val expectedVanillaMaterial: Material
             get() = material
     }
 }
 
-val ItemStack.agnosticMaterial: AgnosticMaterial
+public val ItemStack.agnosticMaterial: AgnosticMaterial
     get() {
         if (this.isCustom) {
             return AgnosticMaterial.Custom(this.customItem)
@@ -156,16 +150,16 @@ val ItemStack.agnosticMaterial: AgnosticMaterial
         return AgnosticMaterial.Vanilla(this.type)
     }
 
-val CuTItemStack.agnosticMaterial: AgnosticMaterial
+public val CuTItemStack.agnosticMaterial: AgnosticMaterial
     get() {
         return AgnosticMaterial.Custom(this.type)
     }
 
 
-fun Material.toAgnostic(): AgnosticMaterial.Vanilla {
+public fun Material.toAgnostic(): AgnosticMaterial.Vanilla {
     return AgnosticMaterial.Vanilla(this)
 }
 
-fun AnyCustomItem.toAgnostic(): AgnosticMaterial.Custom {
+public fun AnyCustomItem.toAgnostic(): AgnosticMaterial.Custom {
     return AgnosticMaterial.Custom(this)
 }

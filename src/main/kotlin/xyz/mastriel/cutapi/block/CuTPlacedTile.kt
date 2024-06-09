@@ -1,22 +1,23 @@
 package xyz.mastriel.cutapi.block
 
-import org.bukkit.block.Block
+import org.bukkit.*
+import org.bukkit.block.*
 import xyz.mastriel.cutapi.pdc.tags.*
 
 
-sealed class CuTPlacedTile(
-    val handle: Block,
+public sealed class CuTPlacedTile(
+    public val handle: Block,
 ) : TagContainer by BlockDataTagContainer(handle) {
 
-    val location by handle::location
-    val chunk by handle::chunk
+    public val location: Location by handle::location
+    public val chunk: Chunk by handle::chunk
 
-    fun vanilla() = handle
+    public fun vanilla(): Block = handle
 
     protected abstract val typeTag: NotNullTag<String, out CustomTile<*>>
 
     @Suppress("UNCHECKED_CAST")
-    var type: CustomTile<*>
+    public var type: CustomTile<*>
         get() = typeTag.get()
         set(value) {
             (typeTag as NotNullTag<String, CustomTile<*>>).store(value)
@@ -26,18 +27,19 @@ sealed class CuTPlacedTile(
 }
 
 
-open class CuTPlacedTileEntity(
+public open class CuTPlacedTileEntity(
     handle: Block
 ) : CuTPlacedTile(handle) {
 
 
-    final override val typeTag = customTileEntityTag("type", CustomTileEntity.Unknown)
+    final override val typeTag: NotNullTag<String, CustomTileEntity<*>> =
+        customTileEntityTag("type", CustomTileEntity.Unknown)
 
 
 }
 
-open class CuTPlacedBlock(handle: Block) : CuTPlacedTile(handle) {
+public open class CuTPlacedBlock(handle: Block) : CuTPlacedTile(handle) {
 
-    final override val typeTag = customBlockTag("type", CustomBlock.Unknown)
+    final override val typeTag: NotNullTag<String, CustomBlock<*>> = customBlockTag("type", CustomBlock.Unknown)
 
 }

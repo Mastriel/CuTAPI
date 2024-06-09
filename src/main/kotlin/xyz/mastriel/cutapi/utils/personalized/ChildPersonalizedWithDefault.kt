@@ -1,7 +1,7 @@
 package xyz.mastriel.cutapi.utils.personalized
 
-import org.bukkit.entity.Player
-import xyz.mastriel.cutapi.utils.computable.ChildComputableWithDefault
+import org.bukkit.entity.*
+import xyz.mastriel.cutapi.utils.computable.*
 
 internal class ChildPersonalizedWithDefault<T>(constantDefault: T, parent: Personalized<T>) :
     PersonalizedWithDefault<T>,

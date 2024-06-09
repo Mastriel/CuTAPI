@@ -1,37 +1,36 @@
 package xyz.mastriel.cutapi.resources.builtin
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 import kotlinx.serialization.decodeFromString
 import net.peanuuutz.tomlkt.TomlTable
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.resources.ResourceRef
-import xyz.mastriel.cutapi.resources.data.CuTMeta
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.data.*
 
-class FolderApplyResource(
+public class FolderApplyResource(
     ref: ResourceRef<FolderApplyResource>,
     metadata: Metadata
 ) : MetadataResource<FolderApplyResource.Metadata>(ref, metadata) {
 
     @Serializable
-    data class Metadata(
+    public data class Metadata(
         @SerialName("apply")
         val applyTable: TomlTable = TomlTable()
     ) : CuTMeta()
 }
 
 
-val FolderApplyResourceLoader = metadataResourceLoader(
-    listOf("meta.folder"),
-    id(Plugin, "folder_apply"),
-    FolderApplyResource.Metadata.serializer()
-) {
+public val FolderApplyResourceLoader: ResourceFileLoader<MetadataResource<FolderApplyResource.Metadata>> =
+    metadataResourceLoader(
+        listOf("meta.folder"),
+        id(Plugin, "folder_apply"),
+        FolderApplyResource.Metadata.serializer()
+    ) {
 
-    if (ref.name != "apply.meta.folder") {
-        return@metadataResourceLoader wrongType()
+        if (ref.name != "apply.meta.folder") {
+            return@metadataResourceLoader wrongType()
+        }
+        val meta = CuTAPI.toml.decodeFromString<FolderApplyResource.Metadata>(metadataBytes!!.toString(Charsets.UTF_8))
+        success(FolderApplyResource(ref.cast(), metadata!!))
     }
-    val meta = CuTAPI.toml.decodeFromString<FolderApplyResource.Metadata>(metadataBytes!!.toString(Charsets.UTF_8))
-    success(FolderApplyResource(ref.cast(), metadata!!))
-}

@@ -17,7 +17,7 @@ import kotlin.reflect.full.functions
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.jvm.isAccessible
 
-class PeriodicManager {
+public class PeriodicManager {
 
     private sealed class PeriodicTask {
         abstract fun cancel()
@@ -37,7 +37,7 @@ class PeriodicManager {
 
     private val tasks = mutableMapOf<CuTPlugin, MutableList<PeriodicTask>>()
 
-    fun <T : Any> register(plugin: CuTPlugin, instance: T) {
+    public fun <T : Any> register(plugin: CuTPlugin, instance: T) {
         val periodicFunctions = getFunctions(instance::class)
         periodicFunctions.forEach { (function, ticks) ->
             if (function.isSuspend) {
@@ -88,7 +88,7 @@ class PeriodicManager {
         tasks.getOrPut(plugin) { mutableListOf() }.add(PeriodicTask.BukkitTask(task))
     }
 
-    fun cancelAll(plugin: CuTPlugin) {
+    public fun cancelAll(plugin: CuTPlugin) {
         tasks[plugin]?.forEach { it.cancel() }
         tasks.remove(plugin)
     }
@@ -97,7 +97,7 @@ class PeriodicManager {
     private fun <T : Any> getFunctions(kClass: KClass<out T>): Map<KFunction<Unit>, Int> {
         return kClass.functions.filter { it.hasAnnotation<Periodic>() }
             .filter { it.parameters.size == 1 }
-            .map { it.isAccessible = true; it }
+            .onEach { it.isAccessible = true }
             .associateWith { it.findAnnotation<Periodic>()!!.ticks }
             as Map<KFunction<Unit>, Int>
     }

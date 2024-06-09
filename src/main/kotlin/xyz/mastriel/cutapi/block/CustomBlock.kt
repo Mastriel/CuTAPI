@@ -1,28 +1,26 @@
 package xyz.mastriel.cutapi.block
 
-import org.bukkit.Location
-import org.bukkit.Material
-import org.bukkit.block.Block
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.behavior.BehaviorHolder
+import org.bukkit.*
+import org.bukkit.block.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.behavior.*
 import xyz.mastriel.cutapi.block.CustomBlockManager.Companion.tags
-import xyz.mastriel.cutapi.block.behaviors.BlockBehavior
-import xyz.mastriel.cutapi.block.behaviors.TileEntityBehavior
-import xyz.mastriel.cutapi.pdc.tags.setIdentifier
+import xyz.mastriel.cutapi.block.behaviors.*
+import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
-import kotlin.reflect.KClass
+import kotlin.reflect.*
 
 
-sealed interface CustomTile<T : CuTPlacedTile> : Identifiable {
-    val descriptor: TileDescriptor
-    val placedBlockTypeClass: KClass<out T>
+public sealed interface CustomTile<T : CuTPlacedTile> : Identifiable {
+    public val descriptor: TileDescriptor
+    public val placedBlockTypeClass: KClass<out T>
 
-    fun setAt(location: Location) {
+    public fun setAt(location: Location) {
         val block = location.toBlockLocation().block
         setAt(block)
     }
 
-    fun setAt(block: Block) {
+    public fun setAt(block: Block) {
         block.tags.setIdentifier("cutapi.CuTID", id)
         when (val strategy = descriptor.blockStrategy) {
             is BlockStrategy.FakeEntity -> block.type = Material.BARRIER
@@ -32,12 +30,12 @@ sealed interface CustomTile<T : CuTPlacedTile> : Identifiable {
         }
     }
 
-    companion object : IdentifierRegistry<CustomTile<*>>("Custom Tiles") {
+    public companion object : IdentifierRegistry<CustomTile<*>>("Custom Tiles") {
 
     }
 }
 
-class CustomBlock<T : CuTPlacedBlock>(
+public class CustomBlock<T : CuTPlacedBlock>(
     override val id: Identifier,
     override val descriptor: BlockDescriptor,
     override val placedBlockTypeClass: KClass<out T>
@@ -58,9 +56,9 @@ class CustomBlock<T : CuTPlacedBlock>(
     override fun <T : BlockBehavior> getBehavior(behavior: KClass<T>): T = behaviorHolder.getBehavior(behavior)
 
 
-    companion object : IdentifierRegistry<CustomBlock<*>>("Custom Blocks") {
+    public companion object : IdentifierRegistry<CustomBlock<*>>("Custom Blocks") {
 
-        val Unknown = customBlock(
+        public val Unknown: CustomBlock<CuTPlacedBlock> = customBlock(
             id(Plugin, "unknown_block")
         ) {
             blockStrategy = BlockStrategy.Vanilla(Material.BARRIER)
@@ -78,7 +76,7 @@ class CustomBlock<T : CuTPlacedBlock>(
     }
 }
 
-class CustomTileEntity<T : CuTPlacedTileEntity>(
+public class CustomTileEntity<T : CuTPlacedTileEntity>(
     override val id: Identifier,
     override val descriptor: TileEntityDescriptor,
     override val placedBlockTypeClass: KClass<out T>
@@ -99,9 +97,9 @@ class CustomTileEntity<T : CuTPlacedTileEntity>(
 
     override fun <T : TileEntityBehavior> getBehavior(behavior: KClass<T>): T = behaviorHolder.getBehavior(behavior)
 
-    companion object : IdentifierRegistry<CustomTileEntity<*>>("Custom Tile Entities") {
+    public companion object : IdentifierRegistry<CustomTileEntity<*>>("Custom Tile Entities") {
 
-        val Unknown = customTileEntity(
+        public val Unknown: CustomTileEntity<CuTPlacedTileEntity> = customTileEntity(
             id(Plugin, "unknown_tile_entity")
         ) {
             blockStrategy = BlockStrategy.Vanilla(Material.BARRIER)

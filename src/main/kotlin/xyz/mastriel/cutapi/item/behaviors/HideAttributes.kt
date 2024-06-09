@@ -1,13 +1,12 @@
 package xyz.mastriel.cutapi.item.behaviors
 
-import org.bukkit.entity.Player
-import org.bukkit.inventory.ItemFlag
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.registry.id
+import org.bukkit.entity.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
 
-object HideAttributes : ItemBehavior(id(Plugin, "hide_attributes")) {
+public object HideAttributes : ItemBehavior(id(Plugin, "hide_attributes")) {
 
     override fun onRender(viewer: Player?, item: CuTItemStack) {
         item.handle.addItemFlags(ItemFlag.HIDE_ATTRIBUTES)

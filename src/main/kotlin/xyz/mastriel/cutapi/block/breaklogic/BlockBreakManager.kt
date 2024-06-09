@@ -1,35 +1,32 @@
 package xyz.mastriel.cutapi.block.breaklogic
 
-import net.minecraft.core.BlockPos
-import net.minecraft.core.Direction
-import net.minecraft.network.protocol.game.ClientboundBlockChangedAckPacket
-import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket
-import net.minecraft.world.InteractionHand
-import org.bukkit.GameMode
-import org.bukkit.craftbukkit.event.CraftEventFactory
-import org.bukkit.entity.Player
-import org.bukkit.event.Event
-import org.bukkit.event.Listener
-import org.bukkit.event.block.Action
-import org.bukkit.inventory.ItemStack
-import org.bukkit.potion.PotionEffectType
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.item.toAgnostic
+import net.minecraft.core.*
+import net.minecraft.network.protocol.game.*
+import net.minecraft.world.*
+import org.bukkit.*
+import org.bukkit.craftbukkit.event.*
+import org.bukkit.entity.*
+import org.bukkit.event.*
+import org.bukkit.event.block.*
+import org.bukkit.inventory.*
+import org.bukkit.potion.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.nms.*
-import xyz.mastriel.cutapi.periodic.Periodic
-import xyz.mastriel.cutapi.utils.onlinePlayers
-import java.util.concurrent.ConcurrentHashMap
-import java.util.logging.Level
+import xyz.mastriel.cutapi.periodic.*
+import xyz.mastriel.cutapi.utils.*
+import java.util.concurrent.*
+import java.util.logging.*
 
 // This class uses NMS to detect when a player starts breaking a block.
 @UsesNMS
-class BlockBreakManager : Listener, PacketListener {
+public class BlockBreakManager : Listener, PacketListener {
 
     private val breakers = ConcurrentHashMap<Player, PlayerBlockBreaker>()
 
 
     @Periodic(1)
-    fun updateEffects() {
+    public fun updateEffects() {
         for (player in onlinePlayers()) {
             if (!player.hasPotionEffect(PotionEffectType.MINING_FATIGUE)) {
                 player.addPotionEffect(
@@ -43,7 +40,7 @@ class BlockBreakManager : Listener, PacketListener {
     }
 
     @Periodic(1)
-    fun updateTicks() {
+    public fun updateTicks() {
         for ((player, breaker) in breakers.toMap()) {
             try {
                 if (!breaker.hasStopped) {

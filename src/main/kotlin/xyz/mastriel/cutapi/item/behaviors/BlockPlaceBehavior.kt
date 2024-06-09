@@ -1,16 +1,16 @@
 package xyz.mastriel.cutapi.item.behaviors
 
-import org.bukkit.Location
-import org.bukkit.entity.Player
-import org.bukkit.event.block.BlockPlaceEvent
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.block.CustomTile
-import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.registry.id
+import org.bukkit.*
+import org.bukkit.entity.*
+import org.bukkit.event.block.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.block.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
 
-class BlockPlaceBehavior(
-    val tile: CustomTile<*>,
-    val consumesItem: Boolean = true
+public class BlockPlaceBehavior(
+    public val tile: CustomTile<*>,
+    public val consumesItem: Boolean = true
 ) : ItemBehavior(id(Plugin, "block_place").appendSubId(tile.id.key)) {
 
     override fun onPlace(player: Player, item: CuTItemStack, location: Location, event: BlockPlaceEvent) {

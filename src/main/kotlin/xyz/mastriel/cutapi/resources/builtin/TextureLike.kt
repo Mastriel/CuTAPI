@@ -1,13 +1,13 @@
 package xyz.mastriel.cutapi.resources.builtin
 
-import kotlinx.serialization.json.JsonObject
-import xyz.mastriel.cutapi.resources.Resource
+import kotlinx.serialization.json.*
+import xyz.mastriel.cutapi.resources.*
 
-interface TextureLike : CustomModelDataAllocated {
+public interface TextureLike : CustomModelDataAllocated {
 
-    fun createItemModelData(): JsonObject
+    public fun createItemModelData(): JsonObject
 
-    val materials: List<String>
+    public val materials: List<String>
 
-    val resource: Resource
+    public val resource: Resource
 }

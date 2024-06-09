@@ -1,26 +1,22 @@
 package xyz.mastriel.cutapi.item.recipe
 
-import com.destroystokyo.paper.event.player.PlayerRecipeBookClickEvent
-import org.bukkit.Bukkit
-import org.bukkit.event.Event
-import org.bukkit.event.EventHandler
-import org.bukkit.event.Listener
-import org.bukkit.event.inventory.CraftItemEvent
-import org.bukkit.event.inventory.PrepareItemCraftEvent
-import org.bukkit.event.inventory.PrepareSmithingEvent
+import com.destroystokyo.paper.event.player.*
+import org.bukkit.*
+import org.bukkit.event.*
+import org.bukkit.event.inventory.*
 import org.bukkit.inventory.*
-import org.bukkit.inventory.meta.Damageable
-import xyz.mastriel.cutapi.Plugin
+import org.bukkit.inventory.meta.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.item.ItemStackUtility.customItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
-import xyz.mastriel.cutapi.item.toAgnostic
-import xyz.mastriel.cutapi.registry.toIdentifier
-import xyz.mastriel.cutapi.utils.playSound
-import xyz.mastriel.cutapi.utils.trim
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.*
 
-class CraftingRecipeEvents : Listener {
+internal class CraftingRecipeEvents : Listener {
 
     @EventHandler
-    fun onCraftAttempt(e: CraftItemEvent) {
+    public fun onCraftAttempt(e: CraftItemEvent) {
         val recipe = e.recipe
         if (recipe is ShapelessRecipe) {
 
@@ -88,8 +84,8 @@ class CraftingRecipeEvents : Listener {
             inventory.setItem(index, context.replaceWith?.vanilla())
         }
         if (context.lowerDurabilityBy != 0) {
-            item.itemMeta = item.itemMeta?.also a@{ meta ->
-                if (meta !is Damageable) return@a
+            item.itemMeta = item.itemMeta?.also also@{ meta ->
+                if (meta !is Damageable) return@also
                 meta.damage += context.lowerDurabilityBy
                 if (meta.damage > item.type.maxDurability) {
                     item.amount -= 1
@@ -102,7 +98,7 @@ class CraftingRecipeEvents : Listener {
     }
 
     @EventHandler
-    fun onPrepareCraftShapeless(e: PrepareItemCraftEvent) {
+    public fun onPrepareCraftShapeless(e: PrepareItemCraftEvent) {
         val recipe = e.recipe as? ShapelessRecipe ?: return
 
         val canCraft = testShapelessRecipe(recipe, e.inventory)
@@ -118,7 +114,7 @@ class CraftingRecipeEvents : Listener {
     }
 
     @EventHandler
-    fun onPrepareCraftShaped(e: PrepareItemCraftEvent) {
+    public fun onPrepareCraftShaped(e: PrepareItemCraftEvent) {
         val recipe = e.recipe as? ShapedRecipe ?: return
 
         val canCraft = testShapedRecipe(recipe, e.inventory)
@@ -141,16 +137,38 @@ class CraftingRecipeEvents : Listener {
         return CustomShapedRecipe.getOrNull(recipe.key.toIdentifier())
     }
 
+    fun itemIsNotCustomOrCraftsAsBaseMaterial(item: ItemStack): Boolean {
+        if (!item.isCustom) return true
+        return item.customItem.hasBehavior<CraftsAsBaseMaterial>()
+    }
+
+    private fun testShapelessVanillaRecipe(recipe: ShapelessRecipe, inventory: CraftingInventory): Boolean {
+        val ingredientsRemaining = recipe.choiceList.toMutableList()
+        var canCraft = true
+        for (item in inventory.matrix) {
+            if (item == null) continue
+            val ingredient = ingredientsRemaining.find { it.test(item) && itemIsNotCustomOrCraftsAsBaseMaterial(item) }
+            if (ingredient == null) {
+                canCraft = false
+                break
+            }
+            ingredientsRemaining.remove(ingredient)
+        }
+        return canCraft
+    }
 
     private fun testShapelessRecipe(recipe: ShapelessRecipe, inventory: CraftingInventory): Boolean {
-        val customRecipe = getCustomShapelessRecipe(recipe) ?: return true
+        val customRecipe = getCustomShapelessRecipe(recipe) ?: return testShapelessVanillaRecipe(recipe, inventory)
 
         val ingredientsRemaining = customRecipe.ingredients.toMutableList()
         var canCraft = true
         for (item in inventory.matrix) {
             if (item == null) continue
             val ingredient = ingredientsRemaining.find {
-                it.itemRequirement.withEntity(item.toAgnostic()) && item.amount >= it.quantity && item.type == it.material
+                it.itemRequirement.withEntity(item.toAgnostic())
+                    && item.amount >= it.quantity
+                    && item.type == it.material
+                    && shapelessIngredientWorks(it, item)
             }
             if (ingredient == null) {
                 canCraft = false
@@ -161,8 +179,22 @@ class CraftingRecipeEvents : Listener {
         return canCraft
     }
 
+    private fun shapedIngredientWorks(ingredient: ShapedRecipeIngredient, item: ItemStack): Boolean {
+        if (ingredient !is CustomShapedRecipeIngredient) {
+            return itemIsNotCustomOrCraftsAsBaseMaterial(item)
+        }
+        return true
+    }
+
+    private fun shapelessIngredientWorks(ingredient: ShapelessRecipeIngredient, item: ItemStack): Boolean {
+        if (ingredient !is CustomShapelessRecipeIngredient) {
+            return itemIsNotCustomOrCraftsAsBaseMaterial(item)
+        }
+        return true
+    }
+
     private fun testShapedRecipe(recipe: ShapedRecipe, inventory: CraftingInventory): Boolean {
-        val customRecipe = getCustomShapedRecipe(recipe) ?: return true
+        val customRecipe = getCustomShapedRecipe(recipe) ?: return testShapedVanillaRecipe(recipe, inventory)
 
 
         var canCraft = true
@@ -174,7 +206,39 @@ class CraftingRecipeEvents : Listener {
             if (item == null) continue
             val ingredient = recipeData.getOrNull(i) ?: continue
             val succeeds =
-                ingredient.itemRequirement.withEntity(item.toAgnostic()) && item.amount >= ingredient.quantity && item.type == ingredient.material
+                ingredient.itemRequirement.withEntity(item.toAgnostic())
+                    && item.amount >= ingredient.quantity
+                    && item.type == ingredient.material
+                    && shapedIngredientWorks(ingredient, item)
+            if (!succeeds) {
+                canCraft = false
+                break
+            }
+        }
+        return canCraft
+    }
+
+    private fun getMatrix(recipe: ShapedRecipe): List<RecipeChoice?> {
+        val size = recipe.shape[0].length
+        val itemList = recipe.shape.map { row ->
+            row.map { char ->
+                recipe.choiceMap[char]
+            }
+        }.flatten()
+        val matrixData = itemList.chunked(size).trim { it != null }.flatten()
+        return matrixData
+    }
+
+    private fun testShapedVanillaRecipe(recipe: ShapedRecipe, inventory: CraftingInventory): Boolean {
+        var canCraft = true
+        val size = recipe.shape[0].length
+        val matrixData: List<ItemStack?> = inventory.matrix.toList().chunked(size).trim { it != null }.flatten()
+        val recipeData = getMatrix(recipe)
+
+        for ((i, item) in matrixData.withIndex()) {
+            if (item == null) continue
+            val ingredient = recipeData.getOrNull(i) ?: continue
+            val succeeds = ingredient.test(item) && itemIsNotCustomOrCraftsAsBaseMaterial(item)
             if (!succeeds) {
                 canCraft = false
                 break
@@ -184,7 +248,7 @@ class CraftingRecipeEvents : Listener {
     }
 
     @EventHandler
-    fun recipeBookClick(e: PlayerRecipeBookClickEvent) {
+    public fun recipeBookClick(e: PlayerRecipeBookClickEvent) {
         val recipeKey = e.recipe
         val recipe = Bukkit.getRecipe(recipeKey)
         if (recipe is ShapelessRecipe) {
@@ -204,7 +268,7 @@ class CraftingRecipeEvents : Listener {
 
 
     @EventHandler
-    fun `smithing table craft event`(ev: PrepareSmithingEvent) {
+    public fun `smithing table craft event`(ev: PrepareSmithingEvent) {
         val recipe = ev.inventory.recipe as? SmithingRecipe ?: return
         val template = ev.inventory.inputTemplate ?: ItemStack.empty()
         val base = ev.inventory.inputEquipment ?: ItemStack.empty()

@@ -1,15 +1,42 @@
 package xyz.mastriel.cutapi.resources.builtin
 
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.Serializable
-import xyz.mastriel.cutapi.resources.ResourceRef
-import xyz.mastriel.cutapi.resources.data.CuTMeta
+import kotlinx.serialization.*
+import net.peanuuutz.tomlkt.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.data.*
 
 
-@Serializable
-open class TemplateMetadata : CuTMeta() {
+public class TemplateResource(
+    ref: ResourceRef<TemplateResource>,
+    metadata: Metadata,
+    private val stringData: String
+) : Resource(ref, metadata) {
+
+    @Serializable
+    public class Metadata : CuTMeta()
+
+    public fun getPatchedTable(map: Map<String, TomlLiteral>): TomlTable {
+        var stringTable = stringData
+        for ((key, value) in map) {
+            stringTable = stringTable.replace("{{${key}}}", value.toString())
+        }
+        return CuTAPI.toml.parseToTomlTable(stringTable)
+    }
 }
 
 
-// what the fuck
-typealias SerializableTemplateMetadataRef = ResourceRef<@Contextual MetadataResource<@Contextual TemplateMetadata>>
+public val TemplateResourceLoader: ResourceFileLoader<TemplateResource> =
+    resourceLoader(
+        listOf("template"),
+        id(Plugin, "template"),
+        TemplateResource.Metadata.serializer()
+    ) {
+        success(TemplateResource(ref.cast(), metadata ?: TemplateResource.Metadata(), dataAsString))
+    }
+
+
+public typealias SerializableTemplateRef = ResourceRef<@Contextual TemplateResource>
+
+

@@ -1,9 +1,9 @@
 package xyz.mastriel.cutapi.utils.personalized
 
-import org.bukkit.entity.Player
-import xyz.mastriel.cutapi.utils.computable.AlteredComputable
+import org.bukkit.entity.*
+import xyz.mastriel.cutapi.utils.computable.*
 
-class AlteredPersonalized<T, R>(previous: Personalized<T>, alter: (player: Player, value: T) -> R) :
+public class AlteredPersonalized<T, R>(previous: Personalized<T>, alter: (player: Player, value: T) -> R) :
     Personalized<R>, AlteredComputable<Player, T, R>(previous, alter) {
 
     override fun withViewer(viewer: Player): R = super<AlteredComputable>.withEntity(viewer)

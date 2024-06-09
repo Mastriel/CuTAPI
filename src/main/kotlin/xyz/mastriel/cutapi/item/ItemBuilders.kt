@@ -1,15 +1,14 @@
 package xyz.mastriel.cutapi.item
 
-import net.kyori.adventure.text.Component
-import org.bukkit.Material
-import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
-import xyz.mastriel.cutapi.utils.personalized.withViewer
-import kotlin.reflect.KClass
+import net.kyori.adventure.text.*
+import org.bukkit.*
+import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.personalized.*
+import kotlin.reflect.*
 
 
-fun customItem(
+public fun customItem(
     id: Identifier,
     bukkitMaterial: Material,
     block: (ItemDescriptorBuilder.() -> Unit)?
@@ -20,7 +19,7 @@ fun customItem(
     return CustomItem(id, bukkitMaterial, CuTItemStack::class, descriptor)
 }
 
-fun customItem(
+public fun customItem(
     id: Identifier,
     bukkitMaterial: Material,
     descriptor: ItemDescriptor
@@ -29,7 +28,7 @@ fun customItem(
 }
 
 @JvmName("customItemWithStackType")
-inline fun <reified T : CuTItemStack> customItem(
+public inline fun <reified T : CuTItemStack> customItem(
     id: Identifier,
     bukkitMaterial: Material,
     noinline block: (ItemDescriptorBuilder.() -> Unit)?
@@ -41,7 +40,7 @@ inline fun <reified T : CuTItemStack> customItem(
 }
 
 @JvmName("customItemWithStackType")
-fun <T : CuTItemStack> typedCustomItem(
+public fun <T : CuTItemStack> typedCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
     itemStackClass: KClass<T>,
@@ -54,7 +53,7 @@ fun <T : CuTItemStack> typedCustomItem(
 }
 
 @JvmName("registerCustomItemWithStackType")
-inline fun <reified T : CuTItemStack> registerCustomItem(
+public inline fun <reified T : CuTItemStack> registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
     noinline block: (ItemDescriptorBuilder.() -> Unit)?
@@ -64,7 +63,7 @@ inline fun <reified T : CuTItemStack> registerCustomItem(
     return customItem
 }
 
-fun customItem(
+public fun customItem(
     id: Identifier,
     bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>
@@ -76,7 +75,7 @@ fun customItem(
     }
 }
 
-fun customItem(
+public fun customItem(
     id: Identifier,
     bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>,
@@ -91,7 +90,7 @@ fun customItem(
     }
 }
 
-fun registerCustomItem(
+public fun registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
     block: ItemDescriptorBuilder.() -> Unit
@@ -101,7 +100,7 @@ fun registerCustomItem(
     return customItem
 }
 
-fun registerCustomItem(
+public fun registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
     descriptor: ItemDescriptor
@@ -111,7 +110,7 @@ fun registerCustomItem(
     return customItem
 }
 
-fun registerCustomItem(
+public fun registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>
@@ -122,7 +121,7 @@ fun registerCustomItem(
 }
 
 
-fun registerCustomItem(
+public fun registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>,

@@ -1,23 +1,19 @@
 package xyz.mastriel.cutapi.item.recipe
 
-import org.bukkit.Bukkit
-import org.bukkit.inventory.RecipeChoice
-import org.bukkit.inventory.SmithingTransformRecipe
-import xyz.mastriel.cutapi.item.AgnosticItemStack
-import xyz.mastriel.cutapi.item.AgnosticMaterial
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
+import org.bukkit.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
 
-class CustomSmithingTableRecipe(
+public class CustomSmithingTableRecipe(
     override val id: Identifier,
-    val template: AgnosticMaterial,
-    val base: AgnosticMaterial,
-    val addition: AgnosticMaterial,
-    val result: AgnosticItemStack
+    public val template: AgnosticMaterial,
+    public val base: AgnosticMaterial,
+    public val addition: AgnosticMaterial,
+    public val result: AgnosticItemStack
 ) : Identifiable {
 
-    companion object : IdentifierRegistry<CustomSmithingTableRecipe>("Custom Smithing Table Recipes") {
+    public companion object : IdentifierRegistry<CustomSmithingTableRecipe>("Custom Smithing Table Recipes") {
 
         override fun register(item: CustomSmithingTableRecipe): CustomSmithingTableRecipe {
             with(item) {

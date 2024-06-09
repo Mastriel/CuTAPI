@@ -1,13 +1,12 @@
 package xyz.mastriel.cutapi.pdc.tags
 
-import org.bukkit.NamespacedKey
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.pdc.getPrimitiveValue
-import xyz.mastriel.cutapi.pdc.setPrimitiveValue
-import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
+import org.bukkit.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.pdc.*
+import xyz.mastriel.cutapi.pdc.tags.converters.*
 
-open class ItemTagContainer(private val itemStack: ItemStack) : TagContainer {
+public open class ItemTagContainer(private val itemStack: ItemStack) : TagContainer {
 
 
     override fun <P: Any, C: Any> set(key: String, complexValue: C?, converter: TagConverter<P, C>) {

@@ -1,33 +1,28 @@
 package xyz.mastriel.cutapi.item.behaviors
 
-import org.bukkit.entity.LivingEntity
-import org.bukkit.entity.Player
-import org.bukkit.event.EventHandler
-import org.bukkit.event.Listener
-import org.bukkit.event.block.BlockBreakEvent
-import org.bukkit.event.entity.EntityDamageByEntityEvent
-import org.bukkit.event.entity.EntityDamageEvent
-import org.bukkit.event.inventory.InventoryClickEvent
-import org.bukkit.event.player.PlayerDropItemEvent
-import org.bukkit.event.player.PlayerInteractEvent
-import org.bukkit.event.player.PlayerSwapHandItemsEvent
+import org.bukkit.entity.*
+import org.bukkit.event.*
+import org.bukkit.event.block.*
+import org.bukkit.event.entity.*
+import org.bukkit.event.inventory.*
+import org.bukkit.event.player.*
 import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
-import xyz.mastriel.cutapi.item.events.CustomItemObtainEvent
-import xyz.mastriel.cutapi.periodic.Periodic
-import xyz.mastriel.cutapi.utils.onlinePlayers
+import xyz.mastriel.cutapi.item.events.*
+import xyz.mastriel.cutapi.periodic.*
+import xyz.mastriel.cutapi.utils.*
 
-class ItemBehaviorEvents : Listener {
+public class ItemBehaviorEvents : Listener {
 
     @EventHandler
-    fun onObtain(event: CustomItemObtainEvent) {
+    public fun onObtain(event: CustomItemObtainEvent) {
         event.behaviors.forEach {
             it.onObtain(event.player, event.item, event)
         }
     }
 
     @EventHandler
-    fun onInteract(event: PlayerInteractEvent) {
+    public fun onInteract(event: PlayerInteractEvent) {
         val item = event.player.inventory.itemInMainHand
         if (!item.isCustom) return
         val customItem = item.wrap()
@@ -41,7 +36,7 @@ class ItemBehaviorEvents : Listener {
     }
 
     @EventHandler
-    fun onInteract(event: BlockBreakEvent) {
+    public fun onInteract(event: BlockBreakEvent) {
         val item = event.player.inventory.itemInMainHand
         if (!item.isCustom) return
         val customItem = item.wrap()
@@ -52,7 +47,7 @@ class ItemBehaviorEvents : Listener {
     }
 
     @EventHandler
-    fun onDrop(event: PlayerDropItemEvent) {
+    public fun onDrop(event: PlayerDropItemEvent) {
         val item = event.itemDrop.itemStack
         if (!item.isCustom) return
         val customItem = item.wrap()
@@ -63,7 +58,7 @@ class ItemBehaviorEvents : Listener {
     }
 
     @EventHandler
-    fun onOffhandSwap(event: PlayerSwapHandItemsEvent) {
+    public fun onOffhandSwap(event: PlayerSwapHandItemsEvent) {
         val item = event.offHandItem ?: return
         if (!item.isCustom) return
         val customItem = item.wrap()
@@ -73,7 +68,7 @@ class ItemBehaviorEvents : Listener {
     }
 
     @EventHandler
-    fun onOffhandInventoryPlace(event: InventoryClickEvent) {
+    public fun onOffhandInventoryPlace(event: InventoryClickEvent) {
         if (event.slot != 40) return
         val player = event.whoClicked as? Player ?: return
         val item = player.itemOnCursor
@@ -87,7 +82,7 @@ class ItemBehaviorEvents : Listener {
     }
 
     @EventHandler
-    fun onEntityDamage(event: EntityDamageByEntityEvent) {
+    public fun onEntityDamage(event: EntityDamageByEntityEvent) {
         if (event.cause == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK) return
 
         val damager = event.damager as? LivingEntity ?: return
@@ -107,7 +102,7 @@ class ItemBehaviorEvents : Listener {
      * Deals with onTick... functions for [ItemBehavior]. Ran once per tick.
      */
     @Periodic(1)
-    fun tickEvents() {
+    public fun tickEvents() {
         for (player in onlinePlayers()) {
 
             for ((i, item) in player.inventory.withIndex()) {

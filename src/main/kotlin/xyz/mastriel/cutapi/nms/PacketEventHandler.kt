@@ -1,11 +1,9 @@
 package xyz.mastriel.cutapi.nms
 
-import io.netty.channel.ChannelDuplexHandler
-import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.ChannelPromise
-import net.minecraft.network.protocol.game.ClientboundBundlePacket
-import org.bukkit.entity.Player
-import xyz.mastriel.cutapi.CuTAPI
+import io.netty.channel.*
+import net.minecraft.network.protocol.game.*
+import org.bukkit.entity.*
+import xyz.mastriel.cutapi.*
 
 
 @UsesNMS

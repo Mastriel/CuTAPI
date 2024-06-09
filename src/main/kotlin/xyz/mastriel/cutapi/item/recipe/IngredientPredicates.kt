@@ -1,24 +1,22 @@
 package xyz.mastriel.cutapi.item.recipe
 
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.item.AgnosticItemStack
-import xyz.mastriel.cutapi.item.CustomItem
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.item.ItemStackUtility.customIdOrNull
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.utils.computable.Computable
-import xyz.mastriel.cutapi.utils.computable.computable
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.computable.*
 
-object IngredientPredicates {
+public object IngredientPredicates {
 
-    fun hasId(id: Identifier): Computable<AgnosticItemStack, Boolean> {
+    public fun hasId(id: Identifier): Computable<AgnosticItemStack, Boolean> {
         return computable { it.vanilla().customIdOrNull == id }
     }
 
-    fun isItem(item: CustomItem<*>): Computable<AgnosticItemStack, Boolean> {
+    public fun isItem(item: CustomItem<*>): Computable<AgnosticItemStack, Boolean> {
         return computable { it.vanilla().customIdOrNull == item.id }
     }
 
-    fun isSimilar(item: ItemStack): Computable<AgnosticItemStack, Boolean> {
+    public fun isSimilar(item: ItemStack): Computable<AgnosticItemStack, Boolean> {
         return computable { it.vanilla().isSimilar(item) }
     }
 

@@ -1,21 +1,21 @@
 package xyz.mastriel.cutapi.utils.personalized
 
-import org.bukkit.entity.Player
-import xyz.mastriel.cutapi.utils.computable.Computable
+import org.bukkit.entity.*
+import xyz.mastriel.cutapi.utils.computable.*
 
 
-interface Personalized<out T> : Computable<Player, T> {
+public interface Personalized<out T> : Computable<Player, T> {
 
-    infix fun withViewer(viewer: Player): T
+    public infix fun withViewer(viewer: Player): T
 
     override fun withEntity(entity: Player): T = withEntity(entity)
 
-    override infix fun <R> alterResult(block: (Player, T) -> R) : Personalized<R> {
+    override infix fun <R> alterResult(block: (Player, T) -> R): Personalized<R> {
         return AlteredPersonalized(this, block)
     }
 }
 
-fun <T> personalized(block: Personalized<T>.(Player) -> T): Personalized<T> {
+public fun <T> personalized(block: Personalized<T>.(Player) -> T): Personalized<T> {
     return SimplePersonalized(block)
 }
 

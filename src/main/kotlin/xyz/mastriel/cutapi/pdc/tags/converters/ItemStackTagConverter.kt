@@ -1,15 +1,12 @@
 package xyz.mastriel.cutapi.pdc.tags.converters
 
-import kotlinx.serialization.SerializationException
-import org.bukkit.inventory.ItemStack
-import org.bukkit.util.io.BukkitObjectInputStream
-import org.bukkit.util.io.BukkitObjectOutputStream
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.IOException
+import kotlinx.serialization.*
+import org.bukkit.inventory.*
+import org.bukkit.util.io.*
+import java.io.*
 
 
-object ItemStackTagConverter : TagConverter<ByteArray, ItemStack>(ByteArray::class, ItemStack::class) {
+public object ItemStackTagConverter : TagConverter<ByteArray, ItemStack>(ByteArray::class, ItemStack::class) {
 
     override fun fromPrimitive(primitive: ByteArray): ItemStack {
         try {

@@ -1,18 +1,13 @@
 package xyz.mastriel.cutapi.utils
 
-import java.io.File
-import java.io.IOException
-import java.io.InputStream
-import java.net.JarURLConnection
-import java.net.URL
-import java.net.URLConnection
-import java.util.jar.JarEntry
-import java.util.jar.JarFile
+import java.io.*
+import java.net.*
+import java.util.jar.*
 
 // https://www.spigotmc.org/threads/copying-directory-from-jar-to-another-directory.308550/
 
 @Throws(IllegalArgumentException::class)
-fun copyResourceDirectory(originUrl: URL, destination: File) {
+public fun copyResourceDirectory(originUrl: URL, destination: File) {
     when (val urlConnection: URLConnection = originUrl.openConnection()) {
         is JarURLConnection -> {
             copyJarResourcesRecursively(destination, urlConnection)

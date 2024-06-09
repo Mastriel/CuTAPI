@@ -1,30 +1,21 @@
 package xyz.mastriel.cutapi.resources.builtin
 
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.block.BlockStrategy
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.resources.ByteArraySerializable
-import xyz.mastriel.cutapi.resources.Resource
-import xyz.mastriel.cutapi.resources.ResourceRef
-import xyz.mastriel.cutapi.resources.data.CuTMeta
-import xyz.mastriel.cutapi.resources.resourceLoader
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.block.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.data.*
 
-open class Model3D(
+public open class Model3D(
     override val ref: ResourceRef<Model3D>,
-    val modelJson: JsonObject,
+    public val modelJson: JsonObject,
     override val metadata: Metadata
 ) : Resource(ref), TextureLike, ByteArraySerializable {
 
     @Serializable
-    data class Metadata(
+    public data class Metadata(
         @SerialName("block_strategies")
         val blockStrategies: List<AllowedBlockStrategy> = AllowedBlockStrategy.entries.toList(),
         @SerialName("materials")
@@ -33,7 +24,7 @@ open class Model3D(
         val textures: Map<String, ResourceRef<@Contextual Texture2D>> = mapOf(),
     ) : CuTMeta()
 
-    override val customModelData = allocateCustomModelData()
+    override val customModelData: Int = allocateCustomModelData()
 
     override fun createItemModelData(): JsonObject = modelJson
 
@@ -49,7 +40,7 @@ open class Model3D(
 }
 
 
-val Model3DResourceLoader = resourceLoader(
+public val Model3DResourceLoader: ResourceFileLoader<Model3D> = resourceLoader(
     extensions = listOf("model3d.json"),
     resourceTypeId = id(Plugin, "model3d"),
     metadataSerializer = Model3D.Metadata.serializer(),
@@ -76,7 +67,7 @@ val Model3DResourceLoader = resourceLoader(
 }
 
 
-enum class AllowedBlockStrategy(val strategy: BlockStrategy) {
+public enum class AllowedBlockStrategy(public val strategy: BlockStrategy) {
     NoteBlock(BlockStrategy.NoteBlock),
     Mushroom(BlockStrategy.Mushroom),
     FakeEntity(BlockStrategy.FakeEntity)

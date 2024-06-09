@@ -1,6 +1,6 @@
 package xyz.mastriel.cutapi.resources
 
-import xyz.mastriel.cutapi.registry.ListRegistry
+import xyz.mastriel.cutapi.registry.*
 
 
 /**
@@ -17,10 +17,10 @@ import xyz.mastriel.cutapi.registry.ListRegistry
  * @see [resourceProcessor]
  * @see [ResourcePackProcessor]
  */
-fun interface ResourceProcessor {
-    fun processResources(resources: ResourceManager)
+public fun interface ResourceProcessor {
+    public fun processResources(resources: ResourceManager)
 
-    companion object : ListRegistry<ResourceProcessor>("Resource Processors")
+    public companion object : ListRegistry<ResourceProcessor>("Resource Processors")
 }
 
 
@@ -35,13 +35,13 @@ fun interface ResourceProcessor {
  * @see [resourceProcessor]
  * @see [ResourceProcessor]
  */
-object ResourcePackProcessor : ListRegistry<ResourceProcessor>("Resource Pack Processors")
+public object ResourcePackProcessor : ListRegistry<ResourceProcessor>("Resource Pack Processors")
 
 
-data class ResourceProcessorContext<T : Resource>(val resources: List<T>)
+public data class ResourceProcessorContext<T : Resource>(val resources: List<T>)
 
 
-inline fun <reified T : Resource> resourceProcessor(crossinline block: ResourceProcessorContext<T>.() -> Unit): ResourceProcessor {
+public inline fun <reified T : Resource> resourceProcessor(crossinline block: ResourceProcessorContext<T>.() -> Unit): ResourceProcessor {
     return ResourceProcessor { resources ->
         val filteredResources = resources.getAllResources().filterIsInstance<T>()
         val context = ResourceProcessorContext(filteredResources)

@@ -2,18 +2,17 @@ package xyz.mastriel.cutapi.utils
 
 import kotlinx.serialization.json.*
 import net.peanuuutz.tomlkt.*
-import kotlin.reflect.typeOf
 
 
 /**
  * Converts a TomlTable to a Json object. Used for adding things to resource packs.
  */
-fun TomlTable.toJson() : JsonObject {
+public fun TomlTable.toJson(): JsonObject {
     return tomlTableToJsonObject(this)
 }
 
 
-private fun tomlTableToJsonObject(table: TomlTable) : JsonObject {
+private fun tomlTableToJsonObject(table: TomlTable): JsonObject {
     val tomlMap = table.content.toMutableMap()
     val jsonMap = mutableMapOf<String, JsonElement>()
     for ((key, value) in tomlMap) {
@@ -22,7 +21,7 @@ private fun tomlTableToJsonObject(table: TomlTable) : JsonObject {
     return JsonObject(jsonMap)
 }
 
-private fun tomlElementToJsonElement(element: TomlElement) : JsonElement {
+private fun tomlElementToJsonElement(element: TomlElement): JsonElement {
     return when (element) {
         is TomlTable -> {
             tomlTableToJsonObject(element)
@@ -58,9 +57,9 @@ private fun tomlElementToJsonElement(element: TomlElement) : JsonElement {
 /**
  * Recursively combine 2 TomlTables together. [other] will overwrite literals and arrays of this.
  */
-fun TomlTable.combine(other: TomlTable, combineArrays: Boolean = true) : TomlTable {
+public fun TomlTable.combine(other: TomlTable, combineArrays: Boolean = true): TomlTable {
     val map = this.content.toMutableMap()
-    for ((key) in map) {
+    for (key in (map.keys + other.keys).toSet()) {
         if (map[key] is TomlTable && other[key] is TomlTable) {
             map[key] = this[key]!!.asTomlTable().combine(other[key]!!.asTomlTable())
             continue
@@ -68,14 +67,15 @@ fun TomlTable.combine(other: TomlTable, combineArrays: Boolean = true) : TomlTab
         if (map[key] is TomlArray && other[key] is TomlArray) {
             val newArray = mutableListOf<TomlElement>()
             val (currentArray, otherArray) = map[key]!!.asTomlArray() to other[key]!!.asTomlArray()
-            if (combineArrays) newArray.add(currentArray)
-            newArray.add(otherArray)
+            if (combineArrays) newArray.addAll(currentArray)
+            newArray.addAll(otherArray)
+            map[key] = TomlArray(newArray)
             continue
         }
-        if (other[key] != null) {
+
+
+        if (other[key] != null && other[key] != TomlNull) {
             map[key] = other[key]!!
-        } else {
-            map[key] = this[key]!!
         }
     }
     return TomlTable(map)
@@ -87,7 +87,11 @@ fun TomlTable.combine(other: TomlTable, combineArrays: Boolean = true) : TomlTab
  * @param ensureSameTypes when true, other will not overwrite the object keys if they are not of the
  * same type. Arrays are always of any type
  */
-fun JsonObject.combine(other: JsonObject, combineArrays: Boolean = true, ensureSameTypes: Boolean = true) : JsonObject {
+public fun JsonObject.combine(
+    other: JsonObject,
+    combineArrays: Boolean = true,
+    ensureSameTypes: Boolean = true
+): JsonObject {
     val map = this.toMutableMap()
     for ((key, value) in map) {
         if (value is JsonObject && other[key] is JsonObject) {

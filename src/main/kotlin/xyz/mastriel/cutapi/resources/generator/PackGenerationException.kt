@@ -1,4 +1,4 @@
 package xyz.mastriel.cutapi.resources.generator
 
-class PackGenerationException(reason: String, causedBy: Throwable? = null) : Exception(reason, causedBy) {
+public class PackGenerationException(reason: String, causedBy: Throwable? = null) : Exception(reason, causedBy) {
 }

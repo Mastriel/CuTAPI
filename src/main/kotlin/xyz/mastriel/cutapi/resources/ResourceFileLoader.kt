@@ -1,32 +1,26 @@
 package xyz.mastriel.cutapi.resources
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerializationException
-import org.bukkit.Bukkit
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.CuTPlugin
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.resources.data.CuTMeta
+import kotlinx.serialization.*
+import org.bukkit.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.data.*
 
 
-interface ResourceFileLoader<T : Resource> : Identifiable {
+public interface ResourceFileLoader<T : Resource> : Identifiable {
     /**
      * The dependencies of this loader. These are the loaders that must run before this one.
      * Circular dependencies are not allowed.
      * If a loader has no dependencies, it will be loaded first.
      * If a loader has dependencies, it will be loaded after all of its dependencies.
      */
-    val dependencies: List<ResourceFileLoader<*>> get() = listOf()
+    public val dependencies: List<ResourceFileLoader<*>> get() = listOf()
 
-    fun loadResource(ref: ResourceRef<T>, data: ByteArray, metadata: ByteArray?): ResourceLoadResult<T>
+    public fun loadResource(ref: ResourceRef<T>, data: ByteArray, metadata: ByteArray?): ResourceLoadResult<T>
 
-    companion object : IdentifierRegistry<ResourceFileLoader<*>>("Resource File Loaders") {
+    public companion object : IdentifierRegistry<ResourceFileLoader<*>>("Resource File Loaders") {
 
-        fun getDependencySortedLoaders(): List<ResourceFileLoader<*>> {
+        public fun getDependencySortedLoaders(): List<ResourceFileLoader<*>> {
             val sorted = mutableListOf<ResourceFileLoader<*>>()
             val visited = mutableSetOf<ResourceFileLoader<*>>()
             val recursionStack = mutableSetOf<ResourceFileLoader<*>>()
@@ -66,37 +60,37 @@ interface ResourceFileLoader<T : Resource> : Identifiable {
 /**
  * The result of trying to load a resource.
  */
-sealed class ResourceLoadResult<T : Resource> {
+public sealed class ResourceLoadResult<T : Resource> {
     /**
      * The resource has loaded successfully and can be registered! Hooray!
      */
-    data class Success<T : Resource>(val resource: T) : ResourceLoadResult<T>()
+    public data class Success<T : Resource>(val resource: T) : ResourceLoadResult<T>()
 
     /**
      * The resource failed to load, and we shouldn't try to make it into any other resource type.
      */
-    class Failure<T : Resource> : ResourceLoadResult<T>()
+    public class Failure<T : Resource> : ResourceLoadResult<T>()
 
     /**
      * The resource failed to load, but we should try to cast it into different types still.
      */
-    class WrongType<T : Resource> : ResourceLoadResult<T>()
+    public class WrongType<T : Resource> : ResourceLoadResult<T>()
 }
 
 
 private class WrongResourceTypeException : Exception()
 
-class ResourceFileLoaderContext<T : Resource, M : CuTMeta>(
-    val ref: ResourceRef<T>,
-    val data: ByteArray,
-    val metadata: M?,
-    val metadataBytes: ByteArray? = null
+public class ResourceFileLoaderContext<T : Resource, M : CuTMeta>(
+    public val ref: ResourceRef<T>,
+    public val data: ByteArray,
+    public val metadata: M?,
+    public val metadataBytes: ByteArray? = null
 ) {
-    val dataAsString by lazy { data.toString(Charsets.UTF_8) }
+    public val dataAsString: String by lazy { data.toString(Charsets.UTF_8) }
 
-    fun success(value: T) = ResourceLoadResult.Success(value)
-    fun failure() = ResourceLoadResult.Failure<T>()
-    fun wrongType() = ResourceLoadResult.WrongType<T>()
+    public fun success(value: T): ResourceLoadResult.Success<T> = ResourceLoadResult.Success(value)
+    public fun failure(): ResourceLoadResult.Failure<T> = ResourceLoadResult.Failure<T>()
+    public fun wrongType(): ResourceLoadResult.WrongType<T> = ResourceLoadResult.WrongType<T>()
 }
 
 /**
@@ -104,8 +98,8 @@ class ResourceFileLoaderContext<T : Resource, M : CuTMeta>(
  * Don't write the extensions with a dot at the beginning. If a resource has multiple
  * extensions (such as tar.gz), write it with a period only in the middle
  */
-fun <T : Resource, M : CuTMeta> resourceLoader(
-    extensions: Collection<String>,
+public fun <T : Resource, M : CuTMeta> resourceLoader(
+    extensions: Collection<String>?,
     resourceTypeId: Identifier,
     metadataSerializer: KSerializer<M>?,
     dependencies: List<ResourceFileLoader<*>> = listOf(),
@@ -118,7 +112,7 @@ fun <T : Resource, M : CuTMeta> resourceLoader(
         override val id: Identifier = resourceTypeId
 
         override fun loadResource(ref: ResourceRef<T>, data: ByteArray, metadata: ByteArray?): ResourceLoadResult<T> {
-            if (ref.extension in extensions) {
+            if (extensions == null || ref.extension in extensions) {
                 val metadataText = metadata?.toString(Charsets.UTF_8)
                 try {
                     if (metadataText == null) {
@@ -183,10 +177,10 @@ internal fun checkResourceLoading(plugin: CuTPlugin) {
     if (CuTAPI.getDescriptor(plugin).options.strictResourceLoading) {
         Plugin.error("Strict resource loading is enabled for ${plugin.namespace}. Disabling ${plugin.namespace}...")
         if (plugin != Plugin) {
+            CuTAPI.unregisterPlugin(plugin)
             Bukkit.getPluginManager().disablePlugin(plugin.plugin)
         } else {
             Plugin.error("Cannot disable the main CuTAPI plugin!")
         }
-        CuTAPI.unregisterPlugin(plugin)
     }
 }

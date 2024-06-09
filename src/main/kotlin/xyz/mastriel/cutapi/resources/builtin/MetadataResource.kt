@@ -2,24 +2,23 @@ package xyz.mastriel.cutapi.resources.builtin
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.registry.Identifier
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
-import xyz.mastriel.cutapi.resources.data.CuTMeta
+import xyz.mastriel.cutapi.resources.data.*
 
 
 /**
  * A resource which is only metadata. Extend CuTMeta and use it as the type argument
  * to make what are effectively TOML resources.
  */
-open class MetadataResource<M : CuTMeta>(
+public open class MetadataResource<M : CuTMeta>(
     override val ref: ResourceRef<MetadataResource<M>>,
     override val metadata: M?
 ) : Resource(ref, metadata) {
 
-    companion object {
-        val Loader = metadataResourceLoader(
+    public companion object {
+        public val Loader: ResourceFileLoader<MetadataResource<CuTMeta>> = metadataResourceLoader(
             extensions = listOf("toml"),
             resourceTypeId = Identifier("cutapi", "metadata"),
             serializer = CuTMeta.serializer()
@@ -30,7 +29,7 @@ open class MetadataResource<M : CuTMeta>(
 }
 
 
-fun <T : MetadataResource<M>, M : CuTMeta> metadataResourceLoader(
+public fun <T : MetadataResource<M>, M : CuTMeta> metadataResourceLoader(
     extensions: Collection<String>,
     resourceTypeId: Identifier,
     serializer: KSerializer<M>,

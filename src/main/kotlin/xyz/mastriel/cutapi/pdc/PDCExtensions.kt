@@ -1,10 +1,9 @@
 package xyz.mastriel.cutapi.pdc
 
-import org.bukkit.NamespacedKey
-import org.bukkit.persistence.PersistentDataContainer
-import org.bukkit.persistence.PersistentDataType
-import xyz.mastriel.cutapi.Plugin
-import kotlin.reflect.KClass
+import org.bukkit.*
+import org.bukkit.persistence.*
+import xyz.mastriel.cutapi.*
+import kotlin.reflect.*
 
 @Suppress("DuplicatedCode")
 internal fun <T: Any> PersistentDataContainer.setPrimitiveValue(primitiveClass: KClass<T>, key: String, value: T) {

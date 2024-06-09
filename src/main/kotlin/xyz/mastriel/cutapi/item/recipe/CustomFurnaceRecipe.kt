@@ -1,20 +1,14 @@
 package xyz.mastriel.cutapi.item.recipe
 
-import org.bukkit.Bukkit
-import org.bukkit.Material
-import org.bukkit.inventory.BlastingRecipe
-import org.bukkit.inventory.FurnaceRecipe
-import org.bukkit.inventory.SmokingRecipe
-import xyz.mastriel.cutapi.item.AgnosticItemStack
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
-import xyz.mastriel.cutapi.utils.computable.Computable
-import xyz.mastriel.cutapi.utils.computable.computable
-import xyz.mastriel.cutapi.utils.inWholeTicks
-import kotlin.time.Duration
+import org.bukkit.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.*
+import xyz.mastriel.cutapi.utils.computable.*
+import kotlin.time.*
 
-data class CustomFurnaceRecipe(
+public data class CustomFurnaceRecipe(
     override val id: Identifier,
     val input: Material,
     val output: AgnosticItemStack,
@@ -24,7 +18,7 @@ data class CustomFurnaceRecipe(
     val inputRequirement : Computable<AgnosticItemStack, Boolean> = computable(true)
 ) : Identifiable {
 
-    companion object : IdentifierRegistry<CustomFurnaceRecipe>("Custom Furnace Recipes") {
+    public companion object : IdentifierRegistry<CustomFurnaceRecipe>("Custom Furnace Recipes") {
 
         override fun register(item: CustomFurnaceRecipe): CustomFurnaceRecipe {
             with (item) {
@@ -40,7 +34,7 @@ data class CustomFurnaceRecipe(
             return super.register(item)
         }
 
-        fun registerBlasting(item: CustomFurnaceRecipe): CustomFurnaceRecipe {
+        public fun registerBlasting(item: CustomFurnaceRecipe): CustomFurnaceRecipe {
             with (item) {
                 val recipe = BlastingRecipe(
                     id.toNamespacedKey(),
@@ -54,7 +48,7 @@ data class CustomFurnaceRecipe(
             return super.register(item)
         }
 
-        fun registerSmoking(item: CustomFurnaceRecipe): CustomFurnaceRecipe {
+        public fun registerSmoking(item: CustomFurnaceRecipe): CustomFurnaceRecipe {
             with (item) {
                 val recipe = SmokingRecipe(
                     id.toNamespacedKey(),

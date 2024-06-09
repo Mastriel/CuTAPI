@@ -1,7 +1,7 @@
 package xyz.mastriel.cutapi.utils.personalized
 
-import org.bukkit.entity.Player
-import xyz.mastriel.cutapi.utils.computable.AlteredComputableWithDefault
+import org.bukkit.entity.*
+import xyz.mastriel.cutapi.utils.computable.*
 
 internal class AlteredPersonalizedWithDefault<T, R>(
     previous: PersonalizedWithDefault<T>,

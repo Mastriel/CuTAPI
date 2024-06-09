@@ -1,14 +1,14 @@
 package xyz.mastriel.cutapi.item.behaviors
 
-import org.bukkit.Material
-import org.bukkit.enchantments.Enchantment
-import org.bukkit.entity.Player
-import org.bukkit.inventory.ItemFlag
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.registry.id
+import org.bukkit.*
+import org.bukkit.enchantments.*
+import org.bukkit.entity.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
 
-object Shiny : ItemBehavior(id(Plugin, "shiny")) {
+public object Shiny : ItemBehavior(id(Plugin, "shiny")) {
 
     override fun onRender(viewer: Player?, item: CuTItemStack) {
         if (item.enchantments.isEmpty()) {

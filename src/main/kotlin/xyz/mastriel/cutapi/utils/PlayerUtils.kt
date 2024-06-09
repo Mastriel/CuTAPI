@@ -1,11 +1,11 @@
 package xyz.mastriel.cutapi.utils
 
-import org.bukkit.Bukkit
-import org.bukkit.entity.Player
+import org.bukkit.*
+import org.bukkit.entity.*
 
 
-fun onlinePlayers() = Bukkit.getOnlinePlayers()
+public fun onlinePlayers(): List<Player> = Bukkit.getOnlinePlayers()
     .filterNotNull()
     .toList()
 
-fun playerNameList() = onlinePlayers().map(Player::getName)
+public fun playerNameList(): List<String> = onlinePlayers().map(Player::getName)

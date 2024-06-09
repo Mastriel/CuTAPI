@@ -1,14 +1,15 @@
 package xyz.mastriel.cutapi.resources.data
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 
 @Serializable
-enum class ResourceType {
+public enum class ResourceType {
     @SerialName("texture")
     TEXTURE,
+
     @SerialName("model")
     MODEL,
+
     @SerialName("audio")
     AUDIO
 }

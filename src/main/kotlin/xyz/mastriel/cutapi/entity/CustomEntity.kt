@@ -1,17 +1,16 @@
 package xyz.mastriel.cutapi.entity
 
-import org.bukkit.entity.Entity
-import org.bukkit.event.Listener
-import xyz.mastriel.cutapi.behavior.BehaviorHolder
-import xyz.mastriel.cutapi.entity.behaviors.EntityBehavior
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.Identifier
-import kotlin.reflect.KClass
+import org.bukkit.entity.*
+import org.bukkit.event.*
+import xyz.mastriel.cutapi.behavior.*
+import xyz.mastriel.cutapi.entity.behaviors.*
+import xyz.mastriel.cutapi.registry.*
+import kotlin.reflect.*
 
-class CustomEntity<T : Entity>(
+public class CustomEntity<T : Entity>(
     override val id: Identifier,
-    val type: KClass<T>,
-    val descriptor: EntityDescriptor
+    public val type: KClass<T>,
+    public val descriptor: EntityDescriptor
 ) : Identifiable, Listener, BehaviorHolder<EntityBehavior> {
 
 

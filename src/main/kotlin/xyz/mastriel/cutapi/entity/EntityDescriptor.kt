@@ -1,38 +1,36 @@
 package xyz.mastriel.cutapi.entity
 
-import net.kyori.adventure.text.Component
-import org.bukkit.entity.Entity
-import org.bukkit.entity.LivingEntity
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.behavior.isRepeatable
-import xyz.mastriel.cutapi.entity.behaviors.EntityBehavior
-import xyz.mastriel.cutapi.resources.ResourceRef
-import xyz.mastriel.cutapi.resources.builtin.Texture2D
-import xyz.mastriel.cutapi.utils.personalized.Personalized
-import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
+import net.kyori.adventure.text.*
+import org.bukkit.entity.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.behavior.*
+import xyz.mastriel.cutapi.entity.behaviors.*
+import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.builtin.*
+import xyz.mastriel.cutapi.utils.personalized.*
 
-class EntityDescriptor(
-    val name: PersonalizedWithDefault<Component>? = null,
-    val texture: Personalized<ResourceRef<Texture2D>>? = null,
-    val maxHealth: Int = 20,
-    val entityBehaviors: List<EntityBehavior> = listOf(),
-    val equipment: EntityEquipment
+public class EntityDescriptor(
+    public val name: PersonalizedWithDefault<Component>? = null,
+    public val texture: Personalized<ResourceRef<Texture2D>>? = null,
+    public val maxHealth: Int = 20,
+    public val entityBehaviors: List<EntityBehavior> = listOf(),
+    public val equipment: EntityEquipment
 ) {
 
 }
 
 
-open class EntityDescriptorBuilder {
-    var name: PersonalizedWithDefault<Component>? = null
-    var maxHealth: Int = 20
-    var texture : Personalized<ResourceRef<Texture2D>>? = null
+public open class EntityDescriptorBuilder {
+    public var name: PersonalizedWithDefault<Component>? = null
+    public var maxHealth: Int = 20
+    public var texture: Personalized<ResourceRef<Texture2D>>? = null
 
-    var equipment : EntityEquipment = EntityEquipment()
+    public var equipment: EntityEquipment = EntityEquipment()
         private set
 
-    val entityBehaviors = mutableListOf<EntityBehavior>()
+    public val entityBehaviors: MutableList<EntityBehavior> = mutableListOf<EntityBehavior>()
 
-    fun behavior(vararg behaviors: EntityBehavior) {
+    public fun behavior(vararg behaviors: EntityBehavior) {
         for (behavior in behaviors) {
             if (this.entityBehaviors.any { it.id == behavior.id } && !behavior.isRepeatable())
                 error("${behavior.id} lacks a RepeatableBehavior annotation to be repeatable.")
@@ -40,7 +38,7 @@ open class EntityDescriptorBuilder {
         }
     }
 
-    fun behavior(behaviors: Collection<EntityBehavior>) {
+    public fun behavior(behaviors: Collection<EntityBehavior>) {
         for (behavior in behaviors) {
             if (this.entityBehaviors.any { it.id == behavior.id } && !behavior.isRepeatable())
                 error("${behavior.id} lacks a RepeatableBehavior annotation to be repeatable.")
@@ -48,11 +46,11 @@ open class EntityDescriptorBuilder {
         }
     }
 
-    fun equipment(block: EquipmentBuilder.() -> Unit) {
+    public fun equipment(block: EquipmentBuilder.() -> Unit) {
         equipment = EquipmentBuilder().apply(block).build()
     }
 
-    fun build() : EntityDescriptor {
+    public fun build(): EntityDescriptor {
         return EntityDescriptor(
             name,
             texture,
@@ -63,7 +61,7 @@ open class EntityDescriptorBuilder {
     }
 }
 
-data class EntityEquipment(
+public data class EntityEquipment(
     val helmet: ItemStack? = null,
     val chestplate: ItemStack? = null,
     val leggings: ItemStack? = null,
@@ -71,7 +69,7 @@ data class EntityEquipment(
     val mainhand: ItemStack? = null,
     val offhand: ItemStack? = null,
 ) {
-    fun applyToEntity(entity: Entity) {
+    public fun applyToEntity(entity: Entity) {
         if (entity !is LivingEntity) return
         with(entity.equipment) {
             if (this == null) return@with
@@ -85,16 +83,16 @@ data class EntityEquipment(
     }
 }
 
-class EquipmentBuilder {
+public class EquipmentBuilder {
 
-    val helmet: ItemStack? = null
-    val chestplate: ItemStack? = null
-    val leggings: ItemStack? = null
-    val boots: ItemStack? = null
-    val mainhand: ItemStack? = null
-    val offhand: ItemStack? = null
+    public val helmet: ItemStack? = null
+    public val chestplate: ItemStack? = null
+    public val leggings: ItemStack? = null
+    public val boots: ItemStack? = null
+    public val mainhand: ItemStack? = null
+    public val offhand: ItemStack? = null
 
-    fun build() : EntityEquipment {
+    public fun build(): EntityEquipment {
         return EntityEquipment(
             helmet,
             chestplate,
@@ -107,8 +105,8 @@ class EquipmentBuilder {
 }
 
 
-fun entityDescriptor(block: EntityDescriptorBuilder.() -> Unit) =
+public fun entityDescriptor(block: EntityDescriptorBuilder.() -> Unit): EntityDescriptor =
     EntityDescriptorBuilder().apply(block).build()
 
-fun defaultEntityDescriptor() =
+public fun defaultEntityDescriptor(): EntityDescriptor =
     EntityDescriptorBuilder().build()

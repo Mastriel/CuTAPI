@@ -1,9 +1,9 @@
 package xyz.mastriel.cutapi.resources.pack
 
-import xyz.mastriel.cutapi.utils.cutConfigValue
+import xyz.mastriel.cutapi.utils.*
 
-object PackConfig {
-    val PackPng by cutConfigValue("pack-png", "pack.png")
-    val PackDescription by cutConfigValue("pack-description", "CuTAPI Generated Resource Pack")
-    val PackName by cutConfigValue("generated-pack-name", "pack.zip")
+public object PackConfig {
+    public val PackPng: String by cutConfigValue("pack-png", "pack.png")
+    public val PackDescription: String by cutConfigValue("pack-description", "CuTAPI Generated Resource Pack")
+    public val PackName: String by cutConfigValue("generated-pack-name", "pack.zip")
 }

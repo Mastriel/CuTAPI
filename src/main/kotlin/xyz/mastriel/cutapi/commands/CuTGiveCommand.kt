@@ -1,21 +1,16 @@
 package xyz.mastriel.cutapi.commands
 
-import org.bukkit.Bukkit
-import org.bukkit.command.Command
-import org.bukkit.command.CommandSender
-import org.bukkit.command.TabExecutor
-import xyz.mastriel.cutapi.item.CustomItem
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.idOrNull
-import xyz.mastriel.cutapi.utils.chatTooltip
-import xyz.mastriel.cutapi.utils.colored
-import xyz.mastriel.cutapi.utils.playerNameList
+import org.bukkit.*
+import org.bukkit.command.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.*
 
-object CuTGiveCommand : Command("cutgive") {
+public object CuTGiveCommand : Command("cutgive") {
 
-    override fun getDescription() = "Gives a custom item to a player."
-    override fun getPermission() = "cutapi.admin.give"
-    override fun getAliases() = listOf("cgive")
+    override fun getDescription(): String = "Gives a custom item to a player."
+    override fun getPermission(): String = "cutapi.admin.give"
+    override fun getAliases(): List<String> = listOf("cgive")
 
     override fun tabComplete(sender: CommandSender, alias: String, args: Array<out String>): MutableList<String> {
         val position = args.size
@@ -42,7 +37,6 @@ object CuTGiveCommand : Command("cutgive") {
 
         val targetArg = args.getOrNull(0)
         val namespacedItemArg = args.getOrNull(1)
-
 
 
         var quantity: Int? = null
@@ -82,7 +76,7 @@ object CuTGiveCommand : Command("cutgive") {
         return true
     }
 
-    private fun parseQuantity(number: String) : Int? {
+    private fun parseQuantity(number: String): Int? {
         val int = number.toIntOrNull() ?: return null
         if (int < 1 || int > 64) return null
         return int

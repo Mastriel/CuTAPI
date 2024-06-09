@@ -1,8 +1,7 @@
 package xyz.mastriel.cutapi.entity.behaviors
 
-import xyz.mastriel.cutapi.behavior.Behavior
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.Identifier
+import xyz.mastriel.cutapi.behavior.*
+import xyz.mastriel.cutapi.registry.*
 
-class EntityBehavior(override val id: Identifier) : Behavior, Identifiable {
+public class EntityBehavior(override val id: Identifier) : Behavior, Identifiable {
 }

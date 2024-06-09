@@ -1,21 +1,16 @@
 package xyz.mastriel.cutapi.resources.data
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import net.peanuuutz.tomlkt.TomlTable
-import net.peanuuutz.tomlkt.asTomlTable
-import net.peanuuutz.tomlkt.encodeToTomlElement
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.unknownID
-import xyz.mastriel.cutapi.resources.builtin.SerializableTemplateMetadataRef
-import xyz.mastriel.cutapi.utils.combine
+import kotlinx.serialization.*
+import net.peanuuutz.tomlkt.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.builtin.*
+import xyz.mastriel.cutapi.utils.*
 
 @Serializable
-open class CuTMeta {
+public open class CuTMeta {
     @SerialName("generate")
-    open val generateBlock = listOf<GenerateBlock>()
+    public open val generateBlock: List<GenerateBlock> = listOf()
 
     /**
      * Clone blocks will create a whole new resource,
@@ -23,37 +18,47 @@ open class CuTMeta {
      * CuTMeta onto any metadata written in this block.
      */
     @SerialName("clone")
-    open val cloneBlock = listOf<CuTMeta>()
+    public open val cloneBlocks: List<@Contextual TomlTable> = listOf()
 
-    @SerialName("res_type")
-    val resourceType: Identifier = unknownID()
+    @SerialName("id")
+    public val resourceType: Identifier = unknownID()
 
     @SerialName("extends")
-    val extends: List<SerializableTemplateMetadataRef> = emptyList()
+    public val extends: Map<SerializableTemplateRef, List<Map<String, @Contextual TomlLiteral>>> = emptyMap()
 
 
     /**
      * Create a new CuTMeta, using this as a base,
      * and applying properties from [other] as needed.
      */
-    fun <T : CuTMeta> apply(other: T, otherSerializer: KSerializer<T>): T {
-        val thisSerial = CuTAPI.toml.encodeToTomlElement(this).asTomlTable()
-        val otherSerial = CuTAPI.toml.encodeToTomlElement(otherSerializer, other).asTomlTable()
+    @Suppress("UNCHECKED_CAST")
+    public fun <T : CuTMeta> apply(other: T, serializer: KSerializer<T>): T {
+        val thisSerial = CuTAPI.toml.encodeToTomlElement(serializer, this as T).asTomlTable()
+        val otherSerial = CuTAPI.toml.encodeToTomlElement(serializer, other).asTomlTable()
 
         val newTable = thisSerial.combine(otherSerial, combineArrays = true)
 
-        return CuTAPI.toml.decodeFromTomlElement(otherSerializer, newTable)
+        return CuTAPI.toml.decodeFromTomlElement(serializer, newTable)
+    }
+
+
+    public fun toToml(): TomlTable {
+        return CuTAPI.toml.encodeToTomlElement(this).asTomlTable()
+
     }
 }
 
 
 @Serializable
-open class GenerateBlock {
+public open class GenerateBlock {
     @SerialName("gen_id")
-    open val generatorId = unknownID()
+    public open val generatorId: Identifier = unknownID()
+
+    @SerialName("sub_id")
+    public open val subId: String? = null
 
     @SerialName("options")
-    open val options: TomlTable = TomlTable()
+    public open val options: TomlTable = TomlTable()
 }
 
 

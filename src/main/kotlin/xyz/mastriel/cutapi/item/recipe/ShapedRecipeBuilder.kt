@@ -1,32 +1,33 @@
 package xyz.mastriel.cutapi.item.recipe
 
-import org.bukkit.Bukkit
-import org.bukkit.Material
-import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.ShapedRecipe
-import xyz.mastriel.cutapi.item.AgnosticItemStack
-import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.item.CustomItem
-import xyz.mastriel.cutapi.item.ItemDescriptorBuilder
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
-import xyz.mastriel.cutapi.utils.computable.Computable
-import xyz.mastriel.cutapi.utils.computable.computable
-import xyz.mastriel.cutapi.utils.trim
+import org.bukkit.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.*
+import xyz.mastriel.cutapi.utils.computable.*
 
 
-data class ShapedRecipeIngredient(
-    val char: Char,
-    val material: Material,
-    val quantity: Int = 1,
-    val itemRequirement: Computable<AgnosticItemStack, Boolean>,
-    val onCraft: IngredientCraftContext.() -> Unit
+public open class ShapedRecipeIngredient(
+    public val char: Char,
+    public val material: Material,
+    public val quantity: Int = 1,
+    public val itemRequirement: Computable<AgnosticItemStack, Boolean>,
+    public val onCraft: IngredientCraftContext.() -> Unit
 )
+
+public class CustomShapedRecipeIngredient(
+    char: Char,
+    material: Material,
+    quantity: Int = 1,
+    itemRequirement: Computable<AgnosticItemStack, Boolean>,
+    onCraft: IngredientCraftContext.() -> Unit
+) : ShapedRecipeIngredient(char, material, quantity, itemRequirement, onCraft)
+
 
 private typealias RecipePattern = Triple<String, String, String?>
 
-data class CustomShapedRecipe(
+public data class CustomShapedRecipe(
     override val id: Identifier,
     val pattern: RecipePattern,
     val size: Size,
@@ -34,22 +35,22 @@ data class CustomShapedRecipe(
     val result: ItemStack
 ) : Identifiable {
 
-    enum class Size(val size: Int) { Four(4), Nine(9) }
+    public enum class Size(public val size: Int) { Four(4), Nine(9) }
 
 
-    fun getIngredientAtIndex(i: Int): ShapedRecipeIngredient? {
+    public fun getIngredientAtIndex(i: Int): ShapedRecipeIngredient? {
         if (size == Size.Four) {
             val char = when (i) {
                 in 0..1 -> pattern.first.getOrNull(i)
-                in 2..3 -> pattern.second.getOrNull(i)
+                in 2..3 -> pattern.second.getOrNull(i % 2)
                 else -> throw IndexOutOfBoundsException(i)
             }
             return ingredients[char]
         } else if (size == Size.Nine) {
             val char = when (i) {
                 in 0..2 -> pattern.first.getOrNull(i)
-                in 3..5 -> pattern.second.getOrNull(i)
-                in 6..8 -> pattern.third?.getOrNull(i)
+                in 3..5 -> pattern.second.getOrNull(i % 3)
+                in 6..8 -> pattern.third?.getOrNull(i % 3)
                 else -> throw IndexOutOfBoundsException(i)
             }
             return ingredients[char]
@@ -57,11 +58,12 @@ data class CustomShapedRecipe(
         throw IllegalStateException()
     }
 
-    fun getMatrix(): List<ShapedRecipeIngredient?> {
+    public fun getMatrix(): List<ShapedRecipeIngredient?> {
+        println(pattern)
         val matrix = mutableListOf<ShapedRecipeIngredient?>()
         for (i in 0 until size.size) {
             val ingredient = getIngredientAtIndex(i)
-            if (ingredient != null) matrix.add(ingredient)
+            matrix.add(ingredient)
         }
         val items = if (size == Size.Four) {
             matrix.chunked(2)
@@ -72,7 +74,7 @@ data class CustomShapedRecipe(
         return items.trim { it != null }.flatten()
     }
 
-    companion object : IdentifierRegistry<CustomShapedRecipe>("Shaped Recipes") {
+    public companion object : IdentifierRegistry<CustomShapedRecipe>("Shaped Recipes") {
         override fun register(item: CustomShapedRecipe): CustomShapedRecipe {
             val itemResult = item.result
 
@@ -82,9 +84,11 @@ data class CustomShapedRecipe(
                 recipe.shape(item.pattern.first, item.pattern.second)
             } else if (item.size == Size.Nine) {
                 recipe.shape(
-                    item.pattern.first,
-                    item.pattern.second,
-                    item.pattern.third ?: "   "
+                    *listOfNotNull(
+                        item.pattern.first,
+                        item.pattern.second,
+                        item.pattern.third
+                    ).toTypedArray()
                 )
             }
 
@@ -100,19 +104,23 @@ data class CustomShapedRecipe(
     }
 }
 
-class ShapedRecipeBuilder(
-    val result: ItemStack,
+public class ShapedRecipeBuilder(
+    public val result: ItemStack,
     override val id: Identifier,
-    val size: CustomShapedRecipe.Size
+    public val size: CustomShapedRecipe.Size
 ) : CraftingRecipeBuilder<CustomShapedRecipe>, Identifiable {
 
 
-    constructor(result: CuTItemStack, id: Identifier, size: CustomShapedRecipe.Size) : this(result.handle, id, size)
+    public constructor(result: CuTItemStack, id: Identifier, size: CustomShapedRecipe.Size) : this(
+        result.handle,
+        id,
+        size
+    )
 
     private var pattern: RecipePattern? = null
     private var ingredients: MutableMap<Char, ShapedRecipeIngredient> = mutableMapOf()
 
-    fun pattern(row1: String, row2: String, row3: String? = null) {
+    public fun pattern(row1: String, row2: String, row3: String? = null) {
         if ((size == CustomShapedRecipe.Size.Four && row1.length > 2) ||
             (size == CustomShapedRecipe.Size.Four && row2.length > 2) ||
             (size == CustomShapedRecipe.Size.Four && row3 != null)
@@ -131,7 +139,7 @@ class ShapedRecipeBuilder(
         pattern = Triple(row1, row2, row3)
     }
 
-    fun ingredient(
+    public fun ingredient(
         char: Char,
         material: Material,
         quantity: Int = 1,
@@ -141,7 +149,7 @@ class ShapedRecipeBuilder(
         ingredients[char] = ShapedRecipeIngredient(char, material, quantity, itemRequirement, onCraft)
     }
 
-    fun ingredient(
+    public fun ingredient(
         char: Char,
         item: CustomItem<*>,
         quantity: Int = 1,
@@ -149,8 +157,8 @@ class ShapedRecipeBuilder(
         onCraft: IngredientCraftContext.() -> Unit = {}
     ) {
         repeat(slotsRequired) {
-            ingredients[char] =
-                ShapedRecipeIngredient(char, item.type, quantity, IngredientPredicates.isItem(item), onCraft)
+            val predicate = IngredientPredicates.isItem(item)
+            ingredients[char] = CustomShapedRecipeIngredient(char, item.type, quantity, predicate, onCraft)
         }
     }
 
@@ -164,7 +172,7 @@ class ShapedRecipeBuilder(
     }
 }
 
-fun ItemDescriptorBuilder.shapedRecipe(
+public fun ItemDescriptorBuilder.shapedRecipe(
     id: Identifier,
     size: CustomShapedRecipe.Size,
     amount: Int = 1,
@@ -176,7 +184,7 @@ fun ItemDescriptorBuilder.shapedRecipe(
     }
 }
 
-fun shapedRecipe(
+public fun shapedRecipe(
     id: Identifier,
     size: CustomShapedRecipe.Size,
     result: ItemStack,
@@ -186,9 +194,9 @@ fun shapedRecipe(
     return builder.build()
 }
 
-fun registerShapedRecipe(
+public fun registerShapedRecipe(
     id: Identifier,
     size: CustomShapedRecipe.Size,
     result: ItemStack,
     block: ShapedRecipeBuilder.() -> Unit
-) = CustomShapedRecipe.register(shapedRecipe(id, size, result, block))
+): CustomShapedRecipe = CustomShapedRecipe.register(shapedRecipe(id, size, result, block))

@@ -1,9 +1,8 @@
 package xyz.mastriel.cutapi.resources
 
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.CuTPlugin
+import xyz.mastriel.cutapi.*
 
-data class FolderRef internal constructor(override val plugin: CuTPlugin, override val pathList: List<String>) :
+public data class FolderRef internal constructor(override val plugin: CuTPlugin, override val pathList: List<String>) :
     Locator {
 
     override val path: String
@@ -16,11 +15,11 @@ data class FolderRef internal constructor(override val plugin: CuTPlugin, overri
             return folderRef(plugin, list.joinToString("/"))
         }
 
-    fun hasChildren(): Boolean {
+    public fun hasChildren(): Boolean {
         return getChildren().isNotEmpty()
     }
 
-    fun getChildren(): List<Locator> {
+    public fun getChildren(): List<Locator> {
         return CuTAPI.resourceManager.getFolderContents(plugin, this)
     }
 
@@ -28,31 +27,31 @@ data class FolderRef internal constructor(override val plugin: CuTPlugin, overri
         return "${plugin.namespace}://${path}"
     }
 
-    operator fun div(path: String): FolderRef {
+    public operator fun div(path: String): FolderRef {
         return FolderRef(plugin, pathList + path.split("/"))
     }
 
-    fun and(path: String): FolderRef {
+    public fun and(path: String): FolderRef {
         return this / path
     }
 
-    fun <T : Resource> child(path: String): ResourceRef<T> {
-        return ResourceRef(plugin, pathList + path.removePrefix("/").removeSuffix("/").split("/"))
+    public fun <T : Resource> child(path: String): ResourceRef<T> {
+        return ResourceRef(plugin, rootAlias, pathList + path.removePrefix("/").removeSuffix("/").split("/"))
     }
 }
 
-fun folderRef(plugin: CuTPlugin, path: String): FolderRef {
+public fun folderRef(plugin: CuTPlugin, path: String): FolderRef {
     return FolderRef(plugin, normalizeFolder(path).split("/").filterNot { it.isEmpty() })
 }
 
-fun folderRef(stringPath: String): FolderRef {
+public fun folderRef(stringPath: String): FolderRef {
     val (namespace, path) = stringPath.split("://")
     val plugin = CuTAPI.getPluginFromNamespace(namespace)
     return folderRef(plugin, normalizeFolder(path))
 }
 
 
-fun normalizeFolder(path: String): String {
+public fun normalizeFolder(path: String): String {
     var newPath = path
     if (newPath.startsWith("/")) newPath = newPath.removePrefix("/")
     if (!newPath.endsWith("/")) newPath += "/"

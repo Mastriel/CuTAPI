@@ -1,29 +1,26 @@
 package xyz.mastriel.cutapi.resources
 
-import com.github.shynixn.mccoroutine.bukkit.minecraftDispatcher
-import kotlinx.coroutines.withContext
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.CuTPlugin
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.resources.generator.PackGenerationException
-import xyz.mastriel.cutapi.resources.generator.PackVersion9To18Generator
-import xyz.mastriel.cutapi.resources.generator.ResourcePackGenerator
-import xyz.mastriel.cutapi.resources.pack.PackInfo
-import xyz.mastriel.cutapi.resources.uploader.Uploader
+import com.github.shynixn.mccoroutine.bukkit.*
+import kotlinx.coroutines.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.generator.*
+import xyz.mastriel.cutapi.resources.pack.*
+import xyz.mastriel.cutapi.resources.process.*
+import xyz.mastriel.cutapi.resources.uploader.*
 import xyz.mastriel.cutapi.utils.*
-import java.io.File
-import java.security.MessageDigest
-import kotlin.time.measureTime
+import java.io.*
+import java.security.*
+import kotlin.time.*
 
-class ResourcePackManager {
+public class ResourcePackManager {
 
-    val tempFolder = Plugin.dataFolder.appendPath("pack-tmp/")
+    public val tempFolder: File = Plugin.dataFolder.appendPath("pack-tmp/")
 
     private val zipName by cutConfigValue("generated-pack-name", "pack.zip")
-    val zipFile: File = Plugin.dataFolder.appendPath(zipName)
+    public val zipFile: File = Plugin.dataFolder.appendPath(zipName)
 
-    var packInfo: PackInfo? = null
+    public var packInfo: PackInfo? = null
         private set
 
     /**
@@ -31,7 +28,7 @@ class ResourcePackManager {
      *
      * @param namespace The namespace of the plugin.
      */
-    fun getTexturesFolder(namespace: String): File {
+    public fun getTexturesFolder(namespace: String): File {
         return File(tempFolder, "assets/$namespace/textures/item")
     }
 
@@ -40,7 +37,7 @@ class ResourcePackManager {
      *
      * @param namespace The namespace of the plugin.
      */
-    fun getModelsFolder(namespace: String): File {
+    public fun getModelsFolder(namespace: String): File {
         return File(tempFolder, "assets/$namespace/models/item")
     }
 
@@ -49,13 +46,13 @@ class ResourcePackManager {
      *
      * @param plugin The plugin. Will fail if this plugin is not registered in CuTAPI.
      */
-    fun getTexturesFolder(plugin: CuTPlugin): File {
+    public fun getTexturesFolder(plugin: CuTPlugin): File {
         val namespace = CuTAPI.getDescriptor(plugin).namespace
         return getTexturesFolder(namespace).also { it.mkdirs() }
     }
 
 
-    val generator: ResourcePackGenerator
+    public val generator: ResourcePackGenerator
         get() {
             // TODO("detect versions dynamically")
             return PackVersion9To18Generator()
@@ -64,7 +61,7 @@ class ResourcePackManager {
     /**
      * Checks if the zip file exists and is ready to be uploaded
      */
-    fun zipReady() = zipFile.exists()
+    public fun zipReady(): Boolean = zipFile.exists()
 
 
     /**
@@ -101,8 +98,9 @@ class ResourcePackManager {
     }
 
 
-    suspend fun regenerate(): PackInfo = withContext(Plugin.minecraftDispatcher) {
+    public suspend fun regenerate(): PackInfo = withContext(Plugin.minecraftDispatcher) {
         try {
+            CuTAPI.resourceManager.clearTemp()
             for (plugin in CuTAPI.registeredPlugins) {
                 try {
                     CuTAPI.resourceManager.dumpPluginResourcesToTemp(plugin)
@@ -126,14 +124,18 @@ class ResourcePackManager {
         }
     }
 
-    val onPackGenerateFinished = EventHandlerList<Unit>()
+    public val onPackGenerateFinished: EventHandlerList<Unit> = EventHandlerList()
 
 
     private fun runResourceProcessors() {
         val executionTime = measureTime {
+            generateResources(CuTAPI.resourceManager.getAllResources(), ResourceGenerationStage.BeforeProcessors)
+            // we always want the generate processor to run last.
             ResourceProcessor.forEach {
                 it.processResources(CuTAPI.resourceManager)
             }
+
+            generateResources(CuTAPI.resourceManager.getAllResources(), ResourceGenerationStage.AfterProcessors)
         }
         Plugin.info("Resource Processors (normal registry) ran in $executionTime.")
     }

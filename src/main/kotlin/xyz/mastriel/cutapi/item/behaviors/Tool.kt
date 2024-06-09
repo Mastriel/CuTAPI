@@ -1,20 +1,13 @@
 package xyz.mastriel.cutapi.item.behaviors
 
-import org.bukkit.Material
-import org.bukkit.Tag
-import org.bukkit.block.Block
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.behavior.RepeatableBehavior
-import xyz.mastriel.cutapi.behavior.getBehaviorsOfType
-import xyz.mastriel.cutapi.item.AgnosticItemStack
-import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.item.ItemDescriptorBuilder
-import xyz.mastriel.cutapi.registry.Identifiable
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
-import xyz.mastriel.cutapi.registry.id
-import java.util.function.Predicate
+import org.bukkit.*
+import org.bukkit.block.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.behavior.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
+import java.util.function.*
 
 /**
  * If the vanilla material of the custom item is already a tool, it will be considered a tool here as well!
@@ -24,7 +17,7 @@ import java.util.function.Predicate
  * for any item stack, including vanilla.
  */
 @RepeatableBehavior
-data class Tool(val category: ToolCategory, val tier: ToolTier, val toolSpeed: ToolSpeed) :
+public data class Tool(val category: ToolCategory, val tier: ToolTier, val toolSpeed: ToolSpeed) :
     ItemBehavior(id(Plugin, "tool")) {
 
     override fun ItemDescriptorBuilder.modifyDescriptor() {
@@ -36,11 +29,11 @@ data class Tool(val category: ToolCategory, val tier: ToolTier, val toolSpeed: T
         }
     }
 
-    companion object {
+    public companion object {
 
-        val Fists = Tool(ToolCategory.Fists, ToolTier.Nothing, ToolSpeed.Fists)
+        public val Fists: Tool = Tool(ToolCategory.Fists, ToolTier.Nothing, ToolSpeed.Fists)
 
-        fun from(itemStack: AgnosticItemStack): List<Tool> {
+        public fun from(itemStack: AgnosticItemStack): List<Tool> {
             return when (itemStack) {
                 is AgnosticItemStack.Vanilla -> listOf(fromVanilla(itemStack.vanilla()))
                 is AgnosticItemStack.Custom -> fromCustom(itemStack.custom())
@@ -111,28 +104,28 @@ data class Tool(val category: ToolCategory, val tier: ToolTier, val toolSpeed: T
 
 
 @JvmInline
-value class ToolSpeed(val speed: Float) {
+public value class ToolSpeed(public val speed: Float) {
 
     /**
      * Note: This only contains VANILLA tool speeds!
      */
-    companion object Vanilla {
+    public companion object Vanilla {
         private val map = mutableMapOf<Identifier, ToolSpeed>()
 
-        val Fists = ToolSpeed(1.0f)
-        val Wood = ToolSpeed(2.0f)
-        val Stone = ToolSpeed(4.0f)
-        val Iron = ToolSpeed(6.0f)
-        val Diamond = ToolSpeed(8.0f)
-        val Netherite = ToolSpeed(9.0f)
-        val Gold = ToolSpeed(12.0f)
+        public val Fists: ToolSpeed = ToolSpeed(1.0f)
+        public val Wood: ToolSpeed = ToolSpeed(2.0f)
+        public val Stone: ToolSpeed = ToolSpeed(4.0f)
+        public val Iron: ToolSpeed = ToolSpeed(6.0f)
+        public val Diamond: ToolSpeed = ToolSpeed(8.0f)
+        public val Netherite: ToolSpeed = ToolSpeed(9.0f)
+        public val Gold: ToolSpeed = ToolSpeed(12.0f)
 
         private fun register(id: Identifier, speed: ToolSpeed) {
             if (map.containsKey(id)) error("Tool speed $id is already registered.")
             map[id] = speed
         }
 
-        fun overwrite(id: Identifier, speed: ToolSpeed) {
+        public fun overwrite(id: Identifier, speed: ToolSpeed) {
             if (!map.containsKey(id)) error("Tool speed $id is not registered. This registry only contains Vanilla Tool Speeds.")
             map[id] = speed
         }
@@ -149,31 +142,31 @@ value class ToolSpeed(val speed: Float) {
     }
 }
 
-class ToolTier private constructor(
+public class ToolTier private constructor(
     override val id: Identifier,
-    val breakingLevel: Float,
-    val isVanilla: Boolean = false
+    public val breakingLevel: Float,
+    public val isVanilla: Boolean = false
 ) : Identifiable {
 
-    constructor(id: Identifier, breakingLevel: Float) : this(id, breakingLevel, false)
+    public constructor(id: Identifier, breakingLevel: Float) : this(id, breakingLevel, false)
 
 
-    companion object : IdentifierRegistry<ToolTier>("Tool Tiers") {
+    public companion object : IdentifierRegistry<ToolTier>("Tool Tiers") {
 
-        val Nothing get() = get(id(Plugin, "nothing"))
-        val Wood get() = get(id(Plugin, "wood"))
-        val Stone get() = get(id(Plugin, "stone"))
-        val Iron get() = get(id(Plugin, "iron"))
-        val Gold get() = get(id(Plugin, "gold"))
-        val Diamond get() = get(id(Plugin, "diamond"))
-        val Netherite get() = get(id(Plugin, "netherite"))
+        public val Nothing: ToolTier get() = get(id(Plugin, "nothing"))
+        public val Wood: ToolTier get() = get(id(Plugin, "wood"))
+        public val Stone: ToolTier get() = get(id(Plugin, "stone"))
+        public val Iron: ToolTier get() = get(id(Plugin, "iron"))
+        public val Gold: ToolTier get() = get(id(Plugin, "gold"))
+        public val Diamond: ToolTier get() = get(id(Plugin, "diamond"))
+        public val Netherite: ToolTier get() = get(id(Plugin, "netherite"))
 
 
-        fun fromVanillaBlock(block: Block): ToolTier {
+        public fun fromVanillaBlock(block: Block): ToolTier {
             return fromVanillaMaterial(block.type)
         }
 
-        fun fromVanillaMaterial(material: Material): ToolTier {
+        public fun fromVanillaMaterial(material: Material): ToolTier {
             return when {
                 Tag.NEEDS_STONE_TOOL.isTagged(material) -> Stone
                 Tag.NEEDS_IRON_TOOL.isTagged(material) -> Gold
@@ -195,18 +188,18 @@ class ToolTier private constructor(
     }
 }
 
-class ToolCategory private constructor(
+public class ToolCategory private constructor(
     override val id: Identifier,
-    val attributes: ToolCategoryAttributes,
-    val isVanilla: Boolean = false
+    public val attributes: ToolCategoryAttributes,
+    public val isVanilla: Boolean = false
 ) : Identifiable {
 
-    constructor(id: Identifier, attributes: ToolCategoryAttributes) : this(id, attributes, false)
+    public constructor(id: Identifier, attributes: ToolCategoryAttributes) : this(id, attributes, false)
 
 
-    companion object : IdentifierRegistry<ToolCategory>("Tool Categories") {
+    public companion object : IdentifierRegistry<ToolCategory>("Tool Categories") {
 
-        val Pickaxe = ToolCategory(
+        public val Pickaxe: ToolCategory = ToolCategory(
             id(Plugin, "pickaxe"),
             ToolCategoryAttributes(
                 attackEntityItemDamage = 2,
@@ -214,7 +207,7 @@ class ToolCategory private constructor(
             ),
             true
         )
-        val Axe = ToolCategory(
+        public val Axe: ToolCategory = ToolCategory(
             id(Plugin, "axe"),
             ToolCategoryAttributes(
                 attackEntityItemDamage = 2,
@@ -222,7 +215,7 @@ class ToolCategory private constructor(
             ),
             true
         )
-        val Sword = ToolCategory(
+        public val Sword: ToolCategory = ToolCategory(
             id(Plugin, "sword"),
             ToolCategoryAttributes(
                 attackEntityItemDamage = 1,
@@ -234,7 +227,7 @@ class ToolCategory private constructor(
             ),
             true
         )
-        val Hoe = ToolCategory(
+        public val Hoe: ToolCategory = ToolCategory(
             id(Plugin, "hoe"),
             ToolCategoryAttributes(
                 attackEntityItemDamage = 2,
@@ -242,7 +235,7 @@ class ToolCategory private constructor(
             ),
             true
         )
-        val Shovel = ToolCategory(
+        public val Shovel: ToolCategory = ToolCategory(
             id(Plugin, "shovel"),
             ToolCategoryAttributes(
                 attackEntityItemDamage = 2,
@@ -250,7 +243,7 @@ class ToolCategory private constructor(
             ),
             true
         )
-        val Shears = ToolCategory(
+        public val Shears: ToolCategory = ToolCategory(
             id(Plugin, "shears"),
             ToolCategoryAttributes(
                 attackEntityItemDamage = 2,
@@ -264,7 +257,7 @@ class ToolCategory private constructor(
             true
         )
 
-        val Fists = ToolCategory(
+        public val Fists: ToolCategory = ToolCategory(
             id(Plugin, "fists"),
             ToolCategoryAttributes(
                 attackEntityItemDamage = 0,
@@ -282,11 +275,11 @@ class ToolCategory private constructor(
             register(Fists)
         }
 
-        fun vanillaProperCategoriesOf(block: Block): List<ToolCategory> {
+        public fun vanillaProperCategoriesOf(block: Block): List<ToolCategory> {
             return vanillaProperCategoriesOf(block.type)
         }
 
-        fun vanillaProperCategoriesOf(material: Material): List<ToolCategory> {
+        public fun vanillaProperCategoriesOf(material: Material): List<ToolCategory> {
             return buildList {
                 if (Tag.MINEABLE_SHOVEL.isTagged(material)) add(Shovel)
                 if (Tag.MINEABLE_PICKAXE.isTagged(material)) add(Pickaxe)
@@ -304,24 +297,24 @@ class ToolCategory private constructor(
 }
 
 
-open class ToolCategoryAttributes(
-    val breakBlockItemDamage: Int,
-    val attackEntityItemDamage: Int,
-    val specialBreakingMultipliers: SpecialBreakingMultipliers = SpecialBreakingMultipliers()
+public open class ToolCategoryAttributes(
+    public val breakBlockItemDamage: Int,
+    public val attackEntityItemDamage: Int,
+    public val specialBreakingMultipliers: SpecialBreakingMultipliers = SpecialBreakingMultipliers()
 ) {
 
     /**
      * Gets the breaking speed multiplier from the special breaking multipliers.
      */
-    fun getBreakingSpeedMultiplier(material: Material): Float? {
+    public fun getBreakingSpeedMultiplier(material: Material): Float? {
         return specialBreakingMultipliers.getBreakingSpeedMultiplier(material)
     }
 }
 
-class SpecialBreakingMultipliers(
+public class SpecialBreakingMultipliers(
     predicateMap: Map<Predicate<Material>, Float> = emptyMap()
 ) {
-    val map: Map<Material, Float>
+    public val map: Map<Material, Float>
 
     init {
         val materialMap = mutableMapOf<Material, Float>()
@@ -341,10 +334,10 @@ class SpecialBreakingMultipliers(
     /**
      * Returns the special breaking speed of a block, or 1 for any non-special ones.
      */
-    fun getBreakingSpeedMultiplier(material: Material): Float? {
+    public fun getBreakingSpeedMultiplier(material: Material): Float? {
         return map[material]
     }
 }
 
-fun SpecialBreakingMultipliers(vararg pairs: Pair<Predicate<Material>, Float>) =
+public fun SpecialBreakingMultipliers(vararg pairs: Pair<Predicate<Material>, Float>): SpecialBreakingMultipliers =
     SpecialBreakingMultipliers(mapOf(*pairs))

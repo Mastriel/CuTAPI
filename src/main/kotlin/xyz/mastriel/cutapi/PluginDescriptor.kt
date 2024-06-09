@@ -1,16 +1,16 @@
 package xyz.mastriel.cutapi
 
-import org.bukkit.Material
-import org.bukkit.plugin.Plugin
+import org.bukkit.*
+import org.bukkit.plugin.*
 
 
-interface CuTPlugin {
+public interface CuTPlugin {
     // Either is the bukkit plugin that owns this plugin,
     // or its CuTAPI.
-    val plugin: Plugin get() = this as? Plugin ?: Plugin
-    val descriptor get() = CuTAPI.getDescriptor(this)
-    val namespace get() = descriptor.namespace
-    val isFromJar get() = descriptor.options.isFromJar
+    public val plugin: Plugin get() = this as? Plugin ?: Plugin
+    public val descriptor: PluginDescriptor get() = CuTAPI.getDescriptor(this)
+    public val namespace: String get() = descriptor.namespace
+    public val isFromJar: Boolean get() = descriptor.options.isFromJar
 }
 
 /**
@@ -19,26 +19,26 @@ interface CuTPlugin {
  * @see Plugin
  * @see CuTAPI
  * */
-data class PluginDescriptor internal constructor(
+public data class PluginDescriptor internal constructor(
     val plugin: CuTPlugin,
     val namespace: String,
     val options: PluginOptions = defaultPluginOptions()
 )
 
-data class PluginOptions internal constructor(
+public data class PluginOptions internal constructor(
     val packFolder: String = "pack",
     val autoDisplayAsForTexturedItems: Material? = null,
     val strictResourceLoading: Boolean = false,
     val isFromJar: Boolean = true
 )
 
-class PluginOptionsBuilder {
+public class PluginOptionsBuilder {
     /**
      * The folder in `src/main/resources/` that will be used to generate a resource pack.
      *
      * `pack` by default.
      */
-    var packFolder: String = "pack"
+    public var packFolder: String = "pack"
 
     /**
      * If not null, this will automatically add the [DisplayAs][xyz.mastriel.cutapi.item.behaviors.DisplayAs]
@@ -47,7 +47,7 @@ class PluginOptionsBuilder {
      *
      * `null` by default.
      */
-    var autoDisplayAsForTexturedItems: Material? = null
+    public var autoDisplayAsForTexturedItems: Material? = null
 
     /**
      * When true, if a resource is attempted to be loaded from a file and that operation fails, then your plugin
@@ -56,17 +56,17 @@ class PluginOptionsBuilder {
      *
      * `false` by default
      */
-    var strictResourceLoading: Boolean = false
+    public var strictResourceLoading: Boolean = false
 
     /**
      * When true, this indicates that this plugin comes from a jar file,
      * and all of its resources are in a jar file.
      */
-    var isFromJar: Boolean = true
+    public var isFromJar: Boolean = true
 
-    fun build(): PluginOptions {
+    public fun build(): PluginOptions {
         return PluginOptions(packFolder, autoDisplayAsForTexturedItems, strictResourceLoading, isFromJar)
     }
 }
 
-fun defaultPluginOptions() = PluginOptions()
+public fun defaultPluginOptions(): PluginOptions = PluginOptions()

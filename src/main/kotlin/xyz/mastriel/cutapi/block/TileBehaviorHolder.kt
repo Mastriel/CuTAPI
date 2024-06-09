@@ -1,11 +1,9 @@
 package xyz.mastriel.cutapi.block
 
-import xyz.mastriel.cutapi.behavior.BehaviorHolder
-import xyz.mastriel.cutapi.block.behaviors.BlockBehavior
-import xyz.mastriel.cutapi.block.behaviors.TileBehavior
-import xyz.mastriel.cutapi.block.behaviors.TileEntityBehavior
-import xyz.mastriel.cutapi.registry.Identifier
-import kotlin.reflect.KClass
+import xyz.mastriel.cutapi.behavior.*
+import xyz.mastriel.cutapi.block.behaviors.*
+import xyz.mastriel.cutapi.registry.*
+import kotlin.reflect.*
 
 private sealed class TileBehaviorHolder<T : TileBehavior>(block: CustomTile<*>) : BehaviorHolder<T> {
 
@@ -47,6 +45,6 @@ private sealed class TileBehaviorHolder<T : TileBehavior>(block: CustomTile<*>) 
 }
 
 
-fun blockBehaviorHolder(block: CustomBlock<*>): BehaviorHolder<BlockBehavior> = TileBehaviorHolder.Block(block)
-fun tileEntityBehaviorHolder(tileEntity: CustomTileEntity<*>): BehaviorHolder<TileEntityBehavior> =
+public fun blockBehaviorHolder(block: CustomBlock<*>): BehaviorHolder<BlockBehavior> = TileBehaviorHolder.Block(block)
+public fun tileEntityBehaviorHolder(tileEntity: CustomTileEntity<*>): BehaviorHolder<TileEntityBehavior> =
     TileBehaviorHolder.TileEntity(tileEntity)

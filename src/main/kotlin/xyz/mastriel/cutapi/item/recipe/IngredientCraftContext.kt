@@ -1,8 +1,8 @@
 package xyz.mastriel.cutapi.item.recipe
 
-import xyz.mastriel.cutapi.item.AgnosticItemStack
+import xyz.mastriel.cutapi.item.*
 
-data class IngredientCraftContext(val itemStack: AgnosticItemStack) {
+public data class IngredientCraftContext(val itemStack: AgnosticItemStack) {
 
     var dontConsume: Boolean = false
 

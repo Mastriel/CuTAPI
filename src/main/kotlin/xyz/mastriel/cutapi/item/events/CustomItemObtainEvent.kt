@@ -1,11 +1,10 @@
 package xyz.mastriel.cutapi.item.events
 
-import org.bukkit.entity.Player
-import org.bukkit.event.Cancellable
-import org.bukkit.event.HandlerList
-import xyz.mastriel.cutapi.item.CuTItemStack
+import org.bukkit.entity.*
+import org.bukkit.event.*
+import xyz.mastriel.cutapi.item.*
 
-data class CustomItemObtainEvent(override val item: CuTItemStack, val player: Player) : CustomItemEvent(item), Cancellable {
+public data class CustomItemObtainEvent(override val item: CuTItemStack, val player: Player) : CustomItemEvent(item), Cancellable {
 
     private var cancel : Boolean = false
     var destroyItem : Boolean = false
@@ -13,11 +12,11 @@ data class CustomItemObtainEvent(override val item: CuTItemStack, val player: Pl
     override fun getHandlers(): HandlerList {
         return HANDLERS
     }
-    companion object {
+    public companion object {
         private val HANDLERS = HandlerList()
 
         @JvmStatic
-        fun getHandlerList(): HandlerList {
+        public fun getHandlerList(): HandlerList {
             return HANDLERS
         }
     }

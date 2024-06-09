@@ -1,7 +1,7 @@
 package xyz.mastriel.cutapi.behavior
 
-import kotlin.reflect.KClass
-import kotlin.reflect.full.findAnnotations
+import kotlin.reflect.*
+import kotlin.reflect.full.*
 
 
 /**
@@ -13,10 +13,11 @@ import kotlin.reflect.full.findAnnotations
 @Target(AnnotationTarget.CLASS)
 @MustBeDocumented
 @Repeatable
-annotation class RequireBehavior(vararg val behaviors: KClass<Behavior>)
+public annotation class RequireBehavior(vararg val behaviors: KClass<Behavior>)
 
-val Behavior.requiredBehaviors : List<KClass<Behavior>> get() {
-    return this::class.findAnnotations(RequireBehavior::class)
-        .map { it.behaviors.toList() }
-        .flatten()
-}
+public val Behavior.requiredBehaviors: List<KClass<Behavior>>
+    get() {
+        return this::class.findAnnotations(RequireBehavior::class)
+            .map { it.behaviors.toList() }
+            .flatten()
+    }

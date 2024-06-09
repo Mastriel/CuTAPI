@@ -1,9 +1,9 @@
 package xyz.mastriel.cutapi.behavior
 
-import xyz.mastriel.cutapi.registry.Identifier
-import kotlin.reflect.KClass
+import xyz.mastriel.cutapi.registry.*
+import kotlin.reflect.*
 
-class ListBehaviorHolder<B: Behavior> : BehaviorHolder<B>, MutableList<B> by mutableListOf() {
+public class ListBehaviorHolder<B : Behavior> : BehaviorHolder<B>, MutableList<B> by mutableListOf() {
     override fun hasBehavior(behavior: KClass<out B>): Boolean {
         return getBehaviorOrNull(behavior) != null
     }

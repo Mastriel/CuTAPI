@@ -1,14 +1,12 @@
 package xyz.mastriel.cutapi.pdc.tags
 
-import org.bukkit.NamespacedKey
-import org.bukkit.persistence.PersistentDataContainer
-import org.bukkit.persistence.PersistentDataType
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.pdc.getPrimitiveValue
-import xyz.mastriel.cutapi.pdc.setPrimitiveValue
-import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
+import org.bukkit.*
+import org.bukkit.persistence.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.pdc.*
+import xyz.mastriel.cutapi.pdc.tags.converters.*
 
-open class PDCTagContainer(var container: PersistentDataContainer) : TagContainer {
+public open class PDCTagContainer(public var container: PersistentDataContainer) : TagContainer {
 
     override fun <P: Any, C: Any> set(key: String, complexValue: C?, converter: TagConverter<P, C>) {
         val namespacedKey = NamespacedKey(Plugin, key)
@@ -38,8 +36,8 @@ open class PDCTagContainer(var container: PersistentDataContainer) : TagContaine
     }
 
 
-    companion object {
-        fun checkNull(container: PersistentDataContainer, namespacedKey: NamespacedKey) : Boolean {
+    public companion object {
+        public fun checkNull(container: PersistentDataContainer, namespacedKey: NamespacedKey) : Boolean {
             if (container.has(namespacedKey)) {
                 try {
                     return container.get(namespacedKey, PersistentDataType.STRING) == Tag.NULL

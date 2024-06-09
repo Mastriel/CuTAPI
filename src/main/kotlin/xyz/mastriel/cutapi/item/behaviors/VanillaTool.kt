@@ -1,33 +1,29 @@
 package xyz.mastriel.cutapi.item.behaviors
 
-import net.minecraft.core.Holder
-import net.minecraft.core.HolderSet
-import net.minecraft.core.component.DataComponentPatch
-import net.minecraft.core.component.DataComponents
-import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.world.level.block.Block
-import org.bukkit.craftbukkit.util.CraftMagicNumbers
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.nms.UsesNMS
-import xyz.mastriel.cutapi.nms.bukkit
-import xyz.mastriel.cutapi.nms.nms
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.utils.TemporaryAPI
+import net.minecraft.core.*
+import net.minecraft.core.component.*
+import net.minecraft.core.registries.*
+import net.minecraft.world.level.block.*
+import org.bukkit.craftbukkit.util.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.nms.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.utils.*
 import java.util.*
 
 
-typealias ToolComponent = net.minecraft.world.item.component.Tool
-typealias ToolComponentRule = net.minecraft.world.item.component.Tool.Rule
+public typealias ToolComponent = net.minecraft.world.item.component.Tool
+public typealias ToolComponentRule = net.minecraft.world.item.component.Tool.Rule
 
 @TemporaryAPI
 @UsesNMS
-class VanillaTool(
-    vararg val tools: Tool,
-    val defaultMiningSpeed: ToolSpeed = ToolSpeed.Fists,
-    val specialBreakingMultipliers: SpecialBreakingMultipliers = SpecialBreakingMultipliers(),
-    val itemDamage: Int = 1
+public class VanillaTool(
+    public vararg val tools: Tool,
+    public val defaultMiningSpeed: ToolSpeed = ToolSpeed.Fists,
+    public val specialBreakingMultipliers: SpecialBreakingMultipliers = SpecialBreakingMultipliers(),
+    public val itemDamage: Int = 1
 ) : ItemBehavior(id(Plugin, "vanilla_tool_component")) {
 
     private val rules: List<PlainToolComponentRule>

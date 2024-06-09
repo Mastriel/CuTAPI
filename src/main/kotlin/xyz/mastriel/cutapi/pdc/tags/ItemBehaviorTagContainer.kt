@@ -1,17 +1,15 @@
 package xyz.mastriel.cutapi.pdc.tags
 
-import org.bukkit.NamespacedKey
-import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.ItemMeta
-import org.bukkit.persistence.PersistentDataContainer
-import org.bukkit.persistence.PersistentDataType
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.pdc.getPrimitiveValue
-import xyz.mastriel.cutapi.pdc.setPrimitiveValue
-import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
-import xyz.mastriel.cutapi.registry.Identifier
+import org.bukkit.*
+import org.bukkit.inventory.*
+import org.bukkit.inventory.meta.*
+import org.bukkit.persistence.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.pdc.*
+import xyz.mastriel.cutapi.pdc.tags.converters.*
+import xyz.mastriel.cutapi.registry.*
 
-class ItemBehaviorTagContainer(private val itemStack: ItemStack, componentId: Identifier) : TagContainer {
+public class ItemBehaviorTagContainer(private val itemStack: ItemStack, componentId: Identifier) : TagContainer {
 
     private val key = componentId.toString().replace(':', '.')
 
@@ -35,7 +33,7 @@ class ItemBehaviorTagContainer(private val itemStack: ItemStack, componentId: Id
         return getOrCreateContainer(componentsContainer, key)
     }
 
-    fun setDataContainer(meta: ItemMeta, container: PersistentDataContainer) {
+    public fun setDataContainer(meta: ItemMeta, container: PersistentDataContainer) {
         val componentsContainer = getOrCreateContainer(meta.persistentDataContainer, "CuTComponents")
         componentsContainer.set(NamespacedKey(Plugin, key), PersistentDataType.TAG_CONTAINER, container)
         meta.persistentDataContainer.set(

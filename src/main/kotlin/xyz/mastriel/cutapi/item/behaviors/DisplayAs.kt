@@ -1,18 +1,17 @@
 package xyz.mastriel.cutapi.item.behaviors
 
-import org.bukkit.Material
-import org.bukkit.entity.Player
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.registry.id
+import org.bukkit.*
+import org.bukkit.entity.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
 
 /**
  * Makes a custom item display as this material. This is purely client sided (except when
  * the holder is in creative mode, as creative mode enables client-sided changes like this
  * to occur without the server arguing)
  */
-class DisplayAs(val material: Material) : ItemBehavior(id(Plugin, "display_as")) {
+public class DisplayAs(public val material: Material) : ItemBehavior(id(Plugin, "display_as")) {
 
     override fun onRender(viewer: Player?, item: CuTItemStack) {
         item.handle.type = material

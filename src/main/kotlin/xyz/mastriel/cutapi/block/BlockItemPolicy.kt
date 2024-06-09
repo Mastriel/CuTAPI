@@ -1,12 +1,8 @@
 package xyz.mastriel.cutapi.block
 
-import org.bukkit.Material
-import xyz.mastriel.cutapi.item.CustomItem
-import xyz.mastriel.cutapi.item.ItemDescriptor
-import xyz.mastriel.cutapi.item.ItemDescriptorBuilder
-import xyz.mastriel.cutapi.item.behaviors.BlockPlaceBehavior
-import xyz.mastriel.cutapi.item.behaviors.ItemBehavior
-import xyz.mastriel.cutapi.item.registerCustomItem
+import org.bukkit.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.item.behaviors.*
 
 /**
  * Defines how a block has a relationship to items.
@@ -17,7 +13,7 @@ import xyz.mastriel.cutapi.item.registerCustomItem
  * b. create a new item based on the block
  * c. do nothing, you can figure it out manually
  */
-sealed class BlockItemPolicy {
+public sealed class BlockItemPolicy {
 
     internal abstract fun tileRegister(tileDescriptor: TileDescriptor, customTile: CustomTile<*>): CustomItem<*>?
 
@@ -25,8 +21,8 @@ sealed class BlockItemPolicy {
      * Generate a new item and register it. You can supply your own item descriptor which will be combined
      * with a pre-generated one.
      */
-    data class Generate(val descriptor: ItemDescriptor? = null) : BlockItemPolicy() {
-        constructor(descriptor: ItemDescriptorBuilder.() -> Unit) :
+    public data class Generate(val descriptor: ItemDescriptor? = null) : BlockItemPolicy() {
+        public constructor(descriptor: ItemDescriptorBuilder.() -> Unit) :
             this(ItemDescriptorBuilder().apply(descriptor).build())
 
         override fun tileRegister(tileDescriptor: TileDescriptor, customTile: CustomTile<*>): CustomItem<*> {
@@ -50,7 +46,7 @@ sealed class BlockItemPolicy {
      * Using this will modify the behaviors of [item] to include a BlockPlaceBehavior if it doesn't already have one.
      * If it does already have one, a warning will be printed. You shouldn't use this with an item that has one!
      */
-    data class Item(val item: CustomItem<*>, val consumesItem: Boolean = true) : BlockItemPolicy() {
+    public data class Item(val item: CustomItem<*>, val consumesItem: Boolean = true) : BlockItemPolicy() {
         override fun tileRegister(tileDescriptor: TileDescriptor, customTile: CustomTile<*>): CustomItem<*> {
             val behaviors = item.descriptor.itemBehaviors as? MutableList<ItemBehavior>
                 ?: error("${item.id} does not have its itemBehaviors as a MutableList!")
@@ -64,7 +60,7 @@ sealed class BlockItemPolicy {
     /**
      * This does nothing to create relationships between your block and any items.
      */
-    data object None : BlockItemPolicy() {
+    public data object None : BlockItemPolicy() {
         override fun tileRegister(tileDescriptor: TileDescriptor, customTile: CustomTile<*>) = null
     }
 

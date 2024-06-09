@@ -1,29 +1,27 @@
 package xyz.mastriel.cutapi.resources.generator
 
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.registry.ListRegistry
-import xyz.mastriel.cutapi.resources.ResourcePackProcessor
-import xyz.mastriel.cutapi.resources.ResourceRef
-import xyz.mastriel.cutapi.resources.builtin.Texture2D
-import xyz.mastriel.cutapi.resources.pack.PackConfig
-import xyz.mastriel.cutapi.utils.appendPath
-import xyz.mastriel.cutapi.utils.createAndWrite
-import java.io.File
-import kotlin.time.measureTime
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.builtin.*
+import xyz.mastriel.cutapi.resources.pack.*
+import xyz.mastriel.cutapi.resources.process.*
+import xyz.mastriel.cutapi.utils.*
+import java.io.*
+import kotlin.time.*
 
-abstract class ResourcePackGenerator {
+public abstract class ResourcePackGenerator {
 
     /**
      * Pick the earliest version that this generator supports
      */
-    abstract val packVersion: Int
-    abstract val generationSteps: Int
+    public abstract val packVersion: Int
+    public abstract val generationSteps: Int
 
-    val packDescription by PackConfig::PackDescription
+    public val packDescription: String by PackConfig::PackDescription
 
-    val tempPackFolder get() = Plugin.dataFolder.appendPath("pack-tmp/")
-    val resourceManager get() = CuTAPI.resourceManager
+    public val tempPackFolder: File get() = Plugin.dataFolder.appendPath("pack-tmp/")
+    public val resourceManager: ResourceManager get() = CuTAPI.resourceManager
 
 
     /**
@@ -66,26 +64,29 @@ abstract class ResourcePackGenerator {
         Plugin.info("Resource Pack: ($currentStep/$generationSteps) $message")
     }
 
-    fun textureFolderPathOf(ref: ResourceRef<Texture2D>): String {
+    public fun textureFolderPathOf(ref: ResourceRef<Texture2D>): String {
         return "custom/${ref.namespace}/${ref.path(withName = true)}"
     }
 
 
     protected fun runResourceProcessorsPack() {
         val executionTime = measureTime {
+            generateResources(CuTAPI.resourceManager.getAllResources(), ResourceGenerationStage.BeforePackProcessors)
+
             ResourcePackProcessor.forEach {
                 it.processResources(CuTAPI.resourceManager)
             }
+            generateResources(CuTAPI.resourceManager.getAllResources(), ResourceGenerationStage.AfterPackProcessors)
         }
         Plugin.info("Resource Processors (pack registry) ran in $executionTime.")
     }
 
 
-    abstract suspend fun generate()
+    public abstract suspend fun generate()
 
 
-    companion object : ListRegistry<ResourcePackGenerator>("Pack Generators") {
-        fun getByVersionNumber(range: IntRange): ResourcePackGenerator? {
+    public companion object : ListRegistry<ResourcePackGenerator>("Pack Generators") {
+        public fun getByVersionNumber(range: IntRange): ResourcePackGenerator? {
             return values.find { it.packVersion in range }
         }
 

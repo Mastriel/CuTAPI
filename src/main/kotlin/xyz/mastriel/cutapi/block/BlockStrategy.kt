@@ -1,13 +1,13 @@
 package xyz.mastriel.cutapi.block
 
-import org.bukkit.Material
+import org.bukkit.*
 
-sealed class BlockStrategy {
+public sealed class BlockStrategy {
 
-    data object NoteBlock : BlockStrategy()
-    data object Mushroom : BlockStrategy()
-    data class Vanilla(val material: Material) : BlockStrategy()
-    data object FakeEntity : BlockStrategy()
+    public data object NoteBlock : BlockStrategy()
+    public data object Mushroom : BlockStrategy()
+    public data class Vanilla(val material: Material) : BlockStrategy()
+    public data object FakeEntity : BlockStrategy()
 }
 
 

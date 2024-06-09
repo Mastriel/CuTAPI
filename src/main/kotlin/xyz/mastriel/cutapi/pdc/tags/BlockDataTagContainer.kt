@@ -1,21 +1,17 @@
 package xyz.mastriel.cutapi.pdc.tags
 
-import org.bukkit.Chunk
-import org.bukkit.Location
-import org.bukkit.NamespacedKey
-import org.bukkit.block.Block
-import org.bukkit.persistence.PersistentDataContainer
-import org.bukkit.persistence.PersistentDataType
-import xyz.mastriel.cutapi.Plugin
-import xyz.mastriel.cutapi.pdc.getPrimitiveValue
-import xyz.mastriel.cutapi.pdc.setPrimitiveValue
-import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
+import org.bukkit.*
+import org.bukkit.block.*
+import org.bukkit.persistence.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.pdc.*
+import xyz.mastriel.cutapi.pdc.tags.converters.*
 
-open class BlockDataTagContainer(val block : Block) : TagContainer {
+public open class BlockDataTagContainer(public val block : Block) : TagContainer {
 
-    val location : Location get() = block.location
-    val chunk : Chunk get() = block.chunk
-    val rootContainer : PersistentDataContainer get() = block.chunk.persistentDataContainer
+    public val location : Location get() = block.location
+    public val chunk : Chunk get() = block.chunk
+    public val rootContainer : PersistentDataContainer get() = block.chunk.persistentDataContainer
 
     override fun <P: Any, C: Any> set(key: String, complexValue: C?, converter: TagConverter<P, C>) {
 

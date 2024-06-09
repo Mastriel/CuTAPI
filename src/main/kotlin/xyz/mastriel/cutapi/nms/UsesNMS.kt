@@ -9,4 +9,4 @@ import org.jetbrains.annotations.ApiStatus.Internal
  */
 @Internal
 @Retention(AnnotationRetention.SOURCE)
-annotation class UsesNMS()
+public annotation class UsesNMS()

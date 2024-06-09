@@ -1,9 +1,8 @@
 package xyz.mastriel.cutapi.pdc.tags.converters
 
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.id
+import xyz.mastriel.cutapi.registry.*
 
-object IdentifierTagConverter :
+public object IdentifierTagConverter :
     TagConverter<String, Identifier>(String::class, Identifier::class) {
 
     override fun fromPrimitive(primitive: String): Identifier {

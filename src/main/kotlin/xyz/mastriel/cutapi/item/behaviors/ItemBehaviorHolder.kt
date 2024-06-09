@@ -1,9 +1,9 @@
 package xyz.mastriel.cutapi.item.behaviors
 
-import xyz.mastriel.cutapi.behavior.BehaviorHolder
-import xyz.mastriel.cutapi.item.CustomItem
-import xyz.mastriel.cutapi.registry.Identifier
-import kotlin.reflect.KClass
+import xyz.mastriel.cutapi.behavior.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.registry.*
+import kotlin.reflect.*
 
 private class ItemBehaviorHolder(item: CustomItem<*>) : BehaviorHolder<ItemBehavior> {
 
@@ -40,4 +40,4 @@ private class ItemBehaviorHolder(item: CustomItem<*>) : BehaviorHolder<ItemBehav
     }
 }
 
-fun itemBehaviorHolder(item: CustomItem<*>) : BehaviorHolder<ItemBehavior> = ItemBehaviorHolder(item)
+public fun itemBehaviorHolder(item: CustomItem<*>) : BehaviorHolder<ItemBehavior> = ItemBehaviorHolder(item)

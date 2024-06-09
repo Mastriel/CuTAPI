@@ -1,15 +1,15 @@
 package xyz.mastriel.cutapi.block
 
-import xyz.mastriel.cutapi.registry.Identifier
+import xyz.mastriel.cutapi.registry.*
 
-fun customBlock(id: Identifier, builder: BlockDescriptorBuilder.() -> Unit): CustomBlock<CuTPlacedBlock> {
+public fun customBlock(id: Identifier, builder: BlockDescriptorBuilder.() -> Unit): CustomBlock<CuTPlacedBlock> {
     val descriptor = BlockDescriptorBuilder().apply(builder).build()
 
     return CustomBlock(id, descriptor, CuTPlacedBlock::class)
 }
 
 
-fun customTileEntity(
+public fun customTileEntity(
     id: Identifier,
     builder: TileEntityDescriptorBuilder.() -> Unit
 ): CustomTileEntity<CuTPlacedTileEntity> {

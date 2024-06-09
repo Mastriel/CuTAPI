@@ -1,4 +1,4 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.tasks.*
 
 plugins {
     kotlin("jvm") version "1.9.22"
@@ -106,6 +106,7 @@ java {
 
 kotlin {
     jvmToolchain(21)
+    explicitApi()
 }
 
 tasks.reobfJar {

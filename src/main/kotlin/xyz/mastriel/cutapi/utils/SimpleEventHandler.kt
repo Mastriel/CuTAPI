@@ -1,24 +1,24 @@
 package xyz.mastriel.cutapi.utils
 
-fun interface SimpleEventHandler<TInput> {
-    fun TInput.trigger()
+public fun interface SimpleEventHandler<TInput> {
+    public fun TInput.trigger()
 }
 
 
-class EventHandlerList<TInput> {
+public class EventHandlerList<TInput> {
 
     private val events: MutableList<SimpleEventHandler<TInput>> = mutableListOf()
 
-    operator fun plusAssign(event: SimpleEventHandler<TInput>) {
+    public operator fun plusAssign(event: SimpleEventHandler<TInput>) {
         events += event
     }
 
-    operator fun minusAssign(event: SimpleEventHandler<TInput>) {
+    public operator fun minusAssign(event: SimpleEventHandler<TInput>) {
         events -= event
     }
 
-    fun trigger(event: TInput) = events.forEach { with(it) { event.trigger() } }
+    public fun trigger(event: TInput): Unit = events.forEach { with(it) { event.trigger() } }
 
-    operator fun invoke(event: TInput) = trigger(event)
+    public operator fun invoke(event: TInput): Unit = trigger(event)
 }
 

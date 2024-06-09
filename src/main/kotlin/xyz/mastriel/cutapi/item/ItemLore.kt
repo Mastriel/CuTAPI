@@ -1,18 +1,14 @@
 package xyz.mastriel.cutapi.item
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
-import org.bukkit.Material
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.pdc.tags.NotNullTag
-import xyz.mastriel.cutapi.pdc.tags.TagContainer
-import xyz.mastriel.cutapi.pdc.tags.converters.ObjectTagConverter
-import xyz.mastriel.cutapi.pdc.tags.converters.TagConverter
+import kotlinx.serialization.*
+import net.kyori.adventure.text.*
+import net.kyori.adventure.text.serializer.gson.*
+import xyz.mastriel.cutapi.pdc.tags.*
+import xyz.mastriel.cutapi.pdc.tags.converters.*
 
-object LoreTagConverter : TagConverter<ByteArray, ItemLore>(ByteArray::class, ItemLore::class) {
-    val objectConverter = ObjectTagConverter(ItemLore::class, ItemLore.serializer())
+public object LoreTagConverter : TagConverter<ByteArray, ItemLore>(ByteArray::class, ItemLore::class) {
+    public val objectConverter: ObjectTagConverter<ItemLore> =
+        ObjectTagConverter(ItemLore::class, ItemLore.serializer())
 
     override fun fromPrimitive(primitive: ByteArray): ItemLore {
         return objectConverter.fromPrimitive(primitive)
@@ -24,44 +20,49 @@ object LoreTagConverter : TagConverter<ByteArray, ItemLore>(ByteArray::class, It
 }
 
 @Serializable
-class ItemLore {
+public class ItemLore {
 
     @SerialName("components")
     private val components: MutableList<String> = mutableListOf()
 
-    var displayLoreVisible: Boolean = true
+    public var displayLoreVisible: Boolean = true
 
-    fun append(vararg components: Component) = append(components.toList())
+    public fun append(vararg components: Component): Unit = append(components.toList())
 
-    fun append(components: Collection<Component>) {
+    public fun append(components: Collection<Component>) {
         this.components += components.serialized()
-        ItemStack(Material.PAPER).lore()
     }
 
-    fun set(vararg components: Component) = set(components.toList())
+    public fun set(vararg components: Component): Unit = set(components.toList())
 
-    fun set(components: Collection<Component>) {
+    public fun set(components: Collection<Component>) {
         this.components.clear()
         this.components += components.toList().serialized()
     }
 
-    fun get() = components.map { GsonComponentSerializer.gson().deserialize(it) }
+    public fun get(): List<Component> = components.map { GsonComponentSerializer.gson().deserialize(it) }
 
 
-    private fun Collection<Component>.serialized() : List<String> {
+    private fun Collection<Component>.serialized(): List<String> {
         return map { GsonComponentSerializer.gson().serialize(it) }
     }
 }
 
-fun TagContainer.loreTag(name: String) = NotNullTag(name, this, ItemLore(), LoreTagConverter)
+public fun TagContainer.loreTag(name: String): NotNullTag<ByteArray, ItemLore> =
+    NotNullTag(name, this, ItemLore(), LoreTagConverter)
 
-var CuTItemStack.displayLoreVisible
+public var CuTItemStack.displayLoreVisible: Boolean
     get() = lore.displayLoreVisible
-    set(value) { lore.displayLoreVisible = value; lore = lore }
+    set(value) {
+        lore.displayLoreVisible = value; lore = lore
+    }
 
 
-fun CuTItemStack.setLore(vararg components: Component) = lore.set(*components).also { lore = lore }
-fun CuTItemStack.setLore(components: Collection<Component>) = lore.set(components).also { lore = lore }
+public fun CuTItemStack.setLore(vararg components: Component): Unit = lore.set(*components).also { lore = lore }
+public fun CuTItemStack.setLore(components: Collection<Component>): Unit = lore.set(components).also { lore = lore }
 
-fun CuTItemStack.appendLore(vararg components: Component) = lore.append(*components).also { lore = lore }.let { this }
-fun CuTItemStack.appendLore(components: Collection<Component>) = lore.append(components).also { lore = lore }.let { this }
+public fun CuTItemStack.appendLore(vararg components: Component): CuTItemStack =
+    lore.append(*components).also { lore = lore }.let { this }
+
+public fun CuTItemStack.appendLore(components: Collection<Component>): CuTItemStack =
+    lore.append(components).also { lore = lore }.let { this }
