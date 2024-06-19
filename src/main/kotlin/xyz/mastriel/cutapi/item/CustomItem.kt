@@ -96,6 +96,17 @@ public open class CustomItem<TStack : CuTItemStack>(
             }
         }
 
+        public val InventoryBackground: CustomItem<CuTItemStack> = registerCustomItem(
+            id = id(Plugin, "inventory_background"),
+            Material.GLISTERING_MELON_SLICE
+        ) {
+            behavior(BlankNameBehavior)
+
+            display {
+                texture = itemModel(Plugin, "ui/inventory_bg.model3d.json")
+            }
+        }
+
         override fun get(id: Identifier): CustomItem<*> {
             return super.getOrNull(id) ?: return Unknown
         }

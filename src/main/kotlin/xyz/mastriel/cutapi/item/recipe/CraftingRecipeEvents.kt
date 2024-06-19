@@ -15,6 +15,8 @@ import xyz.mastriel.cutapi.utils.*
 
 internal class CraftingRecipeEvents : Listener {
 
+    private val nullFiller = { null }
+
     @EventHandler
     public fun onCraftAttempt(e: CraftItemEvent) {
         val recipe = e.recipe
@@ -193,18 +195,21 @@ internal class CraftingRecipeEvents : Listener {
         return true
     }
 
+    // todo handle mirrored recipes :(
     private fun testShapedRecipe(recipe: ShapedRecipe, inventory: CraftingInventory): Boolean {
         val customRecipe = getCustomShapedRecipe(recipe) ?: return testShapedVanillaRecipe(recipe, inventory)
 
-
         var canCraft = true
         val size = if (customRecipe.size == CustomShapedRecipe.Size.Four) 2 else 3
-        val matrixData: List<ItemStack?> = inventory.matrix.toList().chunked(size).trim { it != null }.flatten()
+        val matrixData: List<ItemStack?> =
+            inventory.matrix.toList().chunked(size).trim(nullFiller) { it != null }.flatten()
         val recipeData = customRecipe.getMatrix()
 
         for ((i, item) in matrixData.withIndex()) {
-            if (item == null) continue
-            val ingredient = recipeData.getOrNull(i) ?: continue
+            val ingredient = recipeData.getOrNull(i)
+            if (item == null || ingredient == null) {
+                continue
+            }
             val succeeds =
                 ingredient.itemRequirement.withEntity(item.toAgnostic())
                     && item.amount >= ingredient.quantity
@@ -225,14 +230,14 @@ internal class CraftingRecipeEvents : Listener {
                 recipe.choiceMap[char]
             }
         }.flatten()
-        val matrixData = itemList.chunked(size).trim { it != null }.flatten()
+        val matrixData = itemList.chunked(size).trim(nullFiller) { it != null }.flatten()
         return matrixData
     }
 
     private fun testShapedVanillaRecipe(recipe: ShapedRecipe, inventory: CraftingInventory): Boolean {
         var canCraft = true
-        val size = recipe.shape[0].length
-        val matrixData: List<ItemStack?> = inventory.matrix.toList().chunked(size).trim { it != null }.flatten()
+        val matrixData: List<ItemStack?> =
+            inventory.matrix.toList().chunked(3).trim(nullFiller) { it != null }.flatten()
         val recipeData = getMatrix(recipe)
 
         for ((i, item) in matrixData.withIndex()) {

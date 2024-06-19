@@ -1,0 +1,6 @@
+id = "cutapi:model3d"
+materials = ["glistering_melon_slice"]
+
+[textures]
+"2" = "cutapi://ui/inventory_bg.png"
+"1" = "cutapi://ui/inventory_bg.png"

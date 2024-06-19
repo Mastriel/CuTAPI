@@ -1,6 +1,9 @@
+@file:Suppress("UnstableApiUsage")
+
 package xyz.mastriel.cutapi
 
 import com.github.shynixn.mccoroutine.bukkit.*
+import io.papermc.paper.plugin.lifecycle.event.types.*
 import org.bukkit.*
 import org.bukkit.plugin.java.*
 import org.bukkit.scheduler.*
@@ -100,8 +103,11 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
     }
 
     private fun registerCommands() {
-        Bukkit.getCommandMap().register("cutapi", CuTGiveCommand)
         Bukkit.getCommandMap().register("cutapi", TestCommand)
+        lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
+            val registrar = event.registrar()
+            registrar.register(CuTGiveCommand, listOf("cutgive"))
+        }
     }
 
 

@@ -71,7 +71,7 @@ public data class CustomShapedRecipe(
             matrix.chunked(3)
         }
 
-        return items.trim { it != null }.flatten()
+        return items.trim({ null }) { it != null }.flatten()
     }
 
     public companion object : IdentifierRegistry<CustomShapedRecipe>("Shaped Recipes") {

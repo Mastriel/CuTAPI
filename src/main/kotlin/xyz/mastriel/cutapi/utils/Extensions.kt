@@ -65,9 +65,22 @@ public fun ItemStack.appendLore(vararg lore: Component): ItemStack {
 
 public val Duration.inWholeTicks: Long get() = ceil(this.inWholeMilliseconds / 50.0).toLong()
 
-public fun <T> List<List<T>>.trim(include: (T) -> Boolean): List<List<T>> {
+/**
+ * Normalizes a collection by making it square with [filler] elements
+ */
+private fun <T> normalize(collection: Collection<Collection<T>>, filler: () -> T): List<List<T>> {
+    val rows = collection.size
+    val cols = collection.maxOf { it.size }
+
+    return collection.map { it + List(cols - it.size) { filler() } }
+        .map { it.toList() }
+        .toList()
+}
+
+public fun <T> List<List<T>>.trim(filler: () -> T, include: (T) -> Boolean): List<List<T>> {
+    val list = normalize(this) { filler() }
     val rows = size
-    val cols = this[0].size
+    val cols = list[0].size
 
     var rmin = 0
     var rmax = rows
@@ -75,34 +88,34 @@ public fun <T> List<List<T>>.trim(include: (T) -> Boolean): List<List<T>> {
     var cmax = cols
 
     for (i in 0 until rows) {
-        if (this[i].any(include)) {
+        if (list[i].any(include)) {
             rmin = i
             break
         }
     }
 
     for (i in rows - 1 downTo 0) {
-        if (this[i].any(include)) {
+        if (list[i].any(include)) {
             rmax = i + 1
             break
         }
     }
 
     for (i in 0 until cols) {
-        if (this.any { include(it[i]) }) {
+        if (list.any { include(it[i]) }) {
             cmin = i
             break
         }
     }
 
     for (i in cols - 1 downTo 0) {
-        if (this.any { include(it[i]) }) {
+        if (list.any { include(it[i]) }) {
             cmax = i + 1
             break
         }
     }
 
 
-    return subList(rmin, rmax)
+    return list.subList(rmin, rmax)
         .map { it.subList(cmin, cmax) }
 }
