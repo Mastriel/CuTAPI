@@ -1,7 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
 
 plugins {
-    kotlin("jvm") version "1.9.22"
+    kotlin("jvm") version "2.0.20"
     java
 
     id("com.github.johnrengelman.shadow") version "8.1.1"
@@ -20,7 +20,7 @@ repositories {
 
     maven {
         name = "papermc-repo"
-        url = uri("https://papermc.io/repo/repository/maven-public/")
+        url = uri("https://repo.papermc.io/repository/maven-public/")
     }
     maven {
         name = "sonatype"
@@ -63,7 +63,7 @@ dependencies {
     shadow("io.ktor:ktor-server-core:2.3.0")
     shadow("io.ktor:ktor-server-netty:2.3.0")
 
-    paperweight.paperDevBundle("1.20.6-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.1-R0.1-SNAPSHOT")
 }
 
 

@@ -11,7 +11,7 @@ public open class BrigadierCommandExecutorContext(private val context: CommandCo
     public val source: CommandSourceStack get() = context.source
     public val sender: CommandSender get() = context.source.sender
 
-    public operator fun <T : Any> BrigadierArgumentAccessor<T>.invoke(): T {
+    public open operator fun <T : Any> BrigadierArgumentAccessor<T>.invoke(): T {
         return context.getArgument(name, kClass.java)
     }
 }
