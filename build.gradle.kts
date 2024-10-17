@@ -67,6 +67,7 @@ dependencies {
     shadow("io.ktor:ktor-client-cio:2.3.12")
 
     shadow("net.lingala.zip4j:zip4j:2.11.5")
+    shadow("com.jhlabs:filters:2.0.235-1")
 
     paperweight.paperDevBundle("1.21.1-R0.1-SNAPSHOT")
 }
