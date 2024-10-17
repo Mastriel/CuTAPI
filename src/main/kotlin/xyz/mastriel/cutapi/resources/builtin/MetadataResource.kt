@@ -46,7 +46,8 @@ public fun <T : MetadataResource<M>, M : CuTMeta> metadataResourceLoader(
         override fun loadResource(
             ref: ResourceRef<T>,
             data: ByteArray,
-            metadata: ByteArray?
+            metadata: ByteArray?,
+            options: ResourceLoadOptions
         ): ResourceLoadResult<T> {
             if (ref.extension in extensions) {
                 try {

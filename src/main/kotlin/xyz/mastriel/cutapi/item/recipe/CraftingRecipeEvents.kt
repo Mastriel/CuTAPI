@@ -195,32 +195,40 @@ internal class CraftingRecipeEvents : Listener {
         return true
     }
 
-    // todo handle mirrored recipes :(
+    private fun <T> mirror(matrix: List<T>, chunkSize: Int): List<T> {
+        return matrix.chunked(chunkSize).map { it.reversed() }.flatten()
+    }
+
     private fun testShapedRecipe(recipe: ShapedRecipe, inventory: CraftingInventory): Boolean {
         val customRecipe = getCustomShapedRecipe(recipe) ?: return testShapedVanillaRecipe(recipe, inventory)
 
-        var canCraft = true
         val size = if (customRecipe.size == CustomShapedRecipe.Size.Four) 2 else 3
-        val matrixData: List<ItemStack?> =
-            inventory.matrix.toList().chunked(size).trim(nullFiller) { it != null }.flatten()
+
         val recipeData = customRecipe.getMatrix()
 
-        for ((i, item) in matrixData.withIndex()) {
-            val ingredient = recipeData.getOrNull(i)
-            if (item == null || ingredient == null) {
-                continue
+        fun test(matrixData: List<ItemStack?>, recipeData: List<ShapedRecipeIngredient?>): Boolean {
+            for ((i, item) in matrixData.withIndex()) {
+                val ingredient = recipeData.getOrNull(i)
+                if (item == null || ingredient == null) {
+                    continue
+                }
+                val succeeds =
+                    ingredient.itemRequirement.withEntity(item.toAgnostic())
+                        && item.amount >= ingredient.quantity
+                        && item.type == ingredient.material
+                        && shapedIngredientWorks(ingredient, item)
+                if (!succeeds) {
+                    return false
+                }
             }
-            val succeeds =
-                ingredient.itemRequirement.withEntity(item.toAgnostic())
-                    && item.amount >= ingredient.quantity
-                    && item.type == ingredient.material
-                    && shapedIngredientWorks(ingredient, item)
-            if (!succeeds) {
-                canCraft = false
-                break
-            }
+            return true
         }
-        return canCraft
+
+
+        return test(trimMatrix(inventory.matrix.toList(), size), recipeData) || test(
+            trimMatrix(mirror(inventory.matrix.toList(), size), size),
+            mirror(recipeData, size)
+        )
     }
 
     private fun getMatrix(recipe: ShapedRecipe): List<RecipeChoice?> {
@@ -234,22 +242,32 @@ internal class CraftingRecipeEvents : Listener {
         return matrixData
     }
 
+    private fun trimMatrix(items: List<ItemStack?>, chunkSize: Int): List<ItemStack?> {
+        return items.chunked(chunkSize).trim(nullFiller) { it != null }.flatten()
+    }
+
     private fun testShapedVanillaRecipe(recipe: ShapedRecipe, inventory: CraftingInventory): Boolean {
-        var canCraft = true
-        val matrixData: List<ItemStack?> =
-            inventory.matrix.toList().chunked(3).trim(nullFiller) { it != null }.flatten()
+        // -1 because the result is in the last slot
+        val size = if (inventory.size - 1 == 9) 3 else 2
+        println("recipe size: $size")
+
         val recipeData = getMatrix(recipe)
 
-        for ((i, item) in matrixData.withIndex()) {
-            if (item == null) continue
-            val ingredient = recipeData.getOrNull(i) ?: continue
-            val succeeds = ingredient.test(item) && itemIsNotCustomOrCraftsAsBaseMaterial(item)
-            if (!succeeds) {
-                canCraft = false
-                break
+        fun test(matrixData: List<ItemStack?>, recipeData: List<RecipeChoice?>): Boolean {
+            for ((i, item) in matrixData.withIndex()) {
+                if (item == null) continue
+                val ingredient = recipeData.getOrNull(i) ?: continue
+                val succeeds = ingredient.test(item) && itemIsNotCustomOrCraftsAsBaseMaterial(item)
+                if (!succeeds) {
+                    return false
+                }
             }
+            return true
         }
-        return canCraft
+        return test(trimMatrix(inventory.matrix.toList(), size), recipeData) || test(
+            trimMatrix(mirror(inventory.matrix.toList(), size), size),
+            mirror(recipeData, size)
+        )
     }
 
     @EventHandler

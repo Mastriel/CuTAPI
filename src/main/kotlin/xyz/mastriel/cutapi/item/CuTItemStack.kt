@@ -17,6 +17,7 @@ import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.item.PacketItemHandler.hasPrerenderStack
 import xyz.mastriel.cutapi.item.PacketItemHandler.setPrerenderItemStack
 import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.utils.*
@@ -195,6 +196,7 @@ public open class CuTItemStack protected constructor(
      * The rendered item stack returned will have the key "cutapi:IsDisplay" byte in the persistent
      * data container set to 1, to indicate that it's a display item.
      */
+    @OptIn(UsesNMS::class)
     public open fun getRenderedItemStack(viewer: Player?): ItemStack {
         val itemStack = handle.clone()
 
@@ -339,11 +341,12 @@ public open class CuTItemStack protected constructor(
 public sealed class AgnosticItemStack(public val handle: ItemStack) {
     public fun vanilla(): ItemStack = handle
 
-    public data class Custom internal constructor(val stack: CuTItemStack) : AgnosticItemStack(stack.handle) {
+
+    public data class Custom(val stack: CuTItemStack) : AgnosticItemStack(stack.handle) {
         public fun custom(): CuTItemStack = stack
     }
 
-    public data class Vanilla internal constructor(private val stack: ItemStack) : AgnosticItemStack(stack)
+    public data class Vanilla(private val stack: ItemStack) : AgnosticItemStack(stack)
 }
 
 public fun ItemStack.toAgnostic(): AgnosticItemStack {

@@ -63,3 +63,10 @@ uploader:
   # Default: cutapi:internal
   id: cutapi:internal
 
+asset-downloader:
+  # The ID of the minecraft asset downloader being used.
+  # cutapi:github downloads the assets from a mirror on GitHub.
+  #
+  # Type: Identifier
+  # Default: cutapi:github
+  id: cutapi:github

@@ -4,6 +4,7 @@ package xyz.mastriel.cutapi
 
 import com.github.shynixn.mccoroutine.bukkit.*
 import io.papermc.paper.plugin.lifecycle.event.types.*
+import kotlinx.coroutines.*
 import org.bukkit.*
 import org.bukkit.plugin.java.*
 import org.bukkit.scheduler.*
@@ -12,16 +13,20 @@ import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.item.behaviors.*
 import xyz.mastriel.cutapi.item.bukkitevents.*
 import xyz.mastriel.cutapi.item.recipe.*
+import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
+import xyz.mastriel.cutapi.resources.minecraft.*
 import xyz.mastriel.cutapi.resources.process.*
 import xyz.mastriel.cutapi.resources.uploader.*
+import java.io.*
 
 
 @PublishedApi
 internal lateinit var Plugin: CuTAPIPlugin
     private set
 
+@OptIn(UsesNMS::class)
 public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
     override fun onEnable() {
@@ -31,6 +36,10 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         saveDefaultConfig()
         CuTAPI.registerPlugin(this, "cutapi") {
             packFolder = "pack"
+        }
+
+        CuTAPI.registerPlugin(MinecraftAssets, "minecraft") {
+            isFromJar = false
         }
 
         registerCommands()
@@ -45,8 +54,8 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         TexturePostProcessor.register(GrayscalePostProcessor)
         TexturePostProcessor.register(PaletteSwapPostProcessor)
         TexturePostProcessor.register(MultiplyOpaquePixelsProcessor)
-        TexturePostProcessor.registerBuiltins()
         ResourcePackProcessor.register(TextureAndModelProcessor, name = "Texture Processor")
+        MinecraftAssetDownloader.register(GithubMinecraftAssetDownloader())
         Uploader.register(BuiltinUploader())
 
         CuTAPI.packetEventManager.registerPacketListener(PacketItemHandler)
@@ -56,14 +65,27 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         generateResourcePackWhenReady()
     }
 
+    private fun getMinecraftVersion(): String {
+        return server.minecraftVersion
+    }
+
     private fun generateResourcePackWhenReady() {
         object : BukkitRunnable() {
             override fun run() {
+                runBlocking {
+                    MinecraftAssetDownloader.getActive()?.downloadAssets(getMinecraftVersion())
+                }
                 launch {
+                    CuTAPI.minecraftAssetLoader.loadAssets(
+                        File(
+                            MinecraftAssetDownloader.cacheFolder,
+                            getMinecraftVersion()
+                        )
+                    )
                     CuTAPI.resourcePackManager.regenerate()
                 }
             }
-        }.runTaskLater(this, 1)
+        }.runTaskLater(this, 0)
     }
 
 
@@ -107,6 +129,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
             val registrar = event.registrar()
             registrar.register(CuTGiveCommand, listOf("cutgive"))
+            registrar.register(CuTAPICommand)
         }
     }
 

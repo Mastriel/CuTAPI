@@ -13,9 +13,9 @@ import kotlin.reflect.full.*
 @Target(AnnotationTarget.CLASS)
 @MustBeDocumented
 @Repeatable
-public annotation class RequireBehavior(vararg val behaviors: KClass<Behavior>)
+public annotation class RequireBehavior(vararg val behaviors: KClass<out Behavior>)
 
-public val Behavior.requiredBehaviors: List<KClass<Behavior>>
+public val Behavior.requiredBehaviors: List<KClass<out Behavior>>
     get() {
         return this::class.findAnnotations(RequireBehavior::class)
             .map { it.behaviors.toList() }

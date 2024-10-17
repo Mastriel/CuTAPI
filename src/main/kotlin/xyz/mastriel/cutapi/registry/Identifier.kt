@@ -1,19 +1,14 @@
 package xyz.mastriel.cutapi.registry
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-import org.bukkit.NamespacedKey
-import xyz.mastriel.cutapi.CuTAPI
-import xyz.mastriel.cutapi.CuTPlugin
-import xyz.mastriel.cutapi.Plugin
+import kotlinx.serialization.*
+import kotlinx.serialization.descriptors.*
+import kotlinx.serialization.encoding.*
+import org.bukkit.*
+import xyz.mastriel.cutapi.*
 
 
 @Serializable(with = IdentifierSerializer::class)
+@ConsistentCopyVisibility
 public data class Identifier internal constructor(val namespace: String, val key: String) : Identifiable {
 
     override val id: Identifier get() = this

@@ -10,18 +10,11 @@ public sealed interface Locator {
      * be already taken care of for you.
      */
     public fun getFile(): File? = null
-    public val plugin: CuTPlugin
+    public val root: ResourceRoot
 
-    /**
-     * The root folder this exists in inside the file system. Typically, this
-     * is the equivalent of the plugin's pack folder.
-     *
-     * Root folders must be registered. If this is null, this means its the default
-     * root folder.
-     */
-    public val rootAlias: String? get() = null
+    public val plugin: CuTPlugin get() = root.cutPlugin
 
-    public val namespace: String get() = CuTAPI.getDescriptor(plugin).namespace
+    public val namespace: String get() = root.namespace
 
     /**
      * The path of this resource/folder without a namespace. Useful for things like filesystem pathing.
@@ -36,4 +29,10 @@ public sealed interface Locator {
 
     public fun toNamespacedPath(): String = toString()
 
+    public companion object {
+        public const val ROOT_SEPARATOR: String = "@"
+        public const val GENERATED_SEPARATOR: String = "^"
+        public const val CLONE_SEPARATOR: String = "+"
+        public const val SUBRESOURCE_SEPARATOR: String = "#"
+    }
 }

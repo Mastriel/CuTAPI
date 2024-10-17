@@ -10,7 +10,28 @@ public open class Resource(
     public open val metadata: CuTMeta? = null
 ) {
 
-    public val plugin: CuTPlugin get() = ref.plugin
+    public val inspector: ResourceInspector = ResourceInspector()
+
+    public fun isSubresource(): Boolean = "#" in ref.name
+
+    init {
+        inspector.single("Resource Type") { this::class.simpleName ?: "Unknown" }
+        inspector.single("Is Serializable") { this is ByteArraySerializable }
+        inspector.single("Plugin") { ref.plugin.namespace }
+        inspector.map("Subresources") {
+            subResources.groupBy { it::class.simpleName!! }.mapValues { (_, v) -> v.size }
+        }
+    }
+
+    public val root: ResourceRoot get() = ref.root
+
+    public val plugin: CuTPlugin get() = root.cutPlugin
+
+    /**
+     * Sub-resources are resources that are loaded with this resource.
+     */
+    public open var subResources: List<Resource> = emptyList()
+        protected set
 
     // these are set by the resource manager
     // these are also purely for the clone block
@@ -28,6 +49,14 @@ public open class Resource(
      * @see requireValidRef
      */
     public open fun check() {}
+
+
+    /**
+     * Called immediately when the resource is registered.
+     *
+     * If you're going to register more resources after this one, you should do it in [onRegister].
+     */
+    public open fun onRegister() {}
 
 
     /**
@@ -73,4 +102,8 @@ public fun Resource.isSerializable(): Boolean = this is ByteArraySerializable
 @OptIn(ExperimentalSerializationApi::class)
 public fun <T : Resource> T.cborSerialize(serializer: KSerializer<T>): ByteArray {
     return CuTAPI.cbor.encodeToByteArray(serializer, this)
+}
+
+public fun <T : Resource> ResourceRef<*>.subRef(refName: String): ResourceRef<T> {
+    return ref(this.root, "${this.path(withExtension = true)}#${refName}")
 }

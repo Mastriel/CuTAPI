@@ -9,9 +9,10 @@ import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.resources.data.minecraft.*
 import xyz.mastriel.cutapi.utils.*
 import java.io.*
+import kotlin.math.*
 
 public val TextureAndModelProcessor: ResourceProcessor = resourceProcessor<Resource> {
-    val textures = this.resources.filterIsInstance<Texture2D>()
+    val textures = this.resources.filterIsInstance<Texture2D>().filter { !it.metadata.transient }
     val models = this.resources.filterIsInstance<Model3D>()
     val resourcePackManager = CuTAPI.resourcePackManager
 
@@ -44,7 +45,7 @@ internal data class MinecraftFontProvider(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val chars: List<String>? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val advances: MutableMap<Char, Int>? = null
+    val advances: MutableMap<String, Int>? = null
 )
 
 
@@ -62,7 +63,7 @@ internal fun BitmapFontProvider(
 }
 
 internal fun SpaceMinecraftFontProvider(
-    advances: MutableMap<Char, Int>,
+    advances: MutableMap<String, Int>,
 ): MinecraftFontProvider {
     return MinecraftFontProvider("space", advances = advances)
 }
@@ -100,6 +101,14 @@ public fun String.decodeGlyphAndColor(): Component {
     return decodeGlyph().colored
 }
 
+public enum class GlyphSize(public val size: (Texture2D) -> Int) {
+    Chat({ 12 }),
+    Large({ 16 }),
+    Preview({ 64 }),
+    Small({ 8 }),
+    Default({ it.data.height })
+}
+
 internal fun generateGlyphs(textures: List<Texture2D>) {
     val list = mutableListOf<MinecraftFontProvider>()
 
@@ -107,22 +116,28 @@ internal fun generateGlyphs(textures: List<Texture2D>) {
 
     for (texture in textures) {
         val fontSettings = texture.metadata.fontSettings
-        val height = texture.data.height
-        val ascent = fontSettings.ascent ?: (height * 0.75).toInt()
-        val finalHeight = fontSettings.height ?: height
+        if (!fontSettings.enabled) continue
 
-        val privateUseChar = Character.toChars(privateUseCharIndex).joinToString("")
-        privateUseCharIndex += 1;
-        if (fontSettings.advance != null) {
-            val advance = fontSettings.advance
-            val spaceChar = Character.toChars(privateUseCharIndex).first()
+        for (size in GlyphSize.entries) {
+            val height = size.size(texture)
+            var ascent = if (size === GlyphSize.Preview) 6 else fontSettings.ascent ?: (height * 0.75).toInt()
+            val finalHeight = if (size === GlyphSize.Default) fontSettings.height ?: height else height
+
+            ascent = min(ascent, finalHeight)
+
+            val privateUseChar = Character.toChars(privateUseCharIndex).joinToString("")
             privateUseCharIndex += 1;
-            spaceProvider.advances!![spaceChar] = advance
-            texture.glyphChar = spaceChar + privateUseChar
-        } else {
-            texture.glyphChar = privateUseChar
+            if (fontSettings.advance != null) {
+                val advance = fontSettings.advance
+                val spaceChar = Character.toChars(privateUseCharIndex).joinToString("")
+                privateUseCharIndex += 1;
+                spaceProvider.advances!![spaceChar] = advance
+                texture.glyphChars[size] = spaceChar + privateUseChar
+            } else {
+                texture.glyphChars[size] = privateUseChar
+            }
+            list += BitmapFontProvider(texture.ref, ascent, finalHeight, listOf(privateUseChar))
         }
-        list += BitmapFontProvider(texture.ref, ascent, finalHeight, listOf(privateUseChar))
     }
 
     val fontFile = MinecraftFontFile(list + spaceProvider)
@@ -132,12 +147,8 @@ internal fun generateGlyphs(textures: List<Texture2D>) {
     File(packTmp, "assets/minecraft/font/default.json").createAndWrite(jsonString)
 }
 
-/**
- * Replace + and ^ from generations and cloning with underscores since
- * minecraft is gay
- */
 internal fun String.fixInvalidResourcePath(): String {
-    return this.replace("+", "_").replace("^", "_")
+    return CuTAPI.resourcePackManager.sanitizeName(this)
 }
 
 internal fun generateTexturesInPack(textures: List<Texture2D>) {
@@ -166,7 +177,7 @@ internal fun generateTexturesInPack(textures: List<Texture2D>) {
             withNamespaceAsFolder = false,
             withNamespace = false
         ).fixInvalidResourcePath()
-        val modelFile = CuTAPI.resourcePackManager.getModelsFolder(texture.plugin.namespace) appendPath "/$path.json"
+        val modelFile = CuTAPI.resourcePackManager.getModelsFolder(texture.root.namespace) appendPath "/$path.json"
 
         modelFile.mkdirsOfParent()
         modelFile.createAndWrite(jsonString)
@@ -176,14 +187,14 @@ internal fun generateTexturesInPack(textures: List<Texture2D>) {
 internal fun generateModelsInPack(models: List<Model3D>) {
     // for this one we only need to put the models in the correct folder.
     models.forEach { model ->
-        val modelsFolder = CuTAPI.resourcePackManager.getModelsFolder(model.ref.plugin.namespace)
+        val modelsFolder = CuTAPI.resourcePackManager.getModelsFolder(model.ref.root.namespace)
         model.saveTo(modelsFolder appendPath model.ref.path(withExtension = false).fixInvalidResourcePath() + ".json")
 
     }
 }
 
 private fun generateAnimationMcMeta(texture: Texture2D, texturesFolder: File, animationData: Animation) {
-    val file = texturesFolder appendPath texture.ref.path + ".mcmeta"
+    val file = texturesFolder appendPath CuTAPI.resourcePackManager.sanitizeName(texture.ref.path) + ".mcmeta"
 
     val mcmetaJson = CuTAPI.json.encodeToString(AnimationMcMeta(animationData))
 
@@ -210,7 +221,7 @@ private fun generateVanillaItemJsonFiles(textures: Collection<TextureLike>, mode
                 .fixInvalidResourcePath()
 
             overrides += ItemOverrides(
-                ItemPredicates(customModelData),
+                ItemPredicates(customModelData!!),
                 "${itemTexture.resource.ref.namespace}:item/$path"
             )
         }

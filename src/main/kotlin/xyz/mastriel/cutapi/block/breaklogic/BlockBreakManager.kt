@@ -19,7 +19,7 @@ import java.util.concurrent.*
 import java.util.logging.*
 
 // This class uses NMS to detect when a player starts breaking a block.
-@UsesNMS
+@OptIn(UsesNMS::class)
 public class BlockBreakManager : Listener, PacketListener {
 
     private val breakers = ConcurrentHashMap<Player, PlayerBlockBreaker>()

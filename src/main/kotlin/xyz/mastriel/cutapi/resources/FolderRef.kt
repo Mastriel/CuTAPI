@@ -2,8 +2,13 @@ package xyz.mastriel.cutapi.resources
 
 import xyz.mastriel.cutapi.*
 
-public data class FolderRef internal constructor(override val plugin: CuTPlugin, override val pathList: List<String>) :
-    Locator {
+@ConsistentCopyVisibility
+public data class FolderRef internal constructor(
+    override val root: ResourceRoot,
+    override val pathList: List<String>
+) : Locator {
+
+    val isRoot: Boolean get() = pathList.isEmpty()
 
     override val path: String
         get() = if (pathList.isEmpty()) "" else pathList.joinToString("/") + "/"
@@ -12,7 +17,7 @@ public data class FolderRef internal constructor(override val plugin: CuTPlugin,
         get() {
             val list = pathList.dropLast(1)
             if (list.isEmpty()) return null
-            return folderRef(plugin, list.joinToString("/"))
+            return folderRef(root, list.joinToString("/"))
         }
 
     public fun hasChildren(): Boolean {
@@ -20,38 +25,45 @@ public data class FolderRef internal constructor(override val plugin: CuTPlugin,
     }
 
     public fun getChildren(): List<Locator> {
-        return CuTAPI.resourceManager.getFolderContents(plugin, this)
+        return CuTAPI.resourceManager.getFolderContents(root, this)
     }
 
     override fun toString(): String {
-        return "${plugin.namespace}://${path}"
+        return "${root.namespace}://${path}"
     }
 
     public operator fun div(path: String): FolderRef {
-        return FolderRef(plugin, pathList + path.split("/"))
+        return FolderRef(root, pathList + path.split("/"))
     }
 
-    public fun and(path: String): FolderRef {
+    public fun append(path: String): FolderRef {
         return this / path
     }
 
     public fun <T : Resource> child(path: String): ResourceRef<T> {
-        return ResourceRef(plugin, rootAlias, pathList + path.removePrefix("/").removeSuffix("/").split("/"))
+        return ResourceRef(root, pathList + path.removePrefix("/").removeSuffix("/").split("/"))
     }
 }
 
-public fun folderRef(plugin: CuTPlugin, path: String): FolderRef {
-    return FolderRef(plugin, normalizeFolder(path).split("/").filterNot { it.isEmpty() })
+public fun folderRef(root: ResourceRoot, path: String): FolderRef {
+    if (path == "") return FolderRef(root, emptyList())
+    return FolderRef(root, normalizeFolder(path).split("/").filterNot { it.isEmpty() })
 }
 
+/**
+ * @throws IllegalStateException if the root is not found.
+ */
 public fun folderRef(stringPath: String): FolderRef {
-    val (namespace, path) = stringPath.split("://")
-    val plugin = CuTAPI.getPluginFromNamespace(namespace)
-    return folderRef(plugin, normalizeFolder(path))
+    val (root, path) = stringPath.split("://")
+    if (path.isEmpty()) return folderRef(
+        CuTAPI.resourceManager.getResourceRoot(root) ?: error("Resource root $root not found."), ""
+    )
+    val resourceRoot = CuTAPI.resourceManager.getResourceRoot(root) ?: error("Resource root $root not found.")
+    return folderRef(resourceRoot, normalizeFolder(path))
 }
-
 
 public fun normalizeFolder(path: String): String {
+    if (path.isEmpty()) return ""
     var newPath = path
     if (newPath.startsWith("/")) newPath = newPath.removePrefix("/")
     if (!newPath.endsWith("/")) newPath += "/"

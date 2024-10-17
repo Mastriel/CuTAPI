@@ -11,6 +11,7 @@ import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.periodic.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.minecraft.*
 import xyz.mastriel.cutapi.utils.*
 import kotlin.collections.set
 
@@ -21,6 +22,7 @@ import kotlin.collections.set
  * @see Plugin
  * @see PluginDescriptor
  */
+@OptIn(UsesNMS::class)
 public object CuTAPI {
 
     /**
@@ -34,9 +36,13 @@ public object CuTAPI {
     public val periodicManager: PeriodicManager = PeriodicManager()
     public val serviceManager: ServiceManager = ServiceManager()
     public val blockManager: CustomBlockManager by lazy { CustomBlockManager() }
+    public val minecraftAssetLoader: MinecraftAssetLoader = MinecraftAssetLoader()
 
-    internal val playerPacketManager = PlayerPacketManager()
-    internal val packetEventManager = PacketEventManager()
+    @UsesNMS
+    public val playerPacketManager: PlayerPacketManager = PlayerPacketManager()
+
+    @UsesNMS
+    public val packetEventManager: PacketEventManager = PacketEventManager()
     internal val blockBreakManager = BlockBreakManager()
 
     /**

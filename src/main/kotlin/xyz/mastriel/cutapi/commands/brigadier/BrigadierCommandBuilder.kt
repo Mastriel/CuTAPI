@@ -11,3 +11,4 @@ public fun command(
 ): LiteralCommandNode<CommandSourceStack> {
     return BrigadierCommandLiteralBuilder(name).apply(builder).build()
 }
+

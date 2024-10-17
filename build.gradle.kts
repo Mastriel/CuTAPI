@@ -51,17 +51,22 @@ dependencies {
     // god hates me so we're shadowing everything
     shadow("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
     shadow("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
-    shadow("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    shadow("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
     shadow("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
     shadow("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
     shadow("net.peanuuutz.tomlkt:tomlkt:0.3.7")
 
     shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.16.0")
     shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.16.0")
+    shadow("net.kyori:adventure-extra-kotlin:4.17.0")
 
     // used for the built-in uploader
-    shadow("io.ktor:ktor-server-core:2.3.0")
-    shadow("io.ktor:ktor-server-netty:2.3.0")
+    shadow("io.ktor:ktor-server-core:2.3.12")
+    shadow("io.ktor:ktor-server-netty:2.3.12")
+    shadow("io.ktor:ktor-client-core:2.3.12")
+    shadow("io.ktor:ktor-client-cio:2.3.12")
+
+    shadow("net.lingala.zip4j:zip4j:2.11.5")
 
     paperweight.paperDevBundle("1.21.1-R0.1-SNAPSHOT")
 }

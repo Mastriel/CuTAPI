@@ -8,5 +8,5 @@ public fun allocateCustomModelData(): Int {
 }
 
 public interface CustomModelDataAllocated {
-    public val customModelData: Int
+    public val customModelData: Int?
 }

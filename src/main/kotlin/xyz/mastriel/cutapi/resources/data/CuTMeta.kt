@@ -21,7 +21,7 @@ public open class CuTMeta {
     public open val cloneBlocks: List<@Contextual TomlTable> = listOf()
 
     @SerialName("id")
-    public val resourceType: Identifier = unknownID()
+    public open val resourceType: Identifier = unknownID()
 
     @SerialName("extends")
     public val extends: Map<SerializableTemplateRef, List<Map<String, @Contextual TomlLiteral>>> = emptyMap()
@@ -44,7 +44,6 @@ public open class CuTMeta {
 
     public fun toToml(): TomlTable {
         return CuTAPI.toml.encodeToTomlElement(this).asTomlTable()
-
     }
 }
 

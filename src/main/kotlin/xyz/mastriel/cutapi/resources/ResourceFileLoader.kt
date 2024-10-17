@@ -16,7 +16,12 @@ public interface ResourceFileLoader<T : Resource> : Identifiable {
      */
     public val dependencies: List<ResourceFileLoader<*>> get() = listOf()
 
-    public fun loadResource(ref: ResourceRef<T>, data: ByteArray, metadata: ByteArray?): ResourceLoadResult<T>
+    public fun loadResource(
+        ref: ResourceRef<T>,
+        data: ByteArray,
+        metadata: ByteArray?,
+        options: ResourceLoadOptions
+    ): ResourceLoadResult<T>
 
     public companion object : IdentifierRegistry<ResourceFileLoader<*>>("Resource File Loaders") {
 
@@ -69,12 +74,16 @@ public sealed class ResourceLoadResult<T : Resource> {
     /**
      * The resource failed to load, and we shouldn't try to make it into any other resource type.
      */
-    public class Failure<T : Resource> : ResourceLoadResult<T>()
+    public class Failure<T : Resource>(public val exception: Throwable? = null) : ResourceLoadResult<T>() {
+        override fun toString(): String = "Failure"
+    }
 
     /**
      * The resource failed to load, but we should try to cast it into different types still.
      */
-    public class WrongType<T : Resource> : ResourceLoadResult<T>()
+    public class WrongType<T : Resource> : ResourceLoadResult<T>() {
+        override fun toString(): String = "WrongType"
+    }
 }
 
 
@@ -84,12 +93,15 @@ public class ResourceFileLoaderContext<T : Resource, M : CuTMeta>(
     public val ref: ResourceRef<T>,
     public val data: ByteArray,
     public val metadata: M?,
-    public val metadataBytes: ByteArray? = null
+    public val metadataBytes: ByteArray? = null,
+    public val options: ResourceLoadOptions = ResourceLoadOptions()
 ) {
     public val dataAsString: String by lazy { data.toString(Charsets.UTF_8) }
 
     public fun success(value: T): ResourceLoadResult.Success<T> = ResourceLoadResult.Success(value)
-    public fun failure(): ResourceLoadResult.Failure<T> = ResourceLoadResult.Failure<T>()
+    public fun failure(exception: Throwable? = null): ResourceLoadResult.Failure<T> =
+        ResourceLoadResult.Failure<T>(exception)
+
     public fun wrongType(): ResourceLoadResult.WrongType<T> = ResourceLoadResult.WrongType<T>()
 }
 
@@ -111,13 +123,18 @@ public fun <T : Resource, M : CuTMeta> resourceLoader(
         override val dependencies: List<ResourceFileLoader<*>> = dependencies
         override val id: Identifier = resourceTypeId
 
-        override fun loadResource(ref: ResourceRef<T>, data: ByteArray, metadata: ByteArray?): ResourceLoadResult<T> {
+        override fun loadResource(
+            ref: ResourceRef<T>,
+            data: ByteArray,
+            metadata: ByteArray?,
+            options: ResourceLoadOptions
+        ): ResourceLoadResult<T> {
             if (extensions == null || ref.extension in extensions) {
                 val metadataText = metadata?.toString(Charsets.UTF_8)
                 try {
                     if (metadataText == null) {
-                        Plugin.warn("$ref is being interpretted as $resourceTypeId implicitly. (no metadata)")
-                        return func(ResourceFileLoaderContext(ref, data, null, metadata))
+                        // Plugin.warn("$ref is being interpretted as $resourceTypeId implicitly. (no metadata)")
+                        return func(ResourceFileLoaderContext(ref, data, null, metadata, options))
                     }
 
                     if (!checkIsResourceTypeOrUnknown(ref, metadataText, resourceTypeId)) {
@@ -126,9 +143,9 @@ public fun <T : Resource, M : CuTMeta> resourceLoader(
 
                     if (metadataSerializer != null) {
                         val parsedMetadata = CuTAPI.toml.decodeFromString(metadataSerializer, metadataText)
-                        return func(ResourceFileLoaderContext(ref, data, parsedMetadata, metadata))
+                        return func(ResourceFileLoaderContext(ref, data, parsedMetadata, metadata, options))
                     } else {
-                        return func(ResourceFileLoaderContext(ref, data, null, metadata))
+                        return func(ResourceFileLoaderContext(ref, data, null, metadata, options))
                     }
 
                 } catch (e: IllegalArgumentException) {
@@ -143,7 +160,6 @@ public fun <T : Resource, M : CuTMeta> resourceLoader(
 
                 } catch (e: WrongResourceTypeException) {
                     return ResourceLoadResult.WrongType()
-
                 } catch (e: Exception) {
                     Plugin.error("Error loading $ref. Skipping!")
                     e.printStackTrace()
@@ -167,7 +183,6 @@ internal fun checkIsResourceTypeOrUnknown(
 ): Boolean {
     val table = CuTAPI.toml.parseToTomlTable(metadataText)
     val metadataId = table["id"] ?: run {
-        Plugin.warn("$ref is being interpretted as $resourceTypeId implicitly. (no id)")
         return true
     }
     return id(metadataId.toString()) == resourceTypeId

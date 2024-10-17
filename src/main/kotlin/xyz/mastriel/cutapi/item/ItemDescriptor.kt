@@ -111,19 +111,28 @@ public class ItemDescriptorBuilder {
 public sealed class ItemTexture : CustomModelDataAllocated {
 
     public abstract fun isAvailable(): Boolean
+    public abstract fun getRef(): ResourceRef<*>
 
     public data class Texture(val texture: ResourceRef<Texture2D>) : ItemTexture() {
-        override val customModelData: Int
-            get() = texture.getResource()!!.customModelData
+        override val customModelData: Int?
+            get() = texture.getResource()?.customModelData
 
         override fun isAvailable(): Boolean = texture.isAvailable()
+
+        override fun getRef(): ResourceRef<*> {
+            return texture
+        }
     }
 
     public data class Model(val model: ResourceRef<Model3D>) : ItemTexture() {
-        override val customModelData: Int
-            get() = model.getResource()!!.customModelData
+        override val customModelData: Int?
+            get() = model.getResource()?.customModelData
 
         override fun isAvailable(): Boolean = model.isAvailable()
+
+        override fun getRef(): ResourceRef<*> {
+            return model
+        }
     }
 }
 

@@ -2,9 +2,12 @@
 
 package xyz.mastriel.cutapi.commands.brigadier
 
+import com.github.shynixn.mccoroutine.bukkit.*
+import com.mojang.brigadier.*
 import com.mojang.brigadier.arguments.*
 import com.mojang.brigadier.tree.*
 import io.papermc.paper.command.brigadier.*
+import xyz.mastriel.cutapi.*
 
 public class BrigadierCommandArgumentBuilder internal constructor(
     public val name: String,
@@ -34,8 +37,11 @@ public class BrigadierCommandArgumentBuilder internal constructor(
         }
         if (executes != null) {
             command.executes {
-                val ctx = BrigadierCommandExecutorContext(it)
-                executes?.invoke(ctx)?.value ?: 0
+                Plugin.launch {
+                    val ctx = BrigadierCommandExecutorContext(it)
+                    executes?.invoke(ctx)?.value ?: 0
+                }
+                Command.SINGLE_SUCCESS
             }
         }
         return command.build()

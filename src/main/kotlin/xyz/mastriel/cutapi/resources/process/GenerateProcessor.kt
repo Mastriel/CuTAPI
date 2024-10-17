@@ -30,7 +30,6 @@ internal fun generateResources(resources: List<Resource>, stage: ResourceGenerat
                     generateResources(newResources, stage)
                 }
 
-
             } catch (ex: Exception) {
                 val subid = resource.ref.generatedSubId(generateBlock.subId ?: "<no subid>")
                 Plugin.error("Failed to generate resource '$subid' from '${resource.ref}'")
@@ -41,5 +40,5 @@ internal fun generateResources(resources: List<Resource>, stage: ResourceGenerat
 }
 
 public fun <T : Resource> ResourceRef<T>.generatedSubId(string: String): ResourceRef<T> {
-    return ref(plugin, "${this.path()}+$string.${this.extension}")
+    return ref(root, "${this.path()}+$string.${this.extension}")
 }

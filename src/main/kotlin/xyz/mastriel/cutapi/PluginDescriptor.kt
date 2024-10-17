@@ -2,15 +2,23 @@ package xyz.mastriel.cutapi
 
 import org.bukkit.*
 import org.bukkit.plugin.*
+import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.utils.*
+import java.io.*
 
 
-public interface CuTPlugin {
+public interface CuTPlugin : ResourceRoot {
     // Either is the bukkit plugin that owns this plugin,
     // or its CuTAPI.
     public val plugin: Plugin get() = this as? Plugin ?: Plugin
+    public override val cutPlugin: CuTPlugin get() = this
     public val descriptor: PluginDescriptor get() = CuTAPI.getDescriptor(this)
-    public val namespace: String get() = descriptor.namespace
+    public override val namespace: String get() = descriptor.namespace
     public val isFromJar: Boolean get() = descriptor.options.isFromJar
+
+    override fun getResourcesFolder(): File {
+        return CuTAPI.resourcePackManager.tempFolder.appendPath(namespace)
+    }
 }
 
 /**
@@ -19,12 +27,14 @@ public interface CuTPlugin {
  * @see Plugin
  * @see CuTAPI
  * */
+@ConsistentCopyVisibility
 public data class PluginDescriptor internal constructor(
     val plugin: CuTPlugin,
     val namespace: String,
     val options: PluginOptions = defaultPluginOptions()
 )
 
+@ConsistentCopyVisibility
 public data class PluginOptions internal constructor(
     val packFolder: String = "pack",
     val autoDisplayAsForTexturedItems: Material? = null,

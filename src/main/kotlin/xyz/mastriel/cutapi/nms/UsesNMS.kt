@@ -8,5 +8,6 @@ import org.jetbrains.annotations.ApiStatus.Internal
  * If you're using CuTAPI, then you should avoid classes with this annotation.
  */
 @Internal
-@Retention(AnnotationRetention.SOURCE)
+@RequiresOptIn("This uses NMS, which is not recommended for use in plugins.")
+@Retention(AnnotationRetention.BINARY)
 public annotation class UsesNMS()

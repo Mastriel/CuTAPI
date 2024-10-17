@@ -1,8 +1,7 @@
 package xyz.mastriel.cutapi.registry
 
-import xyz.mastriel.cutapi.CuTPlugin
-import xyz.mastriel.cutapi.Plugin
-import java.lang.ref.WeakReference
+import xyz.mastriel.cutapi.*
+import java.lang.ref.*
 
 private typealias HookFunction<T> = HookContext<T>.() -> Unit
 
@@ -15,7 +14,11 @@ public enum class HookPriority(public val number: Byte) {
     READONLY(3)
 }
 
-public data class HookContext<T : Identifiable>(val registry: IdentifierRegistry<T>, val item: T, var preventRegister: Boolean)
+public data class HookContext<T : Identifiable>(
+    val registry: IdentifierRegistry<T>,
+    val item: T,
+    var preventRegister: Boolean
+)
 
 /**
  * A map of [Identifier] to [T]. This is used in keeping a registry of all items, blocks, etc.

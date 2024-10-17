@@ -138,14 +138,14 @@ public sealed class AgnosticMaterial {
      */
     public abstract val expectedVanillaMaterial: Material
 
-    public data class Custom internal constructor(val itemType: AnyCustomItem) : AgnosticMaterial() {
+    public data class Custom(val itemType: AnyCustomItem) : AgnosticMaterial() {
         public fun custom(): CustomItem<*> = itemType
 
         override val expectedVanillaMaterial: Material
             get() = itemType.type
     }
 
-    public data class Vanilla internal constructor(private val material: Material) : AgnosticMaterial() {
+    public data class Vanilla(private val material: Material) : AgnosticMaterial() {
         public fun vanilla(): Material = material
 
         override val expectedVanillaMaterial: Material

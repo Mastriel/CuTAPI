@@ -15,9 +15,9 @@ import kotlin.reflect.*
  * Use getResource to get the actual resource this is referring to (if it exists)
  */
 @Serializable(with = ResourceRefSerializer::class)
+@ConsistentCopyVisibility
 public data class ResourceRef<out T : Resource> internal constructor(
-    override val plugin: CuTPlugin,
-    override val rootAlias: String?,
+    override val root: ResourceRoot,
     override val pathList: List<String>
 ) : ReadOnlyProperty<Any?, T?>, Locator {
 
@@ -55,28 +55,29 @@ public data class ResourceRef<out T : Resource> internal constructor(
 
     public fun path(
         withExtension: Boolean = false,
-        withRootFolder: Boolean = false,
         withNamespace: Boolean = false,
+        withRootAlias: Boolean = withNamespace,
         withNamespaceAsFolder: Boolean = false,
         withName: Boolean = true
     ): String {
         val sb = StringBuilder("")
         if (withNamespace) {
-            if (rootAlias != null && withRootFolder)
-                sb.append("${namespace}$${rootAlias}://")
-            else
+            if (withRootAlias)
                 sb.append("${namespace}://")
+            else
+                sb.append("${plugin.namespace}://")
         }
         if (withNamespaceAsFolder) sb.append("${namespace}/")
         if (pathList.size != 1) sb.append(pathList.dropLast(1).joinToString("/"))
 
         if (withName) {
             val optionalSlash = if (pathList.size == 1) "" else "/"
-            sb.append(optionalSlash + name.split(".", limit = 2).first())
-        }
 
-        if (withExtension) {
-            sb.append(".${extension}")
+            if (withExtension) {
+                sb.append(optionalSlash + name)
+            } else {
+                sb.append(optionalSlash + name.removeSuffix(".${extension}"))
+            }
         }
         return sb.toString().removeSuffix("/")
     }
@@ -88,6 +89,8 @@ public data class ResourceRef<out T : Resource> internal constructor(
 
     val extension: String
         get() = name
+            .split(Locator.SUBRESOURCE_SEPARATOR, Locator.GENERATED_SEPARATOR, Locator.CLONE_SEPARATOR, limit = 2)
+            .last()
             .split(".", limit = 2)
             .last()
 
@@ -95,7 +98,7 @@ public data class ResourceRef<out T : Resource> internal constructor(
         get() {
             val list = pathList.dropLast(1)
             if (list.isEmpty()) return null
-            return folderRef(plugin, list.joinToString("/"))
+            return folderRef(root, list.joinToString("/"))
         }
 
     public fun toIdentifier(): Identifier {
@@ -104,8 +107,9 @@ public data class ResourceRef<out T : Resource> internal constructor(
 
 
     override fun toString(): String {
-        return path(withExtension = true, withRootFolder = false, withNamespace = true)
+        return path(withExtension = true, withRootAlias = false, withNamespace = true)
     }
+
 }
 
 public fun <T : Resource> Identifier.toResourceRef(): ResourceRef<T> {
@@ -118,34 +122,24 @@ public fun normalizeRefPath(path: String): String {
     return path.removeSuffix("/").removePrefix("/")
 }
 
-public fun <T : Resource> ref(plugin: CuTPlugin, path: String): ResourceRef<T> {
-    return ResourceRef(plugin, null, normalizeRefPath(path).split("/").filterNot { it.isEmpty() })
+public fun <T : Resource> ref(root: ResourceRoot, path: String): ResourceRef<T> {
+    return ResourceRef(root, normalizeRefPath(path).split("/").filterNot { it.isEmpty() })
 }
 
-public data class PluginWithRootFolder(val plugin: CuTPlugin, val rootFolder: String?)
-
-public infix fun CuTPlugin.root(alias: String?): PluginWithRootFolder {
-    return PluginWithRootFolder(this, alias)
-}
-
-public fun <T : Resource> ref(pluginAndRoot: PluginWithRootFolder, path: String): ResourceRef<T> {
-    return ResourceRef(
-        pluginAndRoot.plugin,
-        pluginAndRoot.rootFolder,
-        normalizeRefPath(path).split("/").filterNot { it.isEmpty() }
-    )
+public fun <T : Resource> ref(folder: FolderRef, path: String): ResourceRef<T> {
+    return folder.child(path)
 }
 
 
 public fun <T : Resource> ref(stringPath: String): ResourceRef<T> {
     require("://" in stringPath) { "String ResourceRef $stringPath does not follow namespace://path format." }
     val (start, path) = stringPath.split("://", limit = 2)
-    val startSplit = start.split("$", limit = 2)
+    val startSplit = start.split(Locator.ROOT_SEPARATOR, limit = 2)
     val namespace = startSplit[0]
     val root = startSplit.getOrNull(1)
 
     val plugin = CuTAPI.getPluginFromNamespace(namespace)
-    return ref(plugin root root, path)
+    return ref(plugin, path)
 }
 
 

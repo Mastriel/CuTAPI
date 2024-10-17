@@ -104,7 +104,7 @@ public class ResourcePackManager {
             for (plugin in CuTAPI.registeredPlugins) {
                 try {
                     CuTAPI.resourceManager.dumpPluginResourcesToTemp(plugin)
-                    CuTAPI.resourceManager.loadPluginResources(plugin)
+                    CuTAPI.resourceManager.loadRootResources(plugin)
                 } catch (e: Exception) {
                     Plugin.error("Failed to load resources for ${plugin}!")
                 }
@@ -126,6 +126,12 @@ public class ResourcePackManager {
 
     public val onPackGenerateFinished: EventHandlerList<Unit> = EventHandlerList()
 
+
+    public fun sanitizeName(name: String): String {
+        return name.replace(Locator.SUBRESOURCE_SEPARATOR, "__SRE__")
+            .replace(Locator.GENERATED_SEPARATOR, "__GEN__")
+            .replace(Locator.CLONE_SEPARATOR, "__CLN__")
+    }
 
     private fun runResourceProcessors() {
         val executionTime = measureTime {

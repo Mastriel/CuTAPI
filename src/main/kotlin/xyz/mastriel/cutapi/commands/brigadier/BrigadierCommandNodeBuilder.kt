@@ -10,8 +10,9 @@ import kotlin.reflect.*
 public interface BrigadierCommandNodeBuilder {
 
     public val arguments: List<ArgumentCommandNode<CommandSourceStack, *>>
+    public val subcommands: List<LiteralCommandNode<CommandSourceStack>>
     public val requirements: List<(CommandSourceStack) -> Boolean>
-    public val executes: (BrigadierCommandExecutorContext.() -> BrigadierCommandReturn)? get() = null
+    public val executes: (suspend BrigadierCommandExecutorContext.() -> BrigadierCommandReturn)? get() = null
 
     public fun build(): CommandNode<CommandSourceStack>
     public fun requires(predicate: CommandSourceStack.() -> Boolean)
@@ -22,7 +23,12 @@ public interface BrigadierCommandNodeBuilder {
         block: BrigadierCommandArgumentBuilder.(BrigadierArgumentAccessor<T>) -> Unit
     )
 
-    public fun executes(func: BrigadierCommandExecutorContext.() -> BrigadierCommandReturn)
+    public fun subcommand(
+        name: String,
+        builder: BrigadierCommandLiteralBuilder.() -> Unit
+    )
+
+    public fun executes(func: suspend BrigadierCommandExecutorContext.() -> BrigadierCommandReturn)
 }
 
 public inline fun <reified T : Any> BrigadierCommandNodeBuilder.argument(

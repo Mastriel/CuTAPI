@@ -20,9 +20,20 @@ import kotlin.collections.set
 public open class Texture2D(
     override val ref: ResourceRef<Texture2D>,
     data: BufferedImage,
-    override val metadata: Metadata
+    final override val metadata: Metadata
 ) : Resource(ref), ByteArraySerializable, CustomModelDataAllocated, TextureLike {
+    final override val customModelData: Int? = if (this.metadata.transient) null else allocateCustomModelData()
 
+    init {
+        inspector.single("Custom Model Data") { customModelData ?: "&7Not Allocated" }
+        inspector.single("Materials") { if (materials.isEmpty()) "&7None" else materials.joinToString() }
+        inspector.single("Glyph") {
+            getGlyphOrNull(GlyphSize.Preview)?.let { "&f${it}" + "\n".repeat(5) } ?: "&7No Glyph Generated"
+        }
+    }
+
+
+    public fun toMinecraftLocator(): String = ref.toMinecraftLocator()
 
     @Serializable
     public open class Metadata(
@@ -44,7 +55,13 @@ public open class Texture2D(
         public val modelFile: ResourceRef<@Contextual JsonResource>? = null,
         @SerialName("font")
         public val fontSettings: FontSettings = FontSettings(),
+        // If this is true, the resource will not be saved to the resource pack
+        @SerialName("transient")
+        public val transient: Boolean = false
     ) : CuTMeta() {
+
+        override val resourceType: Identifier
+            get() = id(Plugin, "texture2d")
 
         public fun copy(): Metadata {
             return Metadata(
@@ -54,7 +71,8 @@ public open class Texture2D(
                 animation = animation,
                 itemModelData = itemModelData,
                 modelFile = modelFile,
-                fontSettings = fontSettings
+                fontSettings = fontSettings,
+                transient = transient
             )
         }
 
@@ -82,17 +100,17 @@ public open class Texture2D(
     override val resource: Resource
         get() = this
 
-    internal var glyphChar: String? = null
+    internal var glyphChars: MutableMap<GlyphSize, String> = mutableMapOf()
 
     /**
      * May return a placeholder string if this emoji hasn't been loaded yet.
      */
-    public fun getEmoji(): String {
-        return glyphChar ?: "<uninitialized emoji>"
+    public fun getGlyph(size: GlyphSize = GlyphSize.Default): String {
+        return glyphChars[size] ?: "<uninitialized emoji>"
     }
 
-    public fun getGlyphOrNull(): String? {
-        return glyphChar
+    public fun getGlyphOrNull(size: GlyphSize = GlyphSize.Default): String? {
+        return glyphChars[size]
     }
 
     override fun createItemModelData(): JsonObject {
@@ -136,9 +154,12 @@ public open class Texture2D(
         return stream.toByteArray()
     }
 
-    override val customModelData: Int = allocateCustomModelData()
 
+}
 
+public fun ResourceRef<Texture2D>.toMinecraftLocator(): String {
+    val path = CuTAPI.resourcePackManager.sanitizeName(path(withExtension = false, withNamespaceAsFolder = false))
+    return "${namespace}:item/$path"
 }
 
 /**
@@ -177,7 +198,13 @@ public open class TexturePostprocessTable {
 
 @Serializable
 public open class FontSettings(
+    public val enabled: Boolean = true,
     public val ascent: Int? = null,
     public val height: Int? = null,
     public val advance: Int? = null,
-)
+) {
+
+    public companion object {
+        public val Disabled: FontSettings = FontSettings(enabled = false)
+    }
+}

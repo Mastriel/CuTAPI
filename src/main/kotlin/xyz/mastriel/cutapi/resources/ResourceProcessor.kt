@@ -29,8 +29,7 @@ public fun interface ResourceProcessor {
  * You should not modify the [ResourceManager], or make any unnecessary modifiacations to [Resource]s you're
  * processing.
  *
- * If you want to add more resources using generators, see [ResourceGenerator]. Generated resources
- * are also processed here.
+ * If you want to add more resources using generators, see [ResourceGenerator].
  *
  * @see [resourceProcessor]
  * @see [ResourceProcessor]

@@ -5,6 +5,7 @@ import net.peanuuutz.tomlkt.*
 import org.bukkit.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.resources.builtin.*
+import xyz.mastriel.cutapi.resources.data.*
 import xyz.mastriel.cutapi.resources.process.*
 import xyz.mastriel.cutapi.utils.*
 import java.io.*
@@ -18,15 +19,31 @@ public class ResourceManager {
     private val folders = mutableListOf<FolderRef>()
     private val locators: List<Locator> get() = resources.keys.toList() + folders
 
-    private val resourceRoots = mutableListOf<Triple<CuTPlugin, File, String>>()
+    private val resourceRoots = mutableListOf<ResourceRoot>()
 
-    public fun register(resource: Resource, overwrite: Boolean = false) {
+    public fun register(resource: Resource, overwrite: Boolean = false, log: Boolean = true) {
         if (resource.ref in resources.keys && !overwrite) {
             error("Resource '${resource.ref}' already registered.")
         }
         resources[resource.ref] = resource
-        Plugin.info("Registered resource ${resource.ref} [${resource::class.simpleName}]")
+        registerFolders(resource.ref)
 
+        if (log) Plugin.info("Registered resource ${resource.ref} [${resource::class.simpleName}]")
+
+        resource.subResources.forEach { register(it) }
+        resource.onRegister()
+    }
+
+    private fun registerFolders(ref: ResourceRef<*>) {
+        val folders = mutableListOf<FolderRef>()
+        var currentRef: Locator = ref
+        while (true) {
+            currentRef = currentRef.parent ?: break
+
+            if (this.folders.any { it == currentRef }) break
+            folders.add(currentRef)
+        }
+        this.folders.addAll(folders)
     }
 
 
@@ -43,8 +60,12 @@ public class ResourceManager {
         return resources[ref] != null
     }
 
-    public fun getFolderContents(plugin: CuTPlugin, folderRef: FolderRef): List<Locator> {
-        return locators.filter { it.plugin == plugin }
+    public fun getFolderContents(root: ResourceRoot, folderRef: FolderRef): List<Locator> {
+        if (folderRef.isRoot) {
+            return locators.filter { it.root == root }
+                .filter { it.parent == null }
+        }
+        return locators.filter { it.root == root }
             .filter { it.parent == folderRef }
     }
 
@@ -85,8 +106,12 @@ public class ResourceManager {
      * Create a new resource root for your plugin. Resources are loaded from here
      * whenever the resource pack is generated.
      */
-    public fun registerResourceRoot(plugin: CuTPlugin, alias: String, folder: File) {
-        resourceRoots += Triple(plugin, folder, alias)
+    public fun registerResourceRoot(resourceRoot: ResourceRoot) {
+        resourceRoots += resourceRoot
+    }
+
+    public fun getResourceRoot(root: String): ResourceRoot? {
+        return resourceRoots.find { it.namespace == root }
     }
 
     /**
@@ -94,32 +119,36 @@ public class ResourceManager {
      *
      * @return true if a resource root was unregistered, false otherwise.
      */
-    public fun unregisterResourceRoot(plugin: CuTPlugin, alias: String): Boolean {
-        return resourceRoots.removeIf { it.first == plugin && it.third == alias }
+    public fun unregisterResourceRoot(root: ResourceRoot): Boolean {
+        return resourceRoots.removeIf { it == root }
     }
 
     /**
      * Remove all resource roots from your plugin.
      */
     public fun unregisterAllResourceRoots(plugin: CuTPlugin) {
-        resourceRoots.removeIf { it.first == plugin }
+        resourceRoots.removeIf { it.cutPlugin == plugin }
     }
 
-    internal fun loadPluginResources(plugin: CuTPlugin) {
-        val namespace = CuTAPI.getDescriptor(plugin).namespace
+    internal fun loadRootResources(root: ResourceRoot) {
+        val namespace = root.namespace
 
         val found = mutableListOf<Pair<File, ResourceRef<*>>>()
-        findResourcesInFolder(File(tempFolder, namespace), folderRef(plugin, ""), found)
+        findResourcesInFolder(File(tempFolder, namespace), folderRef(root, ""), found)
 
-        for ((_, root) in resourceRoots.filter { it.first == plugin }) {
-            findResourcesInFolder(root, folderRef(plugin, ""), found)
-        }
         // make sure templates go first
-        // TODO make this more robust
-        found.sortedByDescending { "template" in it.second.extension }.forEach {
-            val (file, ref) = it
-            loadResource(file, ref)
+        val alreadyFound: MutableList<ResourceRef<*>> = mutableListOf()
+
+        for (loader in ResourceFileLoader.getDependencySortedLoaders()) {
+            found.sortedByDescending { "template" in it.second.extension }.forEach {
+                val (file, ref) = it
+                if (alreadyFound.contains(ref)) return@forEach
+                if (loadResource(file, ref, loader) is ResourceLoadResult.Success) {
+                    alreadyFound += ref
+                }
+            }
         }
+
     }
 
     /**
@@ -183,23 +212,39 @@ public class ResourceManager {
      * @param resourceFile The file being loaded
      * @param ref The resource ref this file will be associated with
      */
-    public fun loadResource(resourceFile: File, ref: ResourceRef<*>): Boolean {
-        when (val result = loadResourceWithoutRegistering(resourceFile, ref)) {
+    public fun loadResource(
+        resourceFile: File,
+        ref: ResourceRef<*>,
+        withLoader: ResourceFileLoader<*>,
+        options: ResourceLoadOptions.() -> Unit = { }
+    ): ResourceLoadResult<*> {
+        @Suppress("UNCHECKED_CAST")
+        when (val result =
+            loadResourceWithoutRegistering(resourceFile, ref, withLoader as ResourceFileLoader<Resource>, options)) {
             is ResourceLoadResult.Success -> {
+                val loadOptions = ResourceLoadOptions().apply(options)
                 if (ref.isAvailable()) {
-                    Plugin.warn("Resource $ref is being overwritten in memory...")
+                    if (loadOptions.log) Plugin.warn("Resource $ref is being overwritten in memory...")
                 }
-                register(result.resource, overwrite = true)
-                return true
+                register(result.resource, overwrite = true, log = loadOptions.log)
+                return result
             }
 
             is ResourceLoadResult.Failure -> {
-                Plugin.error("Failed to load resource ${ref}.")
+                val loadOptions = ResourceLoadOptions().apply(options)
+                if (loadOptions.log) {
+                    Plugin.error("Failed to load resource ${ref}.")
+                    if (result.exception != null) {
+                        result.exception.printStackTrace()
+                    }
+                }
                 checkResourceLoading(ref.plugin)
-                return false
+                return result
             }
 
-            else -> return false
+            is ResourceLoadResult.WrongType -> {
+                return result
+            }
         }
     }
 
@@ -208,56 +253,68 @@ public class ResourceManager {
      *
      * A null return value means that the resource was a metadata file.
      */
+    @OptIn(InternalSerializationApi::class)
     public fun <T : Resource> loadResourceWithoutRegistering(
         resourceFile: File,
-        ref: ResourceRef<T>
-    ): ResourceLoadResult<T>? {
+        ref: ResourceRef<T>,
+        loader: ResourceFileLoader<T>,
+        options: ResourceLoadOptions.() -> Unit = { }
+    ): ResourceLoadResult<T> {
+        val loadOptions = ResourceLoadOptions().apply(options)
+
         val metadataFile = File(resourceFile.absolutePath + ".meta")
 
         try {
             val resourceBytes = resourceFile.readBytes()
 
-            // TODO we're deserializing this a lot. we should cache it or something.
-            val metadataBytes = try {
-                val folderTable = getFolderDefaultTable(ref)
-
-                if (folderTable == null) {
-                    metadataFile.readBytes()
-                } else {
-                    val metadataTable = if (metadataFile.exists())
-                        CuTAPI.toml.parseToTomlTable(metadataFile.readText())
-                    else
-                        TomlTable()
-
-                    val newTable = folderTable.combine(metadataTable, false)
-                    CuTAPI.toml.encodeToString(newTable).toByteArray(Charsets.UTF_8)
-                }
-            } catch (e: Exception) {
-                null
-            }.let { bytes ->
-                if (bytes == null) return@let null
-
-                val depthLimit = 30
-                var depth = 0
-                var table = CuTAPI.toml.parseToTomlTable(bytes.toString(Charsets.UTF_8))
-                while (metadataNeedsToProcessExtensions(table)) {
-                    depth++
-                    if (depth > depthLimit) {
-                        Plugin.error("Metadata extensions for $ref infinitely (or excessively) recurse.")
-                        return ResourceLoadResult.Failure()
-                    }
-                    table = processTemplates(table)
-                }
-
-                CuTAPI.toml.encodeToString(table).toByteArray(Charsets.UTF_8)
+            val encoded = loadOptions.metadata?.let {
+                @Suppress("UNCHECKED_CAST") val serializer = it::class.serializer() as KSerializer<CuTMeta>
+                CuTAPI.toml.encodeToString(serializer, it).encodeToByteArray()
             }
 
+            val metadataBytes = encoded ?: loadMetadata(metadataFile, ref)
 
-
-            return tryLoadResource(ref, resourceBytes, metadataBytes)
+            return tryLoadResource(ref, resourceBytes, metadataBytes, loader, loadOptions)
         } catch (ex: Exception) {
             ex.printStackTrace()
             return ResourceLoadResult.Failure()
+        }
+    }
+
+    private fun loadMetadata(metadataFile: File, ref: ResourceRef<*>): ByteArray? {
+        // TODO we're deserializing this a lot. we should cache it or something.
+        return try {
+            val folderTable = getFolderDefaultTable(ref)
+
+            if (folderTable == null) {
+                metadataFile.readBytes()
+            } else {
+                val metadataTable = if (metadataFile.exists())
+                    CuTAPI.toml.parseToTomlTable(metadataFile.readText())
+                else
+                    TomlTable()
+
+                val newTable = folderTable.combine(metadataTable, false)
+                CuTAPI.toml.encodeToString(newTable).toByteArray(Charsets.UTF_8)
+            }
+        } catch (e: Exception) {
+            null
+        }.let { bytes ->
+            if (bytes == null) return@let null
+
+            val depthLimit = 30
+            var depth = 0
+            var table = CuTAPI.toml.parseToTomlTable(bytes.toString(Charsets.UTF_8))
+            while (metadataNeedsToProcessExtensions(table)) {
+                depth++
+                if (depth > depthLimit) {
+                    Plugin.error("Metadata extensions for $ref excessively (or infinitely) recurse.")
+                    break
+                }
+                table = processTemplates(table)
+            }
+
+            CuTAPI.toml.encodeToString(table).toByteArray(Charsets.UTF_8)
         }
     }
 
@@ -300,45 +357,34 @@ public class ResourceManager {
     private fun <T : Resource> tryLoadResource(
         ref: ResourceRef<T>,
         resourceBytes: ByteArray,
-        metadataBytes: ByteArray?
-    ): ResourceLoadResult<T>? {
-        // make sure that the loaders are sorted by dependencies
-        // otherwise we can get some bad errors.
-        // circulars aren't allowed
-        val loaders = ResourceFileLoader.getDependencySortedLoaders() as List<ResourceFileLoader<Resource>>
+        metadataBytes: ByteArray?,
+        loader: ResourceFileLoader<T>,
+        options: ResourceLoadOptions = ResourceLoadOptions()
+    ): ResourceLoadResult<T> {
 
-        if (loaders.isEmpty()) {
-            Plugin.error("No loaders found for resource $ref.")
-            checkResourceLoading(ref.plugin)
-            return ResourceLoadResult.Failure()
-        }
-
-        for (loader in loaders) {
-            when (val result = loader.loadResource(ref, resourceBytes, metadataBytes)) {
-                is ResourceLoadResult.Success -> {
-                    createClones(result.resource, resourceBytes, metadataBytes)
-                    return result as ResourceLoadResult<T>
-                }
-
-                is ResourceLoadResult.WrongType -> continue
-
-                is ResourceLoadResult.Failure -> {
-                    return result as ResourceLoadResult<T>
-                }
+        when (val result = loader.loadResource(ref, resourceBytes, metadataBytes, options)) {
+            is ResourceLoadResult.Success -> {
+                createClones(result.resource, resourceBytes, metadataBytes, loader)
+                return result as ResourceLoadResult<T>
             }
-        }
-        // ignore .meta files not loading because we can assume
-        // they aren't resources.
-        if (!ref.extension.endsWith("meta")) {
-            Plugin.error("No loaders found for resource $ref. [tried ${loaders.joinToString { it.id.toString() }}]")
-            checkResourceLoading(ref.plugin)
-            return ResourceLoadResult.Failure()
-        } else {
-            return null
+
+            is ResourceLoadResult.WrongType -> {
+                return result
+            }
+
+            is ResourceLoadResult.Failure -> {
+                return result as ResourceLoadResult<T>
+            }
         }
     }
 
-    private fun createClones(resource: Resource, resourceBytes: ByteArray, metadataBytes: ByteArray?) {
+    @Suppress("UNCHECKED_CAST")
+    private fun createClones(
+        resource: Resource,
+        resourceBytes: ByteArray,
+        metadataBytes: ByteArray?,
+        loader: ResourceFileLoader<*>
+    ) {
         if (metadataBytes == null) return
         val originMetadataTable = CuTAPI.toml.parseToTomlTable(metadataBytes.toString(Charsets.UTF_8))
         val cloneBlocks = try {
@@ -365,7 +411,8 @@ public class ResourceManager {
                 val newMetadataBytes = CuTAPI.toml.encodeToString(newTable).toByteArray(Charsets.UTF_8)
                 val newRef = resource.ref.cloneSubId(newRefSubId)
 
-                when (val result = tryLoadResource(newRef, resourceBytes, newMetadataBytes)) {
+                when (val result =
+                    tryLoadResource(newRef, resourceBytes, newMetadataBytes, loader as ResourceFileLoader<Resource>)) {
                     is ResourceLoadResult.Success -> {
                         register(result.resource, overwrite = true)
                     }
@@ -429,7 +476,7 @@ public class ResourceManager {
             } catch (e: ResourceCheckException) {
                 Plugin.error("$ref failed being checked! " + e.message)
                 val strictResourceLoading = CuTAPI.getDescriptor(ref.plugin).options.strictResourceLoading
-                if (strictResourceLoading && ref.plugin.plugin != Plugin) {
+                if (strictResourceLoading && ref.plugin != Plugin) {
                     Bukkit.getPluginManager().disablePlugin(ref.plugin.plugin)
                 }
             }
@@ -438,3 +485,8 @@ public class ResourceManager {
 }
 
 
+public class ResourceLoadOptions(
+    public var overwrite: Boolean = false,
+    public var metadata: CuTMeta? = null,
+    public var log: Boolean = true
+)

@@ -6,8 +6,10 @@ import xyz.mastriel.cutapi.*
 import java.lang.reflect.*
 
 
-internal interface PacketListener
+@UsesNMS
+public interface PacketListener
 
+@UsesNMS
 private data class PacketListenerFunctionDefinition(
     private val parent: PacketListener,
     private val function: Method
@@ -17,6 +19,7 @@ private data class PacketListenerFunctionDefinition(
     }
 }
 
+@UsesNMS
 private data class PacketListenerFunction(
     val parentClass: PacketListener,
     val priority: EventPriority,
@@ -25,7 +28,7 @@ private data class PacketListenerFunction(
 )
 
 @UsesNMS
-internal class PacketEventManager {
+public class PacketEventManager {
 
     private val packetListeners = mutableListOf<PacketListenerFunction>()
 
@@ -34,7 +37,7 @@ internal class PacketEventManager {
      * @param listener the listener to register
      */
     @Suppress("UNCHECKED_CAST")
-    fun registerPacketListener(listener: PacketListener) {
+    public fun registerPacketListener(listener: PacketListener) {
         for (function in listener::class.java.declaredMethods) {
             try {
                 val annotation = function.getAnnotation(PacketHandler::class.java)
@@ -42,11 +45,6 @@ internal class PacketEventManager {
                 val priority = annotation.priority
                 val packetFunction = PacketListenerFunctionDefinition(listener, function)
 
-                // TODO horrifying
-                // this gets the first type argument of the first parameter of the function
-                // like in fun onPacket(event: PacketEvent<ClientboundBlahBlahBlah>) {}
-                // this also makes the assumption that the first parameter is a packet event
-                // and that the first type argument of the first parameter is the packet type
                 val eventParameter = function.parameters.getOrNull(0)
                     ?: error("Invalid arguments in PacketHandler. Must have exactly 1 PacketEvent<MojangPacket> argument.")
 
@@ -79,7 +77,7 @@ internal class PacketEventManager {
      * @param listener the listener to unregister
      * @return true if the listener was found and removed, false otherwise
      */
-    fun unregisterPacketListener(listener: PacketListener): Boolean {
+    public fun unregisterPacketListener(listener: PacketListener): Boolean {
         return packetListeners.removeIf { it.parentClass == listener }
     }
 

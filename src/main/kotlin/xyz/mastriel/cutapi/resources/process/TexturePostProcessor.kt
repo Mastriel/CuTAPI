@@ -1,12 +1,10 @@
 package xyz.mastriel.cutapi.resources.process
 
-import com.jhlabs.image.*
 import kotlinx.serialization.*
 import net.peanuuutz.tomlkt.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.builtin.*
-import xyz.mastriel.cutapi.resources.process.builtin.*
 
 public object TexturePostProcessorSerializer :
     IdentifiableSerializer<TexturePostProcessor>("texture_post_processor", TexturePostProcessor)
@@ -18,16 +16,6 @@ public abstract class TexturePostProcessor(override val id: Identifier) : Identi
 
     public companion object : IdentifierRegistry<TexturePostProcessor>("Texture Post Processors") {
 
-        public fun registerBuiltins() {
-            builtinPostProcessor(id(Plugin, "brightness_contrast"), ContrastFilter()) {
-                property("brightness", ContrastFilter::setBrightness)
-                property("contrast", ContrastFilter::setContrast)
-            }.register()
-        }
-
-        private fun BufferedImageOpPostProcessor<*>.register() {
-            register(this)
-        }
     }
 }
 

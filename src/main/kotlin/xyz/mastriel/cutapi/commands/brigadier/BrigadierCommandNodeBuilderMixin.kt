@@ -9,8 +9,10 @@ import kotlin.reflect.*
 
 internal class BrigadierCommandNodeBuilderMixin : BrigadierCommandNodeBuilder {
     public override val arguments: MutableList<ArgumentCommandNode<CommandSourceStack, *>> = mutableListOf()
+    public override val subcommands: MutableList<LiteralCommandNode<CommandSourceStack>> = mutableListOf()
     public override val requirements: MutableList<(CommandSourceStack) -> Boolean> = mutableListOf()
-    public override var executes: (BrigadierCommandExecutorContext.() -> BrigadierCommandReturn)? = null
+    public override var executes: (suspend BrigadierCommandExecutorContext.() -> BrigadierCommandReturn)? = null
+
 
     public override fun <T : Any> argument(
         name: String,
@@ -24,7 +26,14 @@ internal class BrigadierCommandNodeBuilderMixin : BrigadierCommandNodeBuilder {
         arguments.add(built)
     }
 
-    override fun executes(func: BrigadierCommandExecutorContext.() -> BrigadierCommandReturn) {
+    override fun subcommand(
+        name: String,
+        builder: BrigadierCommandLiteralBuilder.() -> Unit
+    ) {
+        subcommands += BrigadierCommandLiteralBuilder(name).apply(builder).build()
+    }
+
+    override fun executes(func: suspend BrigadierCommandExecutorContext.() -> BrigadierCommandReturn) {
         executes = func
     }
 

@@ -6,6 +6,7 @@ import net.kyori.adventure.text.serializer.legacy.*
 import org.bukkit.inventory.*
 import org.bukkit.inventory.meta.*
 import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.nms.*
 import java.time.*
 import kotlin.math.*
 import kotlin.time.Duration
@@ -16,6 +17,7 @@ public val String.colored: Component
             .decoration(TextDecoration.ITALIC, false)
             .append(LegacyComponentSerializer.legacyAmpersand().deserialize(this))
 
+@OptIn(UsesNMS::class)
 public val ItemStack.chatTooltip: Component
     get() {
         // fixes a problem with Adventure not processing tool components properly
@@ -118,4 +120,8 @@ public fun <T> List<List<T>>.trim(filler: () -> T, include: (T) -> Boolean): Lis
 
     return list.subList(rmin, rmax)
         .map { it.subList(cmin, cmax) }
+}
+
+public fun TextComponent.Builder.appendLine(text: Component): TextComponent.Builder {
+    return append(text).appendNewline()
 }

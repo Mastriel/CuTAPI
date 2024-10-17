@@ -1,6 +1,6 @@
 package xyz.mastriel.cutapi.registry
 
-import xyz.mastriel.cutapi.CuTPlugin
+import xyz.mastriel.cutapi.*
 
 
 public fun identifiable(id: Identifier): Identifiable {

@@ -7,7 +7,7 @@ import xyz.mastriel.cutapi.*
 
 
 @UsesNMS
-internal class PacketEventHandler(val player: Player) : ChannelDuplexHandler() {
+public class PacketEventHandler(public val player: Player) : ChannelDuplexHandler() {
 
     // outgoing packets (clientbound)
     override fun write(ctx: ChannelHandlerContext?, msg: Any?, promise: ChannelPromise?) {
