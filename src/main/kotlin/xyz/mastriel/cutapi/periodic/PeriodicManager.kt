@@ -70,12 +70,12 @@ public class PeriodicManager {
     }
 
     private fun createBukkitTask(function: KFunction<Unit>, instance: Any, plugin: CuTPlugin, ticks: Int) {
-        val task = object : BukkitRunnable() {
+        val runnable = object : BukkitRunnable() {
             override fun run() {
                 function.call(instance)
             }
-        }.runTaskTimer(plugin.plugin, ticks.toLong(), ticks.toLong())
-
+        }
+        val task = runnable.runTaskTimer(plugin.plugin, ticks.toLong(), ticks.toLong())
         tasks.getOrPut(plugin) { mutableListOf() }.add(PeriodicTask.BukkitTask(task))
     }
 

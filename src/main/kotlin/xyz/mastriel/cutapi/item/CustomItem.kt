@@ -138,6 +138,20 @@ public sealed class AgnosticMaterial {
      */
     public abstract val expectedVanillaMaterial: Material
 
+    public infix fun materialIs(value: Material): Boolean {
+        if (this is Vanilla) {
+            return this.vanilla() == value
+        }
+        return false
+    }
+    
+    public infix fun materialIs(value: CustomItem<*>): Boolean {
+        if (this is Custom) {
+            return this.custom() == value
+        }
+        return false
+    }
+
     public data class Custom(val itemType: AnyCustomItem) : AgnosticMaterial() {
         public fun custom(): CustomItem<*> = itemType
 

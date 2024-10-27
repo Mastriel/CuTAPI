@@ -23,9 +23,9 @@ public abstract class ItemBehavior(
     /**
      * The lore which this component shows when applied to a [CuTItemStack].
      */
-    public open fun getLore(item: CuTItemStack, viewer: Player?) : Component? = null
+    public open fun getLore(item: CuTItemStack, viewer: Player?): Component? = null
 
-    protected fun getData(item: CuTItemStack) : TagContainer {
+    protected fun getData(item: CuTItemStack): TagContainer {
         return ItemBehaviorTagContainer(item.handle, this.id)
     }
 
@@ -33,6 +33,13 @@ public abstract class ItemBehavior(
 
     public open fun onMiddleClick(player: Player, item: CuTItemStack, event: PlayerInteractEvent) {}
     public open fun onRightClick(player: Player, item: CuTItemStack, event: PlayerInteractEvent) {}
+    public open fun onRightClickEntity(
+        player: Player,
+        item: CuTItemStack,
+        entity: Entity,
+        event: PlayerInteractEntityEvent
+    ) {
+    }
 
     public open fun onDrop(player: Player, item: CuTItemStack, event: PlayerDropItemEvent) {}
     public open fun onObtain(player: Player, item: CuTItemStack, event: CustomItemObtainEvent) {}
@@ -53,6 +60,7 @@ public abstract class ItemBehavior(
 
 
     public open fun onTickInEitherHand(player: Player, item: CuTItemStack, slot: HandSlot) {}
+
     /**
      * This will trigger for both items in your hands and items equipped still.
      */
@@ -60,7 +68,13 @@ public abstract class ItemBehavior(
     public open fun onTickEquipped(player: Player, item: CuTItemStack, slot: ArmorSlot) {}
 
     public open fun onOffhandEquip(player: Player, item: CuTItemStack, event: Cancellable) {}
-    public open fun onDamageEntity(attacker: LivingEntity, victim: LivingEntity, mainHandItem: CuTItemStack, event: EntityDamageByEntityEvent) {}
+    public open fun onDamageEntity(
+        attacker: LivingEntity,
+        victim: LivingEntity,
+        mainHandItem: CuTItemStack,
+        event: EntityDamageByEntityEvent
+    ) {
+    }
 
 
     public open fun onPlace(player: Player, item: CuTItemStack, location: Location, event: BlockPlaceEvent) {}

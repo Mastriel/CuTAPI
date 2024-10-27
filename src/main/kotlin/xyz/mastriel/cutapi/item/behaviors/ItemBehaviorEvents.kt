@@ -36,6 +36,17 @@ public class ItemBehaviorEvents : Listener {
     }
 
     @EventHandler
+    public fun onInteract(event: PlayerInteractEntityEvent) {
+        val item = event.player.inventory.itemInMainHand
+        if (!item.isCustom) return
+        val customItem = item.wrap()
+
+        customItem?.getAllBehaviors()?.forEach {
+            it.onRightClickEntity(event.player, customItem, event.rightClicked, event)
+        }
+    }
+
+    @EventHandler
     public fun onInteract(event: BlockBreakEvent) {
         val item = event.player.inventory.itemInMainHand
         if (!item.isCustom) return

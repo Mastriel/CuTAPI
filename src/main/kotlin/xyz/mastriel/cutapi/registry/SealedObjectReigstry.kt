@@ -1,29 +1,49 @@
 package xyz.mastriel.cutapi.registry
 
-import xyz.mastriel.cutapi.Plugin
-import kotlin.reflect.KClass
+import xyz.mastriel.cutapi.*
+import kotlin.reflect.*
 
 /**
  * Used specifically to have a registry of sealed objects to consistency. Do not use on a sealed class
  * that has subclasses that are not singleton objects. This registry will ONLY contain objects of a sealed class.
+ *
+ * This DOES support nested sealed classes, such as a situation like this:
+ * ```kt
+ * sealed class Parent {
+ *    object Child1 : Parent()
+ *    sealed class Child2 : Parent()
+ *
+ *    object Grandchild1 : Child2()
+ *    object Grandchild2 : Child2()
+ * }
+ * ```
+ * In that case, Child1, Grandchild1, and Grandchild2 will be registered.
  */
-public open class SealedObjectRegistry<T : Identifiable>(name: String, sealedClass: KClass<T>) : IdentifierRegistry<T>("$name (sealed)") {
+public open class SealedObjectRegistry<T : Identifiable>(name: String, sealedClass: KClass<T>) :
+    IdentifierRegistry<T>("$name (sealed)") {
 
     private var registrationsOpen = true
 
     init {
         if (!sealedClass.isSealed) {
-            Plugin.logger.warning("${sealedClass.simpleName} is not a sealed class, and it's being used in a Sealed Object Registry!")
+            Plugin.logger.warning("${sealedClass.simpleName} is not a sealed class, and it's being used in a '${name}'!")
         }
-        for (kClass in sealedClass.sealedSubclasses) {
-            val instance = kClass.objectInstance
-            if (instance == null) {
-                Plugin.logger.warning("There's no object instance for ${kClass.simpleName} in a sealed object registry.")
-                continue
-            }
-            register(instance)
-        }
+        registerClass(sealedClass)
         registrationsOpen = false
+    }
+
+    private fun registerClass(kClass: KClass<out T>) {
+        if (kClass.isSealed) {
+            kClass.sealedSubclasses.forEach { subclass ->
+                registerClass(subclass)
+            }
+        } else {
+            if (kClass.objectInstance == null) {
+                Plugin.logger.warning("There's no object instance for ${kClass.simpleName} in a '${name}'.")
+            } else {
+                register(kClass.objectInstance!!)
+            }
+        }
     }
 
     /**

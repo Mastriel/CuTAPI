@@ -51,6 +51,8 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             constructor = CuTItemStack.CONSTRUCTOR
         )
         CustomItem.register(CustomItem.Unknown)
+        TexturePostProcessor.registerBuiltins()
+        
         TexturePostProcessor.register(GrayscalePostProcessor)
         TexturePostProcessor.register(PaletteSwapPostProcessor)
         TexturePostProcessor.register(MultiplyOpaquePixelsProcessor)
@@ -59,6 +61,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         Uploader.register(BuiltinUploader())
 
         CuTAPI.packetEventManager.registerPacketListener(PacketItemHandler)
+
 
         registerResourceLoaders()
 
