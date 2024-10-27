@@ -119,7 +119,7 @@ public fun <T : Resource> Identifier.toResourceRef(): ResourceRef<T> {
 
 
 public fun normalizeRefPath(path: String): String {
-    return path.removeSuffix("/").removePrefix("/")
+    return path.replace("\\", "/").removeSuffix("/").removePrefix("/")
 }
 
 public fun <T : Resource> ref(root: ResourceRoot, path: String): ResourceRef<T> {

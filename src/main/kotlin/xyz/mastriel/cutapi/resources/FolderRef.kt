@@ -64,7 +64,7 @@ public fun folderRef(stringPath: String): FolderRef {
 
 public fun normalizeFolder(path: String): String {
     if (path.isEmpty()) return ""
-    var newPath = path
+    var newPath = path.replace("\\", "/")
     if (newPath.startsWith("/")) newPath = newPath.removePrefix("/")
     if (!newPath.endsWith("/")) newPath += "/"
     return newPath
