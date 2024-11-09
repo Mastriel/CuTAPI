@@ -55,7 +55,7 @@ public class ResourcePackManager {
     public val generator: ResourcePackGenerator
         get() {
             // TODO("detect versions dynamically")
-            return PackVersion9To18Generator()
+            return PackVersion9To34Generator()
         }
 
     /**
