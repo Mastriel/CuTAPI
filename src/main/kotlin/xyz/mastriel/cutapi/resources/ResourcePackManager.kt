@@ -128,9 +128,10 @@ public class ResourcePackManager {
 
 
     public fun sanitizeName(name: String): String {
-        return name.replace(Locator.SUBRESOURCE_SEPARATOR, "__SRE__")
-            .replace(Locator.GENERATED_SEPARATOR, "__GEN__")
-            .replace(Locator.CLONE_SEPARATOR, "__CLN__")
+        return name.replace(Locator.SUBRESOURCE_SEPARATOR, "__sre__")
+            .replace(Locator.GENERATED_SEPARATOR, "__gen__")
+            .replace(Locator.CLONE_SEPARATOR, "__cln__")
+            .lowercase()
     }
 
     private fun runResourceProcessors() {
