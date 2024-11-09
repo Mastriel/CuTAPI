@@ -40,5 +40,5 @@ internal fun generateResources(resources: List<Resource>, stage: ResourceGenerat
 }
 
 public fun <T : Resource> ResourceRef<T>.generatedSubId(string: String): ResourceRef<T> {
-    return ref(root, "${this.path()}+$string.${this.extension}")
+    return ref(root, "${this.path()}${Locator.GENERATED_SEPARATOR}$string.${this.extension}")
 }

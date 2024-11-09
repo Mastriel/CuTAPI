@@ -4,5 +4,5 @@ import xyz.mastriel.cutapi.resources.*
 
 
 public fun <T : Resource> ResourceRef<T>.cloneSubId(string: String): ResourceRef<T> {
-    return ref(root, "${this.path()}^$string.${this.extension}")
+    return ref(root, "${this.path()}${Locator.CLONE_SEPARATOR}$string.${this.extension}")
 }
