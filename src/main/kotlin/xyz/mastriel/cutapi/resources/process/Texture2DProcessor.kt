@@ -81,7 +81,7 @@ private var privateUseCharIndex = PRIVATE_USE_AREA_START
  * for the texture at cutapi://items/unknown_item.png.
  */
 public fun String.decodeGlyph(): String {
-    return this.replace(Regex("<[a-zA-Z0-9:/.\\-_+^]+>")) { matchResult ->
+    return this.replace(Regex("<[a-zA-Z0-9:/.\\-_+^#]+>")) { matchResult ->
         val ref = ref<Resource>(matchResult.value.removePrefix("<").removeSuffix(">"))
 
         if (ref.resourceType isAtleast Texture2D::class) {
