@@ -6,7 +6,7 @@ plugins {
 
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.5.31"
-    id("xyz.jpenilla.run-paper") version "2.2.2"
+    id("xyz.jpenilla.run-paper") version "2.3.1"
 
     `maven-publish`
 
@@ -84,7 +84,7 @@ paperweight.reobfArtifactConfiguration = io.papermc.paperweight.userdev.ReobfArt
 
 tasks.withType<ShadowJar> {
     configurations = listOf(project.configurations.shadow.get())
-    // archiveFileName.set("CuTAPI-v${archiveVersion.get()}.jar")
+    archiveFileName.set("CuTAPI-v${archiveVersion.get()}.jar")
 
     manifest {
         attributes["paperweight-mappings-namespace"] = "mojang"
