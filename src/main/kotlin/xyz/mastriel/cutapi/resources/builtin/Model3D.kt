@@ -20,7 +20,6 @@ public open class Model3D(
 ) : Resource(ref), TextureLike, ByteArraySerializable {
 
     init {
-        inspector.single("Custom Model Data") { customModelData }
         inspector.single("Materials") { materials.joinToString() }
         inspector.single("Block Strategies") { metadata.blockStrategies.joinToString() }
         inspector.map("Textures") { metadata.textures.mapValues { (_, v) -> v.toString() } }
@@ -37,9 +36,19 @@ public open class Model3D(
         val textures: Map<String, ResourceRef<@Contextual Texture2D>> = mapOf(),
     ) : CuTMeta()
 
-    override val customModelData: Int = allocateCustomModelData()
 
     override fun createItemModelData(): JsonObject = modelJson.toJsonObject()
+
+    override fun getItemModel(): VanillaItemModel {
+        return VanillaItemModel(
+            "${ref.namespace}:/items/${
+                ref.path(
+                    withExtension = false,
+                    withNamespaceAsFolder = false
+                )
+            }"
+        )
+    }
 
     override val materials: List<String>
         get() = metadata.materials

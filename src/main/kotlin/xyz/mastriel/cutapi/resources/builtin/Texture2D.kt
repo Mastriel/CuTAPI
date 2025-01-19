@@ -21,11 +21,9 @@ public open class Texture2D(
     override val ref: ResourceRef<Texture2D>,
     data: BufferedImage,
     final override val metadata: Metadata
-) : Resource(ref), ByteArraySerializable, CustomModelDataAllocated, TextureLike {
-    final override val customModelData: Int? = if (this.metadata.transient) null else allocateCustomModelData()
+) : Resource(ref), ByteArraySerializable, TextureLike {
 
     init {
-        inspector.single("Custom Model Data") { customModelData ?: "&7Not Allocated" }
         inspector.single("Materials") { if (materials.isEmpty()) "&7None" else materials.joinToString() }
         inspector.single("Glyph") {
             getGlyphOrNull(GlyphSize.Preview)?.let { "&f${it}" + "\n".repeat(5) } ?: "&7No Glyph Generated"
@@ -49,7 +47,6 @@ public open class Texture2D(
         public val itemModelData: ItemModelData? =
             ItemModelData(
                 parent = "minecraft:item/handheld",
-                overrides = listOf(),
             ),
         @SerialName("model_file")
         public val modelFile: ResourceRef<@Contextual JsonResource>? = null,
@@ -130,6 +127,17 @@ public open class Texture2D(
         val combinedAsMap = jsonObject.toMutableMap()
         combinedAsMap["textures"] = JsonObject(textures)
         return JsonObject(combinedAsMap)
+    }
+
+    override fun getItemModel(): VanillaItemModel {
+        return VanillaItemModel(
+            "${ref.namespace}:${
+                ref.path(
+                    withExtension = false,
+                    withNamespaceAsFolder = false
+                )
+            }"
+        )
     }
 
     override fun check() {

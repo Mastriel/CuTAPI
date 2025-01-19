@@ -222,20 +222,7 @@ public open class CuTItemStack protected constructor(
                     meta.itemName(display.name ?: "&c${type.id}".colored)
                 }
 
-                when (val itemTexture = display.texture) {
-                    is ItemTexture.Texture -> if (itemTexture.texture.isAvailable()) {
-                        val customModelData = itemTexture.customModelData
-                        meta.setCustomModelData(customModelData)
-                    }
-
-                    // TODO
-                    is ItemTexture.Model -> if (itemTexture.model.isAvailable()) {
-                        val customModelData = itemTexture.customModelData
-                        meta.setCustomModelData(customModelData)
-                    }
-
-                    else -> Unit
-                }
+                meta.itemModel = display.texture?.getItemModelId()?.toNamespacedKey()
             }
 
             meta.persistentDataContainer.set(NamespacedKey(Plugin, "IsDisplay"), PersistentDataType.BYTE, 1)
@@ -268,8 +255,7 @@ public open class CuTItemStack protected constructor(
 
                 val itemTexture = display.texture
                 if (itemTexture != null && itemTexture.isAvailable()) {
-                    val customModelData = itemTexture.customModelData
-                    meta.setCustomModelData(customModelData)
+                    meta.itemModel = itemTexture.getItemModelId().toNamespacedKey()
                 }
             }
 

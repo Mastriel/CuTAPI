@@ -35,7 +35,7 @@ generated-pack-name: "pack.zip"
 # Default: CuTAPI Generated Resource Pack
 pack-description: "CuTAPI Generated Resource Pack"
 
-# The version of the pack generated. Currently supported: 9 to 18 (1.19-1.20.1)
+# The version of the pack generated. Currently supported: 9 to 39 (1.19-1.21.4)
 # "auto" will automatically choose the resource pack version based on the version the server is running.
 #
 # Type: integer | "auto"

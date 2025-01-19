@@ -37,8 +37,17 @@ public class ResourcePackManager {
      *
      * @param namespace The namespace of the plugin.
      */
-    public fun getModelsFolder(namespace: String): File {
-        return File(tempFolder, "assets/$namespace/models/item")
+    public fun getModelFolder(namespace: String): File {
+        return File(tempFolder, "assets/$namespace/models/")
+    }
+
+    /**
+     * Gets the item model folder of a plugin in the resource pack.
+     *
+     * @param namespace The namespace of the plugin.
+     */
+    public fun getItemModelFolder(namespace: String): File {
+        return File(tempFolder, "assets/$namespace/models/item/")
     }
 
     /**
@@ -55,7 +64,7 @@ public class ResourcePackManager {
     public val generator: ResourcePackGenerator
         get() {
             // TODO("detect versions dynamically")
-            return PackVersion9To34Generator()
+            return PackVersion46Generator()
         }
 
     /**

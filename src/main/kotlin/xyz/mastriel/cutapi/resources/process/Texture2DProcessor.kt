@@ -16,13 +16,11 @@ public val TextureAndModelProcessor: ResourceProcessor = resourceProcessor<Resou
     val models = this.resources.filterIsInstance<Model3D>()
     val resourcePackManager = CuTAPI.resourcePackManager
 
-    val itemModelFolder = resourcePackManager.tempFolder appendPath "assets/minecraft/models/item/"
-    itemModelFolder.mkdirs()
-
+    val namespaces = textures.map { it.ref.namespace }.distinct()
 
     generateTexturesInPack(textures)
     generateModelsInPack(models)
-    generateVanillaItemJsonFiles(this.resources.filterIsInstance<TextureLike>(), itemModelFolder)
+    generateItemAndModelJsonFiles(textures)
     generateGlyphs(textures)
 }
 
@@ -177,7 +175,7 @@ internal fun generateTexturesInPack(textures: List<Texture2D>) {
             withNamespaceAsFolder = false,
             withNamespace = false
         ).fixInvalidResourcePath()
-        val modelFile = CuTAPI.resourcePackManager.getModelsFolder(texture.root.namespace) appendPath "/$path.json"
+        val modelFile = CuTAPI.resourcePackManager.getItemModelFolder(texture.root.namespace) appendPath "/$path.json"
 
         modelFile.mkdirsOfParent()
         modelFile.createAndWrite(jsonString)
@@ -187,9 +185,8 @@ internal fun generateTexturesInPack(textures: List<Texture2D>) {
 internal fun generateModelsInPack(models: List<Model3D>) {
     // for this one we only need to put the models in the correct folder.
     models.forEach { model ->
-        val modelsFolder = CuTAPI.resourcePackManager.getModelsFolder(model.ref.root.namespace)
+        val modelsFolder = CuTAPI.resourcePackManager.getItemModelFolder(model.ref.root.namespace)
         model.saveTo(modelsFolder appendPath model.ref.path(withExtension = false).fixInvalidResourcePath() + ".json")
-
     }
 }
 
@@ -208,55 +205,40 @@ private fun applyPostProcessing(texture: Texture2D) {
     }
 }
 
-private fun generateVanillaItemJsonFiles(textures: Collection<TextureLike>, modelFolder: File) {
-    val groupedTextures = groupByAppliesTo(textures)
+private fun generateModelFile(texture: Texture2D) {
+    val location = texture.getItemModel().location
 
-    groupedTextures.forEach { (item, itemTextures) ->
+    val itemModelJson = texture.metadata.itemModelData?.copy(
+        textures = texture.metadata.itemModelData.textures + mapOf("layer0" to location)
+    ) ?: ItemModelData(parent = "minecraft:item/generated", textures = mapOf("layer0" to location))
 
-        val overrides = mutableListOf<ItemOverrides>()
-        for (itemTexture in itemTextures) {
-            val customModelData = itemTexture.customModelData
+    val jsonString = CuTAPI.json.encodeToString(itemModelJson)
 
-            val path = itemTexture.resource.ref.path(withExtension = false, withNamespaceAsFolder = false)
-                .fixInvalidResourcePath()
+    val path = texture.ref.path(withExtension = false)
+    val file =
+        CuTAPI.resourcePackManager.getModelFolder(texture.ref.namespace) appendPath "${path}.json"
 
-            overrides += ItemOverrides(
-                ItemPredicates(customModelData!!),
-                "${itemTexture.resource.ref.namespace}:item/$path"
-            )
-        }
-        val modelData = ItemModelData(
-            overrides = overrides,
-            textures = mapOf("layer0" to "minecraft:item/$item")
-        )
-
-        val modelFile = modelFolder appendPath "$item.json"
-        modelFile.mkdirsOfParent()
-
-        val modelJson = CuTAPI.json.encodeToString(modelData)
-
-        modelFile.createAndWrite(modelJson)
-    }
+    file.parentFile.mkdirs()
+    file.writeText(jsonString)
 }
 
-private fun groupByAppliesTo(textures: Collection<TextureLike>): Map<String, MutableSet<TextureLike>> {
-    val items = mutableMapOf<String, MutableSet<TextureLike>>()
+@Serializable
+private data class ItemModelFile(
+    @SerialName("hand_animation_on_swap")
+    val handAnimationOnSwap: Boolean,
+
+    )
+
+// we generate 2 different item models, one with no hand swap animation and one with it
+private fun generateItemModelFile(texture: Texture2D) {
+    val folder = CuTAPI.resourcePackManager.getItemModelFolder(texture.ref.namespace)
+
+
+}
+
+private fun generateItemAndModelJsonFiles(textures: Collection<Texture2D>) {
     for (texture in textures) {
-        addDisplayAsRuleTexture(texture, items)
+        generateModelFile(texture)
 
-        for (itemModel in texture.materials) {
-            items.putIfAbsent(itemModel, mutableSetOf())
-            items[itemModel]?.add(texture)
-        }
-    }
-    return items
-}
-
-private fun addDisplayAsRuleTexture(texture: TextureLike, items: MutableMap<String, MutableSet<TextureLike>>) {
-    val displayAsRule = texture.resource.plugin.descriptor.options.autoDisplayAsForTexturedItems
-    val displayAsItem = displayAsRule?.key?.key
-    if (displayAsItem != null) {
-        items.putIfAbsent(displayAsItem, mutableSetOf())
-        items[displayAsItem]?.add(texture)
     }
 }

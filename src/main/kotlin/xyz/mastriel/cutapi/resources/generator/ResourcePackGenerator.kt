@@ -23,7 +23,6 @@ public abstract class ResourcePackGenerator {
     public val tempPackFolder: File get() = Plugin.dataFolder.appendPath("pack-tmp/")
     public val resourceManager: ResourceManager get() = CuTAPI.resourceManager
 
-
     /**
      * Generates the skeleton of the resource pack at /tmp/pack/ inside CuTAPI's data folder,
      * and deletes any files previously at that location.
@@ -58,7 +57,6 @@ public abstract class ResourcePackGenerator {
         }
     }
 
-
     protected fun generationStep(message: String, currentStep: Int, step: () -> Unit) {
         step.invoke()
         Plugin.info("Resource Pack: ($currentStep/$generationSteps) $message")
@@ -67,7 +65,6 @@ public abstract class ResourcePackGenerator {
     public fun textureFolderPathOf(ref: ResourceRef<Texture2D>): String {
         return "custom/${ref.namespace}/${ref.path(withName = true)}"
     }
-
 
     protected fun runResourceProcessorsPack() {
         val executionTime = measureTime {
@@ -81,9 +78,7 @@ public abstract class ResourcePackGenerator {
         Plugin.info("Resource Processors (pack registry) ran in $executionTime.")
     }
 
-
     public abstract suspend fun generate()
-
 
     public companion object : ListRegistry<ResourcePackGenerator>("Pack Generators") {
         public fun getByVersionNumber(range: IntRange): ResourcePackGenerator? {

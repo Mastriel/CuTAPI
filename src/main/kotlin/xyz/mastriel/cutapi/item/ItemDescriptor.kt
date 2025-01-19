@@ -5,6 +5,7 @@ import org.bukkit.entity.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.behavior.*
 import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.utils.*
@@ -108,14 +109,17 @@ public class ItemDescriptorBuilder {
     }
 }
 
-public sealed class ItemTexture : CustomModelDataAllocated {
+public sealed class ItemTexture {
 
     public abstract fun isAvailable(): Boolean
     public abstract fun getRef(): ResourceRef<*>
+    public abstract fun getItemModelId(): Identifier
 
     public data class Texture(val texture: ResourceRef<Texture2D>) : ItemTexture() {
-        override val customModelData: Int?
-            get() = texture.getResource()?.customModelData
+
+        override fun getItemModelId(): Identifier {
+            return texture.getResource()?.getItemModel()?.toIdentifier() ?: unknownID()
+        }
 
         override fun isAvailable(): Boolean = texture.isAvailable()
 
@@ -125,9 +129,11 @@ public sealed class ItemTexture : CustomModelDataAllocated {
     }
 
     public data class Model(val model: ResourceRef<Model3D>) : ItemTexture() {
-        override val customModelData: Int?
-            get() = model.getResource()?.customModelData
 
+        override fun getItemModelId(): Identifier {
+            return model.getResource()?.getItemModel()?.toIdentifier() ?: unknownID()
+        }
+        
         override fun isAvailable(): Boolean = model.isAvailable()
 
         override fun getRef(): ResourceRef<*> {

@@ -85,8 +85,8 @@ public class GithubMinecraftAssetDownloader internal constructor() : MinecraftAs
 
 
         // The zip file contains a folder with the version name, so we need to move the contents of that folder to the root
-        versionFolder.appendPath("minecraft-assets-1.21.1").copyRecursively(versionFolder, true)
-        versionFolder.appendPath("minecraft-assets-1.21.1").deleteRecursively()
+        versionFolder.appendPath("minecraft-assets-$version").copyRecursively(versionFolder, true)
+        versionFolder.appendPath("minecraft-assets-$version").deleteRecursively()
 
 
         return versionFolder

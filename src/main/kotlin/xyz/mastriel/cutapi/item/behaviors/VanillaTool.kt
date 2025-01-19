@@ -31,8 +31,7 @@ public class VanillaTool(
     init {
         val materialData = mutableListOf<ToolMaterialData>()
         for (tool in tools) {
-            for (blockHolder in BuiltInRegistries.BLOCK.holders()) {
-                val blockType = blockHolder.value()
+            for (blockType in BuiltInRegistries.BLOCK.stream()) {
                 val material = CraftMagicNumbers.getMaterial(blockType)
                 val isProper = ToolCategory.vanillaProperCategoriesOf(material).any { it == tool.category }
                 if (!isProper) continue
@@ -43,7 +42,8 @@ public class VanillaTool(
                 val minToolTier = ToolTier.fromVanillaMaterial(material)
                 val correctToolForDrops = minToolTier.breakingLevel <= tool.tier.breakingLevel
 
-                materialData += ToolMaterialData(blockHolder, correctToolForDrops, special ?: tool.toolSpeed.speed)
+                val holder = BuiltInRegistries.BLOCK.createIntrusiveHolder(blockType)
+                materialData += ToolMaterialData(holder, correctToolForDrops, special ?: tool.toolSpeed.speed)
             }
         }
         this.rules = optimize(materialData)

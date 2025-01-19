@@ -6,6 +6,7 @@ import kotlinx.serialization.encoding.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.data.*
+import xyz.mastriel.cutapi.resources.process.*
 import kotlin.properties.*
 import kotlin.reflect.*
 
@@ -58,7 +59,8 @@ public data class ResourceRef<out T : Resource> internal constructor(
         withNamespace: Boolean = false,
         withRootAlias: Boolean = withNamespace,
         withNamespaceAsFolder: Boolean = false,
-        withName: Boolean = true
+        withName: Boolean = true,
+        fixInvalids: Boolean = true
     ): String {
         val sb = StringBuilder("")
         if (withNamespace) {
@@ -79,7 +81,10 @@ public data class ResourceRef<out T : Resource> internal constructor(
                 sb.append(optionalSlash + name.removeSuffix(".${extension}"))
             }
         }
-        return sb.toString().removeSuffix("/")
+        fun String.fixInvalids(): String {
+            return if (fixInvalids) fixInvalidResourcePath() else this
+        }
+        return sb.toString().removeSuffix("/").fixInvalids()
     }
 
     val name: String

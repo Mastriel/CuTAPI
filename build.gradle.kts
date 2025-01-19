@@ -10,7 +10,7 @@ plugins {
 
     `maven-publish`
 
-    id("io.papermc.paperweight.userdev") version "1.7.1"
+    id("io.papermc.paperweight.userdev") version "2.0.0-beta.13"
 
 }
 
@@ -37,16 +37,13 @@ repositories {
 }
 val kotlinVersion: String by properties
 group = "xyz.mastriel"
-version = "0.1.0a"
+version = properties["version"]!!
 
 
 
 
 dependencies {
     testImplementation(kotlin("test"))
-    // compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
-    // compileOnly("com.comphenix.protocol:ProtocolLib:5.1.0")
-
 
     // god hates me so we're shadowing everything
     shadow("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
@@ -69,7 +66,7 @@ dependencies {
     shadow("net.lingala.zip4j:zip4j:2.11.5")
     shadow("com.jhlabs:filters:2.0.235-1")
 
-    paperweight.paperDevBundle("1.21.1-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
 }
 
 
@@ -78,7 +75,7 @@ tasks {
     runServer {
         pluginJars("../CuTAPI/build/libs/CuTAPI-0.1.0a-reobf.jar")
 
-        minecraftVersion("1.20.6")
+        minecraftVersion("1.21.4")
     }
 }
 

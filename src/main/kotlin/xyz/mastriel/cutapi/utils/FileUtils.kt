@@ -55,6 +55,8 @@ private fun recursivelyAddZipEntries(
         } else {
             val origin = BufferedInputStream(FileInputStream(file))
             origin.use {
+                // we must use only forward slashes otherwise minecraft will not load the resource pack properly.
+                // zip files only like forward slashes anyways
                 val entryName = file.absolutePath.substring(basePath.length + 1).replace("\\", "/")
                 out.putNextEntry(ZipEntry(entryName))
                 origin.copyTo(out, 1024)
