@@ -33,7 +33,7 @@ public class ResourcePackManager {
     }
 
     /**
-     * Gets the textures folder of a plugin in the resource pack.
+     * Gets the models folder of a plugin in the resource pack.
      *
      * @param namespace The namespace of the plugin.
      */
@@ -47,7 +47,7 @@ public class ResourcePackManager {
      * @param namespace The namespace of the plugin.
      */
     public fun getItemModelFolder(namespace: String): File {
-        return File(tempFolder, "assets/$namespace/models/item/")
+        return File(tempFolder, "assets/$namespace/items/")
     }
 
     /**

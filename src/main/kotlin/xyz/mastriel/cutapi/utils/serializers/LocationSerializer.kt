@@ -30,7 +30,7 @@ public object LocationSerializer : KSerializer<Location> {
 
 
     override val descriptor: SerialDescriptor =
-        buildClassSerialDescriptor("Location") {
+        buildClassSerialDescriptor("cutapi:location") {
             element<Double>("x")
             element<Double>("y")
             element<Double>("z")

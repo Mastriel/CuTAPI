@@ -4,6 +4,7 @@ import kotlinx.serialization.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.resources.data.*
 import java.io.*
+import kotlin.contracts.*
 
 public open class Resource(
     public open val ref: ResourceRef<*>,
@@ -15,7 +16,7 @@ public open class Resource(
     public fun isSubresource(): Boolean = "#" in ref.name
 
     init {
-        inspector.single("Resource Type") { this::class.simpleName ?: "Unknown" }
+        inspector.single("Resource Type") { this::class.simpleName ?: "<anonymous class>" }
         inspector.single("Is Serializable") { this is ByteArraySerializable }
         inspector.single("Plugin") { ref.plugin.namespace }
         inspector.map("Subresources") {
@@ -96,7 +97,13 @@ public fun <T> T.saveWithMetadata(
     saveTo(file)
 }
 
-public fun Resource.isSerializable(): Boolean = this is ByteArraySerializable
+@OptIn(ExperimentalContracts::class)
+public fun Resource.isSerializable(): Boolean {
+    contract {
+        returns(true) implies (this@isSerializable is ByteArraySerializable)
+    }
+    return this is ByteArraySerializable
+}
 
 
 @OptIn(ExperimentalSerializationApi::class)

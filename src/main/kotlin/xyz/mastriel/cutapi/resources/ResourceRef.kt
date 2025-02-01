@@ -60,7 +60,7 @@ public data class ResourceRef<out T : Resource> internal constructor(
         withRootAlias: Boolean = withNamespace,
         withNamespaceAsFolder: Boolean = false,
         withName: Boolean = true,
-        fixInvalids: Boolean = true
+        fixInvalids: Boolean = false
     ): String {
         val sb = StringBuilder("")
         if (withNamespace) {
@@ -141,7 +141,6 @@ public fun <T : Resource> ref(stringPath: String): ResourceRef<T> {
     val (start, path) = stringPath.split("://", limit = 2)
     val startSplit = start.split(Locator.ROOT_SEPARATOR, limit = 2)
     val namespace = startSplit[0]
-    val root = startSplit.getOrNull(1)
 
     val plugin = CuTAPI.getPluginFromNamespace(namespace)
     return ref(plugin, path)

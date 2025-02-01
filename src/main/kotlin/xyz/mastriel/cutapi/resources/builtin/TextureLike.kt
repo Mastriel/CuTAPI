@@ -20,6 +20,10 @@ public interface TextureLike {
 @JvmInline
 public value class VanillaItemModel(public val location: String) {
 
+    public fun getLocationWithItemFolder(): String {
+        return "${toIdentifier().namespace}:item/${toIdentifier().key}"
+    }
+
     public fun toIdentifier(): Identifier {
         if (":" !in location) {
             return id(MinecraftAssets, location)

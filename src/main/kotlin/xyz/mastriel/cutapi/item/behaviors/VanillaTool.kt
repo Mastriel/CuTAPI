@@ -42,7 +42,7 @@ public class VanillaTool(
                 val minToolTier = ToolTier.fromVanillaMaterial(material)
                 val correctToolForDrops = minToolTier.breakingLevel <= tool.tier.breakingLevel
 
-                val holder = BuiltInRegistries.BLOCK.createIntrusiveHolder(blockType)
+                val holder = BuiltInRegistries.BLOCK.wrapAsHolder(blockType)
                 materialData += ToolMaterialData(holder, correctToolForDrops, special ?: tool.toolSpeed.speed)
             }
         }
@@ -73,7 +73,7 @@ public class VanillaTool(
 @TemporaryAPI
 @UsesNMS
 private fun optimize(materialData: List<ToolMaterialData>): List<PlainToolComponentRule> {
-    val map = mutableMapOf<ToolRuleProperties, MutableList<Holder.Reference<Block>>>()
+    val map = mutableMapOf<ToolRuleProperties, MutableList<Holder<Block>>>()
 
     for (data in materialData) {
         val properties = ToolRuleProperties(data.correctForBlocks, data.speed)
@@ -93,7 +93,7 @@ private fun optimize(materialData: List<ToolMaterialData>): List<PlainToolCompon
 @TemporaryAPI
 @UsesNMS
 private data class ToolMaterialData(
-    val holder: Holder.Reference<Block>,
+    val holder: Holder<Block>,
     val correctForBlocks: Boolean,
     val speed: Float
 )
@@ -108,7 +108,7 @@ private data class ToolRuleProperties(
 @TemporaryAPI
 @UsesNMS
 private data class PlainToolComponentRule(
-    val blocks: List<Holder.Reference<Block>>,
+    val blocks: List<Holder<Block>>,
     val speed: Optional<Float>,
     val correctForDrops: Optional<Boolean>
 ) {
