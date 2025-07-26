@@ -17,11 +17,12 @@ public class TemplateResource(
     @Serializable
     public class Metadata : CuTMeta()
 
-    public fun getPatchedTable(map: Map<String, TomlLiteral>): TomlTable {
+    public fun getPatchedTable(baseRef: ResourceRef<*>, map: Map<String, TomlLiteral>): TomlTable {
         var stringTable = stringData
         for ((key, value) in map) {
             stringTable = stringTable.replace("{{${key}}}", value.toString())
         }
+        stringTable = stringTable.replace("{{@ref}}", baseRef.toString())
         return CuTAPI.toml.parseToTomlTable(stringTable)
     }
 }

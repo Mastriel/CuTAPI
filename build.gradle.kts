@@ -38,6 +38,7 @@ repositories {
 val kotlinVersion: String by properties
 group = "xyz.mastriel"
 version = properties["version"]!!
+val minecraftVersion: String by properties
 
 
 
@@ -66,7 +67,7 @@ dependencies {
     shadow("net.lingala.zip4j:zip4j:2.11.5")
     shadow("com.jhlabs:filters:2.0.235-1")
 
-    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("${minecraftVersion}-R0.1-SNAPSHOT")
 }
 
 
@@ -75,7 +76,7 @@ tasks {
     runServer {
         pluginJars("../CuTAPI/build/libs/CuTAPI-0.1.0a-reobf.jar")
 
-        minecraftVersion("1.21.4")
+        minecraftVersion(minecraftVersion)
     }
 }
 

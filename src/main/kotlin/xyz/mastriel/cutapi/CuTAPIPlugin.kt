@@ -52,7 +52,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         )
         CustomItem.register(CustomItem.Unknown)
         TexturePostProcessor.registerBuiltins()
-        
+
         TexturePostProcessor.register(GrayscalePostProcessor)
         TexturePostProcessor.register(PaletteSwapPostProcessor)
         TexturePostProcessor.register(MultiplyOpaquePixelsProcessor)
@@ -102,13 +102,16 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
     private fun registerResourceLoaders() {
         ResourceGenerator.register(HorizontalAtlasTextureGenerator)
+        ResourceGenerator.register(InventoryTextureGenerator)
 
         ResourceFileLoader.register(FolderApplyResourceLoader)
-        ResourceFileLoader.register(TemplateResourceLoader)
         ResourceFileLoader.register(Texture2DResourceLoader)
         ResourceFileLoader.register(Model3DResourceLoader)
         ResourceFileLoader.register(MetadataResource.Loader)
         ResourceFileLoader.register(PostProcessDefinitionsResource.Loader)
+        ResourceFileLoader.register(GenerateResource.Loader)
+
+        ResourceFileLoader.register(TemplateResourceLoader)
     }
 
     private fun registerEvents() {

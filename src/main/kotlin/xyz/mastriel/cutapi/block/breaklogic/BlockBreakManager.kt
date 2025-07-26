@@ -22,7 +22,7 @@ import java.util.logging.*
 @OptIn(UsesNMS::class)
 public class BlockBreakManager : Listener, PacketListener {
 
-    private val breakers = ConcurrentHashMap<Player, PlayerBlockBreaker>()
+    private val breakers = ConcurrentHashMap<PlayerUUID, PlayerBlockBreaker>()
 
 
     @Periodic(1)
@@ -49,7 +49,7 @@ public class BlockBreakManager : Listener, PacketListener {
                     breakers.remove(player)
                 }
             } catch (ex: Exception) {
-                Plugin.logger.log(Level.SEVERE, "Error while ticking block breaker for ${breaker.player.name}", ex)
+                Plugin.logger.log(Level.SEVERE, "Error while ticking block breaker for ${breaker.player?.name}", ex)
             }
 
         }
@@ -113,13 +113,14 @@ public class BlockBreakManager : Listener, PacketListener {
         }
 
 
-        val breaker = PlayerBlockBreaker(blockPosition.bukkitBlock(player.world), player, activeItem.toAgnostic())
+        val breaker =
+            PlayerBlockBreaker(blockPosition.bukkitBlock(player.world), player.playerUUID, activeItem.toAgnostic())
 
         // creative does not send stop or abort, plus we only need
         // to trigger the first tick since everything should break
         // instantly in creative mode.
         if (player.gameMode != GameMode.CREATIVE) {
-            breakers[player] = breaker
+            breakers[player.playerUUID] = breaker
         }
 
     }

@@ -67,7 +67,9 @@ public fun TomlTable.combine(other: TomlTable, combineArrays: Boolean = true): T
         if (map[key] is TomlArray && other[key] is TomlArray) {
             val newArray = mutableListOf<TomlElement>()
             val (currentArray, otherArray) = map[key]!!.asTomlArray() to other[key]!!.asTomlArray()
-            if (combineArrays) newArray.addAll(currentArray)
+            if (combineArrays || otherArray.isEmpty()) {
+                newArray.addAll(currentArray)
+            }
             newArray.addAll(otherArray)
             map[key] = TomlArray(newArray)
             continue

@@ -22,9 +22,10 @@ import xyz.mastriel.cutapi.utils.*
 @UsesNMS
 public open class PlayerBlockBreaker(
     public val block: Block,
-    public val player: Player,
+    public val playerUUID: PlayerUUID,
     public val item: AgnosticItemStack
 ) {
+    public val player: Player? by playerUUID
 
     protected val soundGroup: SoundGroup = block.blockSoundGroup
     protected val material: Material = block.type
@@ -86,6 +87,8 @@ public open class PlayerBlockBreaker(
     @Suppress("DEPRECATION")
     public open fun calculateDamageDealt(): Float {
 
+        val player = this.player ?: return 0f
+
         // blocks under 0 are unbreakable
         if (hardness < 0f) return 0f
 
@@ -116,7 +119,7 @@ public open class PlayerBlockBreaker(
         // deprecation is suppressed here because isOnGround can be
         // easily spoofed. it doesn't really matter that much since
         // it's used for a minor benefit when mining while flying.
-        // (which fly hacks should be pretty obvious to spot.
+        // (also, fly hacks should be pretty obvious to spot)
         if (!player.isOnGround) totalSpeedMultiplier /= 5f
 
         val correctToolIsUsed = when (item) {

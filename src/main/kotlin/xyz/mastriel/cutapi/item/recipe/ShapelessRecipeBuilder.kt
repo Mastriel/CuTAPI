@@ -17,7 +17,8 @@ public class CustomShapelessRecipeIngredient(
     material: Material,
     quantity: Int = 1,
     itemRequirement: Computable<AgnosticItemStack, Boolean>,
-    onCraft: IngredientCraftContext.() -> Unit
+    onCraft: IngredientCraftContext.() -> Unit,
+    public val placeholderItem: CustomItem<*>
 ) : ShapelessRecipeIngredient(material, quantity, itemRequirement, onCraft)
 
 public data class CustomShapelessRecipe(
@@ -73,7 +74,8 @@ public class ShapelessRecipeBuilder(
                 item.type,
                 quantity,
                 IngredientPredicates.isItem(item),
-                onCraft
+                onCraft,
+                item
             )
         }
     }

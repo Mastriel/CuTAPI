@@ -100,7 +100,7 @@ public open class CustomItem<TStack : CuTItemStack>(
             id = id(Plugin, "inventory_background"),
             Material.GLISTERING_MELON_SLICE
         ) {
-            behavior(BlankNameBehavior)
+            behavior(HideTooltip)
 
             display {
                 texture = itemModel(Plugin, "ui/inventory_bg.model3d.json")
@@ -144,7 +144,7 @@ public sealed class AgnosticMaterial {
         }
         return false
     }
-    
+
     public infix fun materialIs(value: CustomItem<*>): Boolean {
         if (this is Custom) {
             return this.custom() == value

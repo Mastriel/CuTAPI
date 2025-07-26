@@ -23,7 +23,6 @@ public open class Model3D(
         inspector.single("Materials") { materials.joinToString() }
         inspector.single("Block Strategies") { metadata.blockStrategies.joinToString() }
         inspector.map("Textures") { metadata.textures.mapValues { (_, v) -> v.toString() } }
-
     }
 
     @Serializable
@@ -41,10 +40,11 @@ public open class Model3D(
 
     override fun getItemModel(): VanillaItemModel {
         return VanillaItemModel(
-            "${ref.namespace}:/items/${
+            "${ref.namespace}:${
                 ref.path(
                     withExtension = false,
-                    withNamespaceAsFolder = false
+                    withNamespaceAsFolder = false,
+                    fixInvalids = true
                 )
             }"
         )
@@ -80,8 +80,6 @@ public val Model3DResourceLoader: ResourceFileLoader<Model3D> = resourceLoader(
         }
         val json = jsonObject.toMutableMap()
         json["textures"] = JsonObject(textures)
-
-        println(JsonObject(json))
 
         val structure = CuTAPI.json.decodeFromJsonElement<Model3DJsonStructure>(JsonObject(json))
         success(Model3D(ref, structure, metadata))
@@ -122,6 +120,8 @@ public data class Model3DDisplay(
     val scale: VoxelVector? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val rotation: VoxelVector? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val translation: VoxelVector? = null,
 )
 
 @Serializable

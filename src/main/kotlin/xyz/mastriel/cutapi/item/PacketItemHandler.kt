@@ -1,6 +1,9 @@
 package xyz.mastriel.cutapi.item
 
+import com.github.shynixn.mccoroutine.bukkit.*
 import com.mojang.datafixers.util.*
+import it.unimi.dsi.fastutil.ints.*
+import kotlinx.coroutines.*
 import net.minecraft.core.*
 import net.minecraft.core.component.*
 import net.minecraft.network.protocol.game.*
@@ -9,6 +12,7 @@ import net.minecraft.network.syncher.SynchedEntityData.DataValue
 import net.minecraft.world.item.trading.*
 import org.bukkit.*
 import org.bukkit.craftbukkit.inventory.*
+import org.bukkit.craftbukkit.util.*
 import org.bukkit.entity.*
 import org.bukkit.event.*
 import org.bukkit.event.inventory.*
@@ -20,6 +24,7 @@ import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.pdc.tags.converters.*
 import xyz.mastriel.cutapi.periodic.*
 import xyz.mastriel.cutapi.utils.*
+import xyz.mastriel.cutapi.utils.personalized.*
 import java.util.*
 
 
@@ -113,7 +118,7 @@ internal object PacketItemHandler : Listener, PacketListener {
         val hotbar = mainContents.take(9)
         val storedInventory = mainContents.subList(9, 36)
 
-        return listOf(craftingSlots, armorContents, storedInventory, hotbar, offhand /* cursor */)
+        return listOf(craftingSlots, armorContents, storedInventory, hotbar, offhand)
             .flatten()
             .map { it.nms() }
             .toNonNullList()
@@ -150,6 +155,24 @@ internal object PacketItemHandler : Listener, PacketListener {
         return ClientboundSetEquipmentPacket(event.packet.entity, slots)
     }
 
+    private fun getServerSideStack(item: MojangItemStack): MojangItemStack {
+        val itemStack = item.bukkit().wrap() ?: return item
+        return itemStack.getPrerenderItemStack(item.count)?.nms() ?: item
+    }
+
+    @PacketHandler
+    fun clickInventory(event: PacketEvent<ServerboundContainerClickPacket>): ServerboundContainerClickPacket {
+        return ServerboundContainerClickPacket(
+            event.packet.containerId,
+            event.packet.stateId,
+            event.packet.slotNum,
+            event.packet.buttonNum,
+            event.packet.clickType,
+            getServerSideStack(event.packet.carriedItem),
+            event.packet.changedSlots.mapValuesTo(Int2ObjectArrayMap()) { (_, item) -> getServerSideStack(item) }
+        )
+    }
+
     @PacketHandler
     fun handleCreativeSetSlot(event: PacketEvent<ServerboundSetCreativeModeSlotPacket>): ServerboundSetCreativeModeSlotPacket {
         val item = event.packet.itemStack
@@ -175,6 +198,19 @@ internal object PacketItemHandler : Listener, PacketListener {
             }
         }
 
+        if (event.packet.itemStack.item == CraftMagicNumbers.getItem(Material.AIR)) {
+            Plugin.launch {
+                delay(1.ticks)
+
+                ClientboundContainerSetSlotPacket(
+                    0,
+                    0,
+                    event.packet.slotNum.toInt(),
+                    net.minecraft.world.item.ItemStack.EMPTY
+                ).sendTo(event.player)
+            }
+        }
+
         return ServerboundSetCreativeModeSlotPacket(
             event.packet.slotNum,
             renderIfNeeded(event.player, item.bukkit().toAgnostic()).nms()
@@ -183,46 +219,7 @@ internal object PacketItemHandler : Listener, PacketListener {
 
     @Periodic(ticks = 5, asyncThread = false)
     fun updatePlayerItems() {
-        for (player in Bukkit.getOnlinePlayers().filterNotNull()) {
-
-            // only send the packet to update the whole inventory if the player is not in creative mode
-            // in creative mode, the client handles the cursor slot in its entirety. we can't see what item
-            // is in the cursor slot at any given time since the client doesn't send that information to the server.
-            // https://github.com/PaperMC/Paper/issues/7797#issuecomment-1120472278
-            if (player.gameMode != GameMode.CREATIVE) {
-
-                val packet = ClientboundContainerSetContentPacket(
-                    0,
-                    // having no revision/stateid works, however it sends unnecessary packets
-                    // prs are welcome to fix this
-                    // https://wiki.vg/Protocol#Click_Container
-                    0,
-                    renderPlayerInventory(player),
-                    customCursorItem(player).nms()
-                )
-
-                packet.sendTo(player)
-            } else {
-                // so here's what's up. we have to send a separate packet for each slot in the player's inventory
-                // because the client doesn't send the cursor slot to the server in creative mode.
-                // this stupid as fuck.
-
-                val inventory = renderPlayerInventory(player)
-
-                inventory.map { it.bukkit() }.forEachIndexed { index, item ->
-
-                    if (item.wrap() != null) {
-                        val packet = ClientboundContainerSetSlotPacket(
-                            0,
-                            0,
-                            index,
-                            item.nms()
-                        )
-                        packet.sendTo(player)
-                    }
-                }
-            }
-
+        for (player in onlinePlayers()) {
             // this is responsible for updating the inventory of the player's open window.
             if (player.openWindowId != null) {
 
@@ -257,6 +254,42 @@ internal object PacketItemHandler : Listener, PacketListener {
                 if (bottomInventory !is PlayerInventory && topInventory.type != InventoryType.CRAFTING) {
                     sendInventory(bottomInventory)
                 }
+                return
+            }
+
+            // only send the packet to update the whole inventory if the player is not in creative mode
+            // in creative mode, the client handles the cursor slot in its entirety. we can't see what item
+            // is in the cursor slot at any given time since the client doesn't send that information to the server.
+            // https://github.com/PaperMC/Paper/issues/7797#issuecomment-1120472278
+            if (player.gameMode != GameMode.CREATIVE) {
+
+                val packet = ClientboundContainerSetContentPacket(
+                    0,
+                    0,
+                    renderPlayerInventory(player),
+                    customCursorItem(player).nms()
+                )
+
+                packet.sendTo(player)
+            } else {
+                // we have to send a separate packet for each slot in the player's inventory
+                // because the client doesn't send the cursor slot to the server in creative mode.
+                // this stupid as fuck.
+
+                val inventory = renderPlayerInventory(player)
+
+                inventory.map { it.bukkit() }.forEachIndexed { index, item ->
+
+                    if (item.wrap() != null) {
+                        val packet = ClientboundContainerSetSlotPacket(
+                            0,
+                            0,
+                            index,
+                            item.nms()
+                        )
+                        packet.sendTo(player)
+                    }
+                }
             }
 
 
@@ -265,7 +298,10 @@ internal object PacketItemHandler : Listener, PacketListener {
 
     private fun customCursorItem(player: Player): ItemStack {
         // Bukkit.broadcast("Cursor: ${player.openInventory.cursor}".colored)
-        player.itemOnCursor.wrap()?.withViewer(player)?.let { return it }
+        val item = player.itemOnCursor.wrap()?.withViewer(player)
+        if (item != null) {
+            return item
+        }
         return player.itemOnCursor
     }
 
@@ -289,7 +325,7 @@ internal object PacketItemHandler : Listener, PacketListener {
         return ClientboundSetEntityDataPacket(packet.id, newItems)
     }
 
-    fun renderIfNeeded(viewer: Player, stack: AgnosticItemStack): ItemStack {
+    fun renderIfNeeded(viewer: Player?, stack: AgnosticItemStack): ItemStack {
         return when (stack) {
             is AgnosticItemStack.Custom -> stack.custom() withViewer viewer
             is AgnosticItemStack.Vanilla -> stack.vanilla()
@@ -321,7 +357,7 @@ internal object PacketItemHandler : Listener, PacketListener {
 
     private val windowIds = mutableMapOf<Player, Int>()
 
-    internal val Player.openWindowId get() = windowIds[player]
+    internal val Player.openWindowId get() = windowIds[this]
 
     internal fun CuTItemStack.setPrerenderItemStack(prerender: ItemStack) {
 

@@ -37,7 +37,7 @@ public abstract class ResourceGenerator(
 public data class ResourceGeneratorContext<out T : Resource>(
     val resource: T,
     val generateBlock: GenerateBlock,
-    val suppliedSubId: String,
+    val ref: ResourceRef<T>,
     val register: (Resource) -> Unit
 ) {
 

@@ -1,0 +1,4 @@
+[item_model_data]
+parent = "cutapi:ui/inventory_bg"
+textures.1 = "{{@ref}}"
+textures.2 = "cutapi://ui/inventory_bg.png"

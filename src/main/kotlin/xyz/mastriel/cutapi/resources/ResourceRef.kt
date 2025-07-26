@@ -47,7 +47,7 @@ public data class ResourceRef<out T : Resource> internal constructor(
         return CuTAPI.resourceManager.isAvailable(this)
     }
 
-    override fun getValue(thisRef: Any?, property: KProperty<*>): T? {
+    override operator fun getValue(thisRef: Any?, property: KProperty<*>): T? {
         return getResource()
     }
 

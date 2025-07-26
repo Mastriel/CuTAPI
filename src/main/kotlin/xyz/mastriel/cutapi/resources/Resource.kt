@@ -34,6 +34,13 @@ public open class Resource(
     public open var subResources: List<Resource> = emptyList()
         protected set
 
+    protected fun subResource(resource: Resource) {
+        if (resource.ref.root != this.ref.root) {
+            throw IllegalArgumentException("Sub-resource must have the same root as the parent resource.")
+        }
+        subResources = subResources + resource
+    }
+
     // these are set by the resource manager
     // these are also purely for the clone block
     // and processing cloning resources.

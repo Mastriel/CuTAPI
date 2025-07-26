@@ -21,7 +21,8 @@ public class CustomShapedRecipeIngredient(
     material: Material,
     quantity: Int = 1,
     itemRequirement: Computable<AgnosticItemStack, Boolean>,
-    onCraft: IngredientCraftContext.() -> Unit
+    onCraft: IngredientCraftContext.() -> Unit,
+    public val placeholderItem: CustomItem<*>
 ) : ShapedRecipeIngredient(char, material, quantity, itemRequirement, onCraft)
 
 
@@ -158,7 +159,7 @@ public class ShapedRecipeBuilder(
     ) {
         repeat(slotsRequired) {
             val predicate = IngredientPredicates.isItem(item)
-            ingredients[char] = CustomShapedRecipeIngredient(char, item.type, quantity, predicate, onCraft)
+            ingredients[char] = CustomShapedRecipeIngredient(char, item.type, quantity, predicate, onCraft, item)
         }
     }
 

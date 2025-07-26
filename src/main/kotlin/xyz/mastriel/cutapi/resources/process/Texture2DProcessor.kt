@@ -18,11 +18,12 @@ public val TextureAndModelProcessor: ResourceProcessor = resourceProcessor<Resou
     // puts the textures in the right places
     generateTexturesInPack(textures)
 
+    // generates the item model and model files
+    generateTextureItemAndModelJsonFiles(textures)
+
     // puts the models in the right places
     generateModelsInPack(models)
-
-    // generates the item model and model files
-    generateItemAndModelJsonFiles(textures)
+    generateModelItemFiles(models)
 
     // generates the glyphs
     generateGlyphs(textures)
@@ -214,8 +215,8 @@ private fun generateModelFile(texture: Texture2D) {
     val location = texture.getItemModel().getLocationWithItemFolder()
 
     val itemModelJson = texture.metadata.itemModelData?.copy(
-        textures = texture.metadata.itemModelData.textures + mapOf("layer0" to location)
-    ) ?: ItemModelData(parent = "minecraft:item/generated", textures = mapOf("layer0" to location))
+        _textures = texture.metadata.itemModelData.textures + mapOf("layer0" to location)
+    ) ?: ItemModelData(parent = "minecraft:item/generated", _textures = mapOf("layer0" to location))
 
     val jsonString = CuTAPI.json.encodeToString(itemModelJson)
 
@@ -248,7 +249,7 @@ private data class ItemModelFile(
 }
 
 // we generate 2 different item models, one with no hand swap animation and one with it
-private fun generateItemModelFiles(texture: Texture2D) {
+private fun generateItemModelFiles(texture: TextureLike) {
 
     val modelData = ItemModelFile.ModelData(
         ItemModelFile.ModelType.Model,
@@ -271,9 +272,15 @@ private fun generateItemModelFiles(texture: Texture2D) {
     swapFile.createAndWrite(CuTAPI.json.encodeToString(swap))
 }
 
-private fun generateItemAndModelJsonFiles(textures: Collection<Texture2D>) {
+private fun generateTextureItemAndModelJsonFiles(textures: Collection<Texture2D>) {
     for (texture in textures) {
         generateModelFile(texture)
+        generateItemModelFiles(texture)
+    }
+}
+
+private fun generateModelItemFiles(textures: Collection<Model3D>) {
+    for (texture in textures) {
         generateItemModelFiles(texture)
     }
 }

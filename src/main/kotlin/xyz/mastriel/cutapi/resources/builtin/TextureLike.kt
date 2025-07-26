@@ -11,6 +11,8 @@ public interface TextureLike {
 
     public fun getItemModel(): VanillaItemModel
 
+    public val ref: ResourceRef<*>
+
     public val materials: List<String>
 
     public val resource: Resource
