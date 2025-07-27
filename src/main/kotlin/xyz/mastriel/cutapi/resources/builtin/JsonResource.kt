@@ -6,6 +6,12 @@ import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 
+/**
+ * Represents a resource loaded from a JSON file.
+ *
+ * @property ref The reference to this JSON resource.
+ * @property data The parsed JSON object data.
+ */
 public open class JsonResource(
     override val ref: ResourceRef<JsonResource>,
     public val data: JsonObject
@@ -19,6 +25,9 @@ public open class JsonResource(
     public operator fun component1(): JsonObject = data
 }
 
+/**
+ * Loader for JsonResource, parses JSON files into JsonResource objects.
+ */
 public val JsonResourceLoader: ResourceFileLoader<JsonResource> = resourceLoader<JsonResource, Nothing>(
     extensions = listOf("json"),
     resourceTypeId = id(Plugin, "json"),

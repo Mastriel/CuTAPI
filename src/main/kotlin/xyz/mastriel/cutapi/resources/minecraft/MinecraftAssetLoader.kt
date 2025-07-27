@@ -6,6 +6,11 @@ import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.utils.*
 import java.io.*
 
+/**
+ * Loader for Minecraft assets from the file system.
+ *
+ * Loads textures and models from the specified asset folders and registers them as resources.
+ */
 public class MinecraftAssetLoader {
 
     private val resourceManager get() = CuTAPI.resourceManager

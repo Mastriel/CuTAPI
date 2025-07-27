@@ -5,6 +5,13 @@ import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
 
 
+/**
+ * Data class representing item model data for Minecraft resources.
+ *
+ * @property parent The parent model string.
+ * @property textures The map of texture keys to texture paths.
+ * @property overrides List of item model overrides.
+ */
 @Serializable
 public data class ItemModelData(
     @SerialName("parent")
@@ -14,10 +21,6 @@ public data class ItemModelData(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     @SerialName("textures")
     private val _textures: Map<String, String> = mapOf(),
-
-    @OptIn(ExperimentalSerializationApi::class)
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val overrides: List<ItemOverrides> = listOf()
 ) {
     @Transient
     public val textures: Map<String, String> = _textures.toMutableMap().also {
@@ -28,15 +31,3 @@ public data class ItemModelData(
         }
     }
 }
-
-@Serializable
-public data class ItemOverrides(
-    val predicate: ItemPredicates,
-    val model: String
-)
-
-@Serializable
-public data class ItemPredicates(
-    @SerialName("custom_model_data")
-    val customModelData: Int
-)

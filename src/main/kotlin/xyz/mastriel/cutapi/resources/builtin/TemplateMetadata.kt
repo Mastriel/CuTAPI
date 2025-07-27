@@ -8,6 +8,11 @@ import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.data.*
 
 
+/**
+ * A resource representing a template with metadata and string data for patching.
+ *
+ * @constructor Creates a TemplateResource with the given reference, metadata, and string data.
+ */
 public class TemplateResource(
     ref: ResourceRef<TemplateResource>,
     metadata: Metadata,
@@ -28,6 +33,9 @@ public class TemplateResource(
 }
 
 
+/**
+ * Loader for TemplateResource.
+ */
 public val TemplateResourceLoader: ResourceFileLoader<TemplateResource> =
     resourceLoader(
         listOf("template"),
@@ -38,6 +46,7 @@ public val TemplateResourceLoader: ResourceFileLoader<TemplateResource> =
     }
 
 
+/**
+ * Type alias for a serializable reference to a TemplateResource.
+ */
 public typealias SerializableTemplateRef = ResourceRef<@Contextual TemplateResource>
-
-

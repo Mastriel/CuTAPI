@@ -10,6 +10,11 @@ import xyz.mastriel.cutapi.utils.*
 import java.io.*
 import kotlin.time.*
 
+/**
+ * Abstract base class for resource pack generators.
+ *
+ * Implementations should define the pack version, number of steps, and the generation logic.
+ */
 public abstract class ResourcePackGenerator {
 
     /**

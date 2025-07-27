@@ -6,6 +6,11 @@ import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.utils.*
 import java.io.*
 
+/**
+ * Singleton object representing the Minecraft assets resource root.
+ *
+ * Provides access to the Minecraft textures and models folders as FolderRefs.
+ */
 public data object MinecraftAssets : CuTPlugin, ResourceRoot {
     override val namespace: String = "minecraft"
     override val plugin: Plugin = Plugin
