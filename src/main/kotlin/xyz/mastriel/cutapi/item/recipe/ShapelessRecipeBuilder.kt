@@ -94,7 +94,9 @@ public fun ItemDescriptorBuilder.shapelessRecipe(
 ) {
     onRegister += {
         val builder = ShapelessRecipeBuilder(item.createItemStack(amount), id).apply(block)
-        CustomShapelessRecipe.register(builder.build())
+        CustomShapelessRecipe.modifyRegistry {
+            builder.build()
+        }
     }
 }
 
@@ -107,8 +109,8 @@ public fun shapelessRecipe(
     return builder.build()
 }
 
-public fun registerShapelessRecipe(
+public fun DeferredRegistry<CustomShapelessRecipe>.registerShapelessRecipe(
     id: Identifier,
     result: ItemStack,
     block: ShapelessRecipeBuilder.() -> Unit
-): CustomShapelessRecipe = CustomShapelessRecipe.register(shapelessRecipe(id, result, block))
+): Deferred<CustomShapelessRecipe> = register { shapelessRecipe(id, result, block) }

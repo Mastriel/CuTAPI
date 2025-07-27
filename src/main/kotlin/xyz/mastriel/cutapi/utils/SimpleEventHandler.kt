@@ -19,6 +19,8 @@ public class EventHandlerList<TInput> {
 
     public fun trigger(event: TInput): Unit = events.forEach { with(it) { event.trigger() } }
 
-    public operator fun invoke(event: TInput): Unit = trigger(event)
+    public operator fun invoke(event: SimpleEventHandler<TInput>) {
+        events += event
+    }
 }
 

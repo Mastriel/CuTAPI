@@ -181,7 +181,9 @@ public fun ItemDescriptorBuilder.shapedRecipe(
 ) {
     onRegister += {
         val builder = ShapedRecipeBuilder(item.createItemStack(amount), id, size).apply(block)
-        CustomShapedRecipe.register(builder.build())
+        CustomShapedRecipe.modifyRegistry {
+            register(builder.build())
+        }
     }
 }
 
@@ -195,9 +197,9 @@ public fun shapedRecipe(
     return builder.build()
 }
 
-public fun registerShapedRecipe(
+public fun DeferredRegistry<CustomShapedRecipe>.registerShapedRecipe(
     id: Identifier,
     size: CustomShapedRecipe.Size,
     result: ItemStack,
     block: ShapedRecipeBuilder.() -> Unit
-): CustomShapedRecipe = CustomShapedRecipe.register(shapedRecipe(id, size, result, block))
+): Deferred<CustomShapedRecipe> = register { shapedRecipe(id, size, result, block) }

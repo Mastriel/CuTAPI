@@ -20,22 +20,109 @@ public data class HookContext<T : Identifiable>(
     var preventRegister: Boolean
 )
 
+public data class RegistryEvent<T : Identifiable>(
+    public val registry: IdentifierRegistry<*>,
+    private val registerFunction: (item: T) -> Unit,
+    private val replaceFunction: (id: Identifier, item: T) -> Unit
+) {
+    public fun register(item: T): Unit = registerFunction(item)
+    public fun replace(id: Identifier, item: T): Unit = replaceFunction(id, item)
+}
+
+@JvmInline
+public value class RegistryPriority(public val value: Int) : Comparable<RegistryPriority> {
+    public companion object {
+        public val High: RegistryPriority = RegistryPriority(1000)
+        public val Medium: RegistryPriority = RegistryPriority(0)
+        public val Low: RegistryPriority = RegistryPriority(-1000)
+    }
+
+    override fun compareTo(other: RegistryPriority): Int {
+        return this.value.compareTo(other.value)
+    }
+}
+
 /**
  * A map of [Identifier] to [T]. This is used in keeping a registry of all items, blocks, etc.
  *
  * @param T The identifiable that is being tracked.
  */
 public open class IdentifierRegistry<T : Identifiable>(public val name: String) {
+
+    protected data class Handler<T : Identifiable>(
+        public val priority: RegistryPriority,
+        public val handler: RegistryEvent<T>.() -> Unit
+    )
+
     protected val values: MutableMap<Identifier, T> = mutableMapOf()
     protected val hooks: MutableList<Pair<HookContext<T>.() -> Unit, HookPriority>> =
         mutableListOf()
+
+    protected val eventHandlers: MutableList<Handler<T>> = mutableListOf()
+
+    protected fun getSortedEventHandlers(): List<Handler<T>> {
+        return eventHandlers.sortedByDescending { it.priority }
+    }
+
+    public var isOpen: Boolean = true
+        private set
+
+    public open fun modifyRegistry(
+        priority: RegistryPriority = RegistryPriority.Medium,
+        handler: RegistryEvent<T>.() -> Unit
+    ) {
+        if (!isOpen) error("Registry '$name' is already initialized. Cannot add more handlers.")
+        eventHandlers += Handler(priority, handler)
+    }
+
+
+    /**
+     * Call this when the registry is ready to be used, and all handlers have already been added.
+     */
+    public open fun initialize() {
+        if (!isOpen) error("Registry '$name' is already initialized.")
+
+        // run all handlers
+        for (handler in getSortedEventHandlers()) {
+            val event = RegistryEvent(this, ::register, ::replace)
+            handler.handler(event)
+        }
+
+        isOpen = false
+        Plugin.info("[REGISTRY] '$name' initialized with ${values.size} items.")
+        eventHandlers.clear() // we don't need to keep the handlers around anymore
+    }
+
+    protected open fun replace(id: Identifier, item: T) {
+        if (!isOpen) error("Registry '$name' is already initialized. Cannot replace items.")
+
+        if (values.containsKey(id)) {
+            unregister(id)
+        } else {
+            Plugin.warn("[REGISTRY] $id tried to be replaced in '$name', but it doesn't exist in this registry. Creating a new entry instead...")
+        }
+        register(item)
+    }
+
+    /**
+     * Create a deferred registry for this registry. This allows you to group items together, to then be registered
+     * all at the same time when the registry is ready.
+     *
+     * @param priority The priority of the deferred registry. Defaults to [RegistryPriority.Medium].
+     * @return A [DeferredRegistry] that can be used to register items later.
+     */
+    public open fun defer(priority: RegistryPriority = RegistryPriority.Medium): DeferredRegistry<T> {
+        if (!isOpen) error("Registry '$name' is already initialized. Cannot create a deferred registry.")
+        return BasicDeferredRegistry(this, priority)
+    }
+
 
     /**
      * Register an object with this map to allow for it to be identified.
      *
      * @param item The object which the association is being made for.
      */
-    public open fun register(item: T): T {
+    protected open fun register(item: T): T {
         // add this to the list of used registries if it's not already there. keeps track of all registries
         // for when a plugin is disabled.
         if (!usedRegistries.any { it.get() == this }) {
@@ -71,7 +158,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
      *
      * @param item The object being removed.
      */
-    public open fun unregister(item: T): Unit = unregister(item.id)
+    protected open fun unregister(item: T): Unit = unregister(item.id)
 
     /**
      * Remove an object from this registry.
@@ -86,7 +173,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
      *
      * @param id The object being removed.
      */
-    public open fun unregister(id: Identifier) {
+    protected open fun unregister(id: Identifier) {
         if (!values.containsKey(id)) {
             Plugin.warn("[REGISTRY] $id tried to be removed from '${this.name}', but it doesn't exist in this registry.")
             return
@@ -164,7 +251,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
         hooks += func to priority
     }
 
-    internal companion object {
+    public companion object {
         // uses weak references, although registries should probably not be
         // garbage collected at any point and should always have a strong reference
         private val usedRegistries = mutableListOf<WeakReference<IdentifierRegistry<*>>>()
@@ -176,3 +263,4 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
         }
     }
 }
+

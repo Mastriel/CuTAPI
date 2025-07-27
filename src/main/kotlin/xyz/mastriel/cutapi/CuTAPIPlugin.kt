@@ -6,14 +6,18 @@ import com.github.shynixn.mccoroutine.bukkit.*
 import io.papermc.paper.plugin.lifecycle.event.types.*
 import kotlinx.coroutines.*
 import org.bukkit.*
+import org.bukkit.event.*
+import org.bukkit.event.server.*
 import org.bukkit.plugin.java.*
 import org.bukkit.scheduler.*
+import xyz.mastriel.cutapi.block.*
 import xyz.mastriel.cutapi.commands.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.item.behaviors.*
 import xyz.mastriel.cutapi.item.bukkitevents.*
 import xyz.mastriel.cutapi.item.recipe.*
 import xyz.mastriel.cutapi.nms.*
+import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.resources.minecraft.*
@@ -45,23 +49,57 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         registerCommands()
         registerEvents()
         registerPeriodics()
+
         CuTItemStack.registerType(
             id = ItemStackUtility.DEFAULT_ITEMSTACK_TYPE_ID,
             kClass = CuTItemStack::class,
             constructor = CuTItemStack.CONSTRUCTOR
         )
-        CustomItem.register(CustomItem.Unknown)
+        CustomItem.modifyRegistry(RegistryPriority(Int.MAX_VALUE)) {
+            register(CustomItem.Unknown)
+        }
         TexturePostProcessor.registerBuiltins()
 
-        TexturePostProcessor.register(GrayscalePostProcessor)
-        TexturePostProcessor.register(PaletteSwapPostProcessor)
-        TexturePostProcessor.register(MultiplyOpaquePixelsProcessor)
+        TexturePostProcessor.modifyRegistry {
+            register(GrayscalePostProcessor)
+            register(PaletteSwapPostProcessor)
+            register(MultiplyOpaquePixelsProcessor)
+        }
+
         ResourcePackProcessor.register(TextureAndModelProcessor, name = "Texture Processor")
-        MinecraftAssetDownloader.register(GithubMinecraftAssetDownloader())
-        Uploader.register(BuiltinUploader())
+
+        MinecraftAssetDownloader.modifyRegistry {
+            register(GithubMinecraftAssetDownloader())
+        }
+
+        Uploader.modifyRegistry {
+            register(BuiltinUploader())
+        }
 
         CuTAPI.packetEventManager.registerPacketListener(PacketItemHandler)
 
+        CustomItem.DeferredRegistry.commitRegistry()
+
+        CuTAPI.serverReady {
+            ResourceFileLoader.initialize()
+            ResourceGenerator.initialize()
+            MinecraftAssetDownloader.initialize()
+            TexturePostProcessor.initialize()
+            Uploader.initialize()
+
+            CustomItem.initialize()
+            CustomShapedRecipe.initialize()
+            CustomShapelessRecipe.initialize()
+            CustomFurnaceRecipe.initialize()
+            CustomSmithingTableRecipe.initialize()
+
+            CustomTile.initialize()
+            CustomBlock.initialize()
+            CustomTileEntity.initialize()
+
+            ToolCategory.initialize()
+            ToolTier.initialize()
+        }
 
         registerResourceLoaders()
 
@@ -101,17 +139,22 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
     }
 
     private fun registerResourceLoaders() {
-        ResourceGenerator.register(HorizontalAtlasTextureGenerator)
-        ResourceGenerator.register(InventoryTextureGenerator)
+        ResourceGenerator.modifyRegistry {
+            register(HorizontalAtlasTextureGenerator)
+            register(InventoryTextureGenerator)
+        }
 
-        ResourceFileLoader.register(FolderApplyResourceLoader)
-        ResourceFileLoader.register(Texture2DResourceLoader)
-        ResourceFileLoader.register(Model3DResourceLoader)
-        ResourceFileLoader.register(MetadataResource.Loader)
-        ResourceFileLoader.register(PostProcessDefinitionsResource.Loader)
-        ResourceFileLoader.register(GenerateResource.Loader)
+        ResourceFileLoader.modifyRegistry {
+            register(FolderApplyResourceLoader)
+            register(Texture2DResourceLoader)
+            register(Model3DResourceLoader)
+            register(MetadataResource.Loader)
+            register(PostProcessDefinitionsResource.Loader)
+            register(GenerateResource.Loader)
+            register(TemplateResourceLoader)
+        }
 
-        ResourceFileLoader.register(TemplateResourceLoader)
+
     }
 
     private fun registerEvents() {
@@ -124,6 +167,15 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
         server.pluginManager.registerEvents(UploaderJoinEvents(), this)
         server.pluginManager.registerEvents(CuTAPI.playerPacketManager, this)
+
+        val serverReadyHandler = object : Listener {
+            @EventHandler
+            fun serverReady(event: ServerLoadEvent) {
+                if (event.type != ServerLoadEvent.LoadType.STARTUP) return
+                CuTAPI.serverReady.trigger(Unit)
+            }
+        }
+        server.pluginManager.registerEvents(serverReadyHandler, this)
 
         val itemBehaviorEvents = ItemBehaviorEvents()
         server.pluginManager.registerEvents(itemBehaviorEvents, this)

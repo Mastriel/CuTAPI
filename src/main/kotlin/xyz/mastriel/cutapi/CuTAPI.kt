@@ -46,6 +46,11 @@ public object CuTAPI {
     internal val blockBreakManager = BlockBreakManager()
 
     /**
+     * Most registries should probably be initialized here.
+     */
+    public val serverReady: EventHandlerList<Unit> = EventHandlerList()
+
+    /**
      * Register a plugin with CuTAPI. This is used to namespace any items registered with the API, and
      * is used to hold some other additional information about the plugin.
      *
