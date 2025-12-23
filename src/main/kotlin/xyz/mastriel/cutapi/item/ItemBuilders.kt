@@ -58,9 +58,8 @@ public inline fun <reified T : CuTItemStack> DeferredRegistry<CustomItem<*>>.reg
     bukkitMaterial: Material,
     noinline block: (ItemDescriptorBuilder.() -> Unit)?
 ): Deferred<CustomItem<T>> {
-    val customItem = customItem<T>(id, bukkitMaterial, block)
     @Suppress("UNCHECKED_CAST")
-    return register { customItem } as Deferred<CustomItem<T>>
+    return register { customItem<T>(id, bukkitMaterial, block) } as Deferred<CustomItem<T>>
 }
 
 public fun customItem(
@@ -95,9 +94,9 @@ public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
     bukkitMaterial: Material,
     block: ItemDescriptorBuilder.() -> Unit
 ): Deferred<CustomItem<CuTItemStack>> {
-    val customItem = customItem(id, bukkitMaterial, block)
+
     @Suppress("UNCHECKED_CAST")
-    return register { customItem } as Deferred<CustomItem<CuTItemStack>>
+    return register { customItem(id, bukkitMaterial, block) } as Deferred<CustomItem<CuTItemStack>>
 }
 
 public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
@@ -105,9 +104,8 @@ public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
     bukkitMaterial: Material,
     descriptor: ItemDescriptor
 ): Deferred<CustomItem<CuTItemStack>> {
-    val customItem = customItem(id, bukkitMaterial, descriptor)
     @Suppress("UNCHECKED_CAST")
-    return register { customItem } as Deferred<CustomItem<CuTItemStack>>
+    return register { customItem(id, bukkitMaterial, descriptor) } as Deferred<CustomItem<CuTItemStack>>
 }
 
 public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
@@ -115,9 +113,8 @@ public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
     bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>
 ): Deferred<CustomItem<CuTItemStack>> {
-    val customItem = customItem(id, bukkitMaterial, name)
     @Suppress("UNCHECKED_CAST")
-    return register { customItem } as Deferred<CustomItem<CuTItemStack>>
+    return register { customItem(id, bukkitMaterial, name) } as Deferred<CustomItem<CuTItemStack>>
 }
 
 

@@ -22,8 +22,6 @@ public sealed class CuTPlacedTile(
         set(value) {
             (typeTag as NotNullTag<String, CustomTile<*>>).store(value)
         }
-
-
 }
 
 
@@ -39,7 +37,6 @@ public open class CuTPlacedTileEntity(
 }
 
 public open class CuTPlacedBlock(handle: Block) : CuTPlacedTile(handle) {
-
     final override val typeTag: NotNullTag<String, CustomBlock<*>> = customBlockTag("type", CustomBlock.Unknown)
 
 }

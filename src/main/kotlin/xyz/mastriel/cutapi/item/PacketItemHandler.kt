@@ -2,13 +2,14 @@ package xyz.mastriel.cutapi.item
 
 import com.github.shynixn.mccoroutine.bukkit.*
 import com.mojang.datafixers.util.*
-import it.unimi.dsi.fastutil.ints.*
 import kotlinx.coroutines.*
 import net.minecraft.core.*
 import net.minecraft.core.component.*
+import net.minecraft.network.*
 import net.minecraft.network.protocol.game.*
 import net.minecraft.network.syncher.*
 import net.minecraft.network.syncher.SynchedEntityData.DataValue
+import net.minecraft.world.item.*
 import net.minecraft.world.item.trading.*
 import org.bukkit.*
 import org.bukkit.craftbukkit.inventory.*
@@ -17,10 +18,12 @@ import org.bukkit.entity.*
 import org.bukkit.event.*
 import org.bukkit.event.inventory.*
 import org.bukkit.inventory.*
+import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.nms.*
+import xyz.mastriel.cutapi.nms.PacketListener
 import xyz.mastriel.cutapi.pdc.tags.converters.*
 import xyz.mastriel.cutapi.periodic.*
 import xyz.mastriel.cutapi.utils.*
@@ -56,7 +59,7 @@ internal object PacketItemHandler : Listener, PacketListener {
 
         fun itemCost(mojangItemStack: MojangItemStack?): Optional<ItemCost> {
             if (mojangItemStack == null) return Optional.empty<ItemCost>()
-            val componentPredicate = DataComponentPredicate.allOf(mojangItemStack.components)
+            val componentPredicate = DataComponentExactPredicate.allOf(mojangItemStack.components)
             return Optional.of(ItemCost(mojangItemStack.itemHolder, mojangItemStack.count, componentPredicate))
         }
         for (offer in event.packet.offers) {
@@ -162,15 +165,33 @@ internal object PacketItemHandler : Listener, PacketListener {
 
     @PacketHandler
     fun clickInventory(event: PacketEvent<ServerboundContainerClickPacket>): ServerboundContainerClickPacket {
+        @Suppress("DEPRECATION")
+        val evilItem =
+            HashedStack.ActualItem(Items.DIRT.builtInRegistryHolder(), -1, HashedPatchMap(emptyMap(), emptySet()))
+
+        // evil hack from hell
+        // hashedstack is evil blah blah blah
+        // just send something that causes a desync and forces the server to try to correct it
+        // not efficient however the other option involves some horrible caching
         return ServerboundContainerClickPacket(
             event.packet.containerId,
             event.packet.stateId,
             event.packet.slotNum,
             event.packet.buttonNum,
             event.packet.clickType,
-            getServerSideStack(event.packet.carriedItem),
-            event.packet.changedSlots.mapValuesTo(Int2ObjectArrayMap()) { (_, item) -> getServerSideStack(item) }
+            event.packet.changedSlots,
+            evilItem
         )
+
+//        return ServerboundContainerClickPacket(
+//            event.packet.containerId,
+//            event.packet.stateId,
+//            event.packet.slotNum,
+//            event.packet.buttonNum,
+//            event.packet.clickType,
+//            event.packet.changedSlots.mapValuesTo(Int2ObjectArrayMap()) { (_, item) -> getServerSideStack(item) },
+//            getServerSideStack(event.packet.carriedItem)
+//        )
     }
 
     @PacketHandler

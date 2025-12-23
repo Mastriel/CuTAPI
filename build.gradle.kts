@@ -4,14 +4,13 @@ plugins {
     kotlin("jvm") version "2.0.20"
     java
 
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.2.0"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.5.31"
     id("xyz.jpenilla.run-paper") version "2.3.1"
 
     `maven-publish`
 
-    id("io.papermc.paperweight.userdev") version "2.0.0-beta.13"
-
+    id("io.papermc.paperweight.userdev") version "2.0.0-beta.19"
 }
 
 repositories {
@@ -117,7 +116,7 @@ tasks.reobfJar {
 }
 
 tasks.assemble {
-    dependsOn(tasks.reobfJar)
+    dependsOn(tasks.shadowJar)
 }
 
 publishing {

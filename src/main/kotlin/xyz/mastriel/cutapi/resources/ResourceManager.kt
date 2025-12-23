@@ -9,9 +9,6 @@ import xyz.mastriel.cutapi.resources.data.*
 import xyz.mastriel.cutapi.resources.process.*
 import xyz.mastriel.cutapi.utils.*
 import java.io.*
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.set
 
 public class ResourceManager {
 
@@ -383,6 +380,7 @@ public class ResourceManager {
             var depth = 0
             var table = CuTAPI.toml.parseToTomlTable(bytes.toString(Charsets.UTF_8))
             while (metadataNeedsToProcessExtensions(table)) {
+                println("Processing extends for $ref at depth $depth ts")
                 depth++
                 if (depth > depthLimit) {
                     Plugin.error("Metadata extensions for $ref excessively (or infinitely) recurse.")
@@ -428,7 +426,9 @@ public class ResourceManager {
 
 
         val newMetadata = refs.fold(metadata) { acc, r ->
-            val templateTable = r.first.getResource() ?: return@fold acc
+            val templateTable = r.first.getResource() ?: return@fold acc.also {
+                Plugin.error("Template ${r.first} not found for resource $ref.")
+            }
             val patchedTemplates = r.second.map { templateTable.getPatchedTable(ref, it) }
 
             patchedTemplates.fold(acc) { acc2, t ->

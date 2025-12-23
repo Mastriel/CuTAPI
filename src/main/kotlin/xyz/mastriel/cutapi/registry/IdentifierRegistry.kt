@@ -71,7 +71,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
         priority: RegistryPriority = RegistryPriority.Medium,
         handler: RegistryEvent<T>.() -> Unit
     ) {
-        if (!isOpen) error("Registry '$name' is already initialized. Cannot add more handlers.")
+        if (!isOpen) Plugin.warn("Registry '$name' is already initialized. Cannot add more handlers.")
         eventHandlers += Handler(priority, handler)
     }
 
@@ -80,7 +80,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
      * Call this when the registry is ready to be used, and all handlers have already been added.
      */
     public open fun initialize() {
-        if (!isOpen) error("Registry '$name' is already initialized.")
+        if (!isOpen) Plugin.warn("Registry '$name' is already initialized.")
 
         // run all handlers
         for (handler in getSortedEventHandlers()) {
@@ -94,7 +94,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
     }
 
     protected open fun replace(id: Identifier, item: T) {
-        if (!isOpen) error("Registry '$name' is already initialized. Cannot replace items.")
+        if (!isOpen) Plugin.warn("Registry '$name' is already initialized. Cannot replace items.")
 
         if (values.containsKey(id)) {
             unregister(id)
@@ -112,7 +112,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
      * @return A [DeferredRegistry] that can be used to register items later.
      */
     public open fun defer(priority: RegistryPriority = RegistryPriority.Medium): DeferredRegistry<T> {
-        if (!isOpen) error("Registry '$name' is already initialized. Cannot create a deferred registry.")
+        if (!isOpen) Plugin.warn("Registry '$name' is already initialized. Cannot create a deferred registry.")
         return BasicDeferredRegistry(this, priority)
     }
 

@@ -10,6 +10,7 @@ import org.bukkit.event.*
 import org.bukkit.event.server.*
 import org.bukkit.plugin.java.*
 import org.bukkit.scheduler.*
+import xyz.mastriel.cutapi.CuTAPI.experimentalBlockSupport
 import xyz.mastriel.cutapi.block.*
 import xyz.mastriel.cutapi.commands.*
 import xyz.mastriel.cutapi.item.*
@@ -32,6 +33,7 @@ internal lateinit var Plugin: CuTAPIPlugin
 
 @OptIn(UsesNMS::class)
 public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
+
 
     override fun onEnable() {
         Plugin = this
@@ -76,9 +78,11 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             register(BuiltinUploader())
         }
 
-        CuTAPI.packetEventManager.registerPacketListener(PacketItemHandler)
 
-        CustomItem.DeferredRegistry.commitRegistry()
+        CuTAPI.packetEventManager.registerPacketListener(PacketItemHandler)
+        if (experimentalBlockSupport) CuTAPI.packetEventManager.registerPacketListener(CuTAPI.blockBreakManager)
+
+        CustomItem.DeferredRegistry.commitToRegistry()
 
         CuTAPI.serverReady {
             ResourceFileLoader.initialize()
@@ -93,9 +97,9 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             CustomFurnaceRecipe.initialize()
             CustomSmithingTableRecipe.initialize()
 
-            CustomTile.initialize()
             CustomBlock.initialize()
             CustomTileEntity.initialize()
+            CustomTile.initialize()
 
             ToolCategory.initialize()
             ToolTier.initialize()
@@ -134,7 +138,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         val periodicManager = CuTAPI.periodicManager
 
         periodicManager.register(this, PacketItemHandler)
-        // periodicManager.register(CuTAPI.blockBreakManager)
+        if (experimentalBlockSupport) periodicManager.register(this, CuTAPI.blockBreakManager)
 
     }
 
@@ -145,13 +149,13 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         }
 
         ResourceFileLoader.modifyRegistry {
+            register(TemplateResourceLoader)
             register(FolderApplyResourceLoader)
             register(Texture2DResourceLoader)
             register(Model3DResourceLoader)
             register(MetadataResource.Loader)
             register(PostProcessDefinitionsResource.Loader)
             register(GenerateResource.Loader)
-            register(TemplateResourceLoader)
         }
 
 
@@ -160,7 +164,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
     private fun registerEvents() {
         server.pluginManager.registerEvents(PlayerItemEvents, this)
 
-        // server.pluginManager.registerEvents(CuTAPI.blockBreakManager, this)
+        if (experimentalBlockSupport) server.pluginManager.registerEvents(CuTAPI.blockBreakManager, this)
         server.pluginManager.registerEvents(PacketItemHandler, this)
         server.pluginManager.registerEvents(CraftingRecipeEvents(), this)
         server.pluginManager.registerEvents(Unstackable, this)
