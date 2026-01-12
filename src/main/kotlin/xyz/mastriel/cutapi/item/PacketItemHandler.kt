@@ -26,6 +26,7 @@ import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.nms.PacketListener
 import xyz.mastriel.cutapi.pdc.tags.converters.*
 import xyz.mastriel.cutapi.periodic.*
+import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.utils.*
 import xyz.mastriel.cutapi.utils.personalized.*
 import java.util.*
@@ -382,15 +383,15 @@ internal object PacketItemHandler : Listener, PacketListener {
 
     internal fun CuTItemStack.setPrerenderItemStack(prerender: ItemStack) {
 
-        set("PrerenderItemStack", prerender.clone().also { it.amount = 1 }, ItemStackTagConverter)
+        set(id(Plugin, "prerenderItemStack"), prerender.clone().also { it.amount = 1 }, ItemStackTagConverter)
     }
 
     internal fun CuTItemStack.getPrerenderItemStack(amount: Int): ItemStack? {
-        return get("PrerenderItemStack", ItemStackTagConverter)?.also { it.amount = amount }
+        return get(id(Plugin, "prerenderItemStack"), ItemStackTagConverter)?.also { it.amount = amount }
     }
 
     internal fun CuTItemStack.hasPrerenderStack(): Boolean {
-        return has("PrerenderItemStack")
+        return has(id(Plugin, "prerenderItemStack"))
     }
 
     /*

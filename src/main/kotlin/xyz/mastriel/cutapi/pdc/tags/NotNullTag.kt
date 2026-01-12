@@ -1,16 +1,17 @@
 package xyz.mastriel.cutapi.pdc.tags
 
 import xyz.mastriel.cutapi.pdc.tags.converters.*
+import xyz.mastriel.cutapi.registry.*
 import kotlin.reflect.*
 
-public open class NotNullTag<P: Any, C : Any>(
-    override val key: String,
+public open class NotNullTag<P : Any, C : Any>(
+    override val key: Identifier,
     override var container: TagContainer,
     override val default: C,
     private val converter: TagConverter<P, C>
 ) : Tag<C> {
 
-    private var cachedValue : C? = null
+    private var cachedValue: C? = null
 
     override fun store(value: C) {
         container.set(key, value, converter)

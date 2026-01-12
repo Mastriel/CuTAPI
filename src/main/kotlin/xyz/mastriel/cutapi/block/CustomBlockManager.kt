@@ -34,7 +34,7 @@ public class CustomBlockManager {
      */
     private fun chunkVanillaBlocks(chunk: Chunk) =
         chunk.persistentDataContainer.keys
-            .filter { it.key.startsWith("CuTBlockData") }
+            .filter { it.key.startsWith("customBlockData") }
             .mapNotNull { namespacedKey ->
                 val (_, x, y, z) = namespacedKey.key.split("/").map { it.toIntOrNull() }
 
@@ -123,8 +123,8 @@ public class CustomBlockManager {
     ): Unit = registerPlacedTileType(id, T::class, constructor)
 
     public companion object {
-        public const val CUT_ID_KEY: String = "cutapi.CuTID"
-        public const val CUT_TYPE_KEY: String = "cutapi.CuTType"
+        public val CUT_ID_KEY: Identifier = id(Plugin, "id")
+        public val CUT_TYPE_KEY: Identifier = id(Plugin, "type")
 
 
         public val BukkitBlock.isCustom: Boolean
