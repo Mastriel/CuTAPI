@@ -11,8 +11,6 @@ plugins {
     `maven-publish`
 
     id("io.papermc.paperweight.userdev") version "2.0.0-beta.19"
-    
-    id("org.pkl-lang") version "0.30.2"
 }
 
 repositories {
@@ -67,10 +65,7 @@ dependencies {
 
     shadow("net.lingala.zip4j:zip4j:2.11.5")
     shadow("com.jhlabs:filters:2.0.235-1")
-
-    shadow("org.pkl-lang:pkl-config-kotlin:0.30.2")
-    shadow("org.pkl-lang:pkl-codegen-kotlin:0.30.2")
-
+    
     paperweight.paperDevBundle("${minecraftVersion}-R0.1-SNAPSHOT")
 }
 
