@@ -20,9 +20,9 @@ public class CustomSmithingTableRecipe(
                 val recipe = SmithingTransformRecipe(
                     id.toNamespacedKey(),
                     result.vanilla(),
-                    RecipeChoice.MaterialChoice(template.expectedVanillaMaterial),
-                    RecipeChoice.MaterialChoice(base.expectedVanillaMaterial),
-                    RecipeChoice.MaterialChoice(addition.expectedVanillaMaterial),
+                    RecipeChoice.itemType(template.expectedVanillaMaterial.asItemType()!!),
+                    RecipeChoice.itemType(base.expectedVanillaMaterial.asItemType()!!),
+                    RecipeChoice.itemType(addition.expectedVanillaMaterial.asItemType()!!),
                 )
                 Bukkit.addRecipe(recipe)
             }

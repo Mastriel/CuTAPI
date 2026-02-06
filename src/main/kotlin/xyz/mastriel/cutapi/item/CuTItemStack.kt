@@ -121,7 +121,7 @@ public open class CuTItemStack protected constructor(
     protected open fun onCreate() {}
 
     public var type: CustomItem<*> by customItemTag(id(Plugin, "type"), CustomItem.Unknown)
-    public var nameHasChanged: Boolean by booleanTag(id(Plugin, "nameHasChanged"), false)
+    public var nameHasChanged: Boolean by booleanTag(id(Plugin, "name_has_changed"), false)
 
     internal var lore by loreTag(id(Plugin, "lore"))
 

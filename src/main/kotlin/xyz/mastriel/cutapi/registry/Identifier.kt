@@ -57,15 +57,16 @@ public fun NamespacedKey.toIdentifier(): Identifier = id("$namespace:$key")
  *
  * @param plugin The plugin used for the namespace
  * @param id This must follow the same naming rules as namespaces. See [CuTAPI.registerPlugin] for more info.
+ *   This will be automatically made to lowercase.
  *
  * @see CuTAPI.registerPlugin
  */
 public fun id(plugin: CuTPlugin, id: String): Identifier {
     CuTAPI.requireRegistered(plugin)
-    CuTAPI.requireValidNamespace(id)
+    CuTAPI.requireValidNamespace(id.lowercase())
 
     val namespace = CuTAPI.getDescriptor(plugin).namespace
-    return Identifier(namespace, id)
+    return Identifier(namespace, id.lowercase())
 }
 
 /**
@@ -77,7 +78,7 @@ public fun id(plugin: CuTPlugin, id: String): Identifier {
  */
 public fun id(stringRepresentation: String): Identifier {
     require(":" in stringRepresentation) { "String identifier $stringRepresentation does not follow namespace:id format." }
-    val (namespace, id) = stringRepresentation.split(":", limit = 2)
+    val (namespace, id) = stringRepresentation.lowercase().split(":", limit = 2)
     return Identifier(namespace, id)
 }
 

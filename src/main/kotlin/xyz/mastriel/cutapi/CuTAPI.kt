@@ -152,7 +152,7 @@ public object CuTAPI {
     }
 
 
-    private val namespaceRegex = "[a-zA-Z0-9/_+]+".toRegex()
+    private val namespaceRegex = "[a-z0-9/_+.]+".toRegex()
 
     /**
      * Validate a namespace string, to ensure that it won't cause problems. See [registerPlugin]
