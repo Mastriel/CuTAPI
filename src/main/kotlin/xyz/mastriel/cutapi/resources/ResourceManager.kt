@@ -9,9 +9,6 @@ import xyz.mastriel.cutapi.resources.data.*
 import xyz.mastriel.cutapi.resources.process.*
 import xyz.mastriel.cutapi.utils.*
 import java.io.*
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.set
 
 public class ResourceManager {
 
@@ -21,6 +18,14 @@ public class ResourceManager {
 
     private val resourceRoots = mutableListOf<ResourceRoot>()
 
+    /**
+     * Registers a resource in the resource manager.
+     *
+     * @param resource The resource to register.
+     * @param overwrite Whether to overwrite an existing resource with the same reference.
+     * @param log Whether to log the registration process.
+     * @throws IllegalStateException if the resource is already registered and overwrite is false.
+     */
     public fun register(resource: Resource, overwrite: Boolean = false, log: Boolean = true) {
         if (resource.ref in resources.keys && !overwrite) {
             error("Resource '${resource.ref}' already registered.")
@@ -34,6 +39,11 @@ public class ResourceManager {
         resource.onRegister()
     }
 
+    /**
+     * Registers all parent folders of a given resource reference.
+     *
+     * @param ref The resource reference whose parent folders will be registered.
+     */
     private fun registerFolders(ref: ResourceRef<*>) {
         val folders = mutableListOf<FolderRef>()
         var currentRef: Locator = ref
@@ -46,20 +56,45 @@ public class ResourceManager {
         this.folders.addAll(folders)
     }
 
-
+    /**
+     * Retrieves a resource by its reference.
+     *
+     * @param ref The reference of the resource to retrieve.
+     * @return The resource associated with the reference.
+     * @throws IllegalStateException if the resource is not found.
+     */
     public fun <T : Resource> getResource(ref: ResourceRef<T>): T {
         return getResourceOrNull(ref) ?: error("$ref is not a valid resource.")
     }
 
+    /**
+     * Retrieves a resource by its reference or returns null if not found.
+     *
+     * @param ref The reference of the resource to retrieve.
+     * @return The resource associated with the reference, or null if not found.
+     */
     @Suppress("UNCHECKED_CAST")
     public fun <T : Resource> getResourceOrNull(ref: ResourceRef<T>): T? {
         return resources[ref] as? T
     }
 
+    /**
+     * Checks if a resource is available and loaded.
+     *
+     * @param ref The reference of the resource to check.
+     * @return True if the resource is available, false otherwise.
+     */
     public fun isAvailable(ref: ResourceRef<*>): Boolean {
         return resources[ref] != null
     }
 
+    /**
+     * Retrieves the contents of a folder.
+     *
+     * @param root The root of the folder.
+     * @param folderRef The reference to the folder.
+     * @return A list of locators representing the folder's contents.
+     */
     public fun getFolderContents(root: ResourceRoot, folderRef: FolderRef): List<Locator> {
         if (folderRef.isRoot) {
             return locators.filter { it.root == root }
@@ -69,6 +104,11 @@ public class ResourceManager {
             .filter { it.parent == folderRef }
     }
 
+    /**
+     * Retrieves all resources currently registered in the resource manager.
+     *
+     * @return A list of all registered resources.
+     */
     public fun getAllResources(): List<Resource> {
         return resources.values.toList()
     }
@@ -76,11 +116,19 @@ public class ResourceManager {
 
     private val tempFolder = Plugin.dataFolder.appendPath("resources-tmp/").absoluteFile
 
+    /**
+     * Clears the temporary folder used for resource operations.
+     */
     internal fun clearTemp() {
         tempFolder.deleteRecursively()
         tempFolder.mkdir()
     }
 
+    /**
+     * Dumps plugin resources to a temporary folder.
+     *
+     * @param plugin The plugin whose resources will be dumped.
+     */
     internal fun dumpPluginResourcesToTemp(plugin: CuTPlugin) {
         val descriptor = CuTAPI.getDescriptor(plugin)
         val options = descriptor.options
@@ -103,33 +151,48 @@ public class ResourceManager {
     }
 
     /**
-     * Create a new resource root for your plugin. Resources are loaded from here
-     * whenever the resource pack is generated.
+     * Registers a new resource root for a plugin.
+     *
+     * @param resourceRoot The resource root to register.
      */
     public fun registerResourceRoot(resourceRoot: ResourceRoot) {
         resourceRoots += resourceRoot
     }
 
+    /**
+     * Retrieves a resource root by its namespace.
+     *
+     * @param root The namespace of the resource root.
+     * @return The resource root, or null if not found.
+     */
     public fun getResourceRoot(root: String): ResourceRoot? {
         return resourceRoots.find { it.namespace == root }
     }
 
     /**
-     * Removes a resource root from your plugin.
+     * Unregisters a resource root by its namespace.
      *
-     * @return true if a resource root was unregistered, false otherwise.
+     * @param root The namespace of the resource root.
+     * @return True if the resource root was unregistered, false otherwise.
      */
     public fun unregisterResourceRoot(root: ResourceRoot): Boolean {
         return resourceRoots.removeIf { it == root }
     }
 
     /**
-     * Remove all resource roots from your plugin.
+     * Unregisters all resource roots associated with a plugin.
+     *
+     * @param plugin The plugin whose resource roots will be unregistered.
      */
     public fun unregisterAllResourceRoots(plugin: CuTPlugin) {
         resourceRoots.removeIf { it.cutPlugin == plugin }
     }
 
+    /**
+     * Loads all resources from a resource root.
+     *
+     * @param root The resource root to load resources from.
+     */
     internal fun loadRootResources(root: ResourceRoot) {
         val namespace = root.namespace
 
@@ -152,7 +215,7 @@ public class ResourceManager {
     }
 
     /**
-     * Converts a [FolderRef] to a filesystem file, given a root to be based off of.
+     * Converts a [FolderRef] to a filesystem file handle, given a root to be based off of.
      *
      * @param root The root folder that this is loading from.
      * @param folderRef The [FolderRef] of this folder.
@@ -180,15 +243,11 @@ public class ResourceManager {
     }
 
     /**
-     * Loads all resources from a folder [root] recursively.
+     * Recursively finds resources in a folder and adds them to a list.
      *
-     * @param root The root folder this is loading from. Used for relative pathing
-     * @param folder The current [FolderRef].
-     *
-     * Example:
-     * Loading from /CuTAPI/custom, where custom is the root, and contains a folder
-     * named 'abc' which itself has a file `texture.png`, [folder] could be 'cutapi://abc', and that
-     * would load the `texture.png` file into 'cutapi://abc/texture.png'
+     * @param root The root folder to search in.
+     * @param folder The current folder reference.
+     * @param found The list to add found resources to.
      */
     private fun findResourcesInFolder(root: File, folder: FolderRef, found: MutableList<Pair<File, ResourceRef<*>>>) {
         folderRefToFile(root, folder).listFiles()?.toList()
@@ -207,10 +266,13 @@ public class ResourceManager {
     }
 
     /**
-     * Load a resource from a file into a ResourceRef, and registers it.
+     * Loads a resource from a file and registers it.
      *
-     * @param resourceFile The file being loaded
-     * @param ref The resource ref this file will be associated with
+     * @param resourceFile The file to load the resource from.
+     * @param ref The reference of the resource.
+     * @param withLoader The loader to use for loading the resource.
+     * @param options Additional options for loading the resource.
+     * @return The result of the resource loading process.
      */
     public fun loadResource(
         resourceFile: File,
@@ -251,7 +313,11 @@ public class ResourceManager {
     /**
      * Loads a resource from a file without registering it.
      *
-     * A null return value means that the resource was a metadata file.
+     * @param resourceFile The file to load the resource from.
+     * @param ref The reference of the resource.
+     * @param loader The loader to use for loading the resource.
+     * @param options Additional options for loading the resource.
+     * @return The result of the resource loading process.
      */
     @OptIn(InternalSerializationApi::class)
     public fun <T : Resource> loadResourceWithoutRegistering(
@@ -281,6 +347,13 @@ public class ResourceManager {
         }
     }
 
+    /**
+     * Loads metadata for a resource from a file.
+     *
+     * @param metadataFile The file containing the metadata.
+     * @param ref The reference of the resource.
+     * @return The metadata as a byte array, or null if not found.
+     */
     private fun loadMetadata(metadataFile: File, ref: ResourceRef<*>): ByteArray? {
         // TODO we're deserializing this a lot. we should cache it or something.
         return try {
@@ -294,7 +367,8 @@ public class ResourceManager {
                 else
                     TomlTable()
 
-                val newTable = folderTable.combine(metadataTable, false)
+                val newTable = folderTable.combine(metadataTable, true)
+                println("${ref}: " + CuTAPI.toml.encodeToString(newTable))
                 CuTAPI.toml.encodeToString(newTable).toByteArray(Charsets.UTF_8)
             }
         } catch (e: Exception) {
@@ -306,24 +380,37 @@ public class ResourceManager {
             var depth = 0
             var table = CuTAPI.toml.parseToTomlTable(bytes.toString(Charsets.UTF_8))
             while (metadataNeedsToProcessExtensions(table)) {
+                println("Processing extends for $ref at depth $depth ts")
                 depth++
                 if (depth > depthLimit) {
                     Plugin.error("Metadata extensions for $ref excessively (or infinitely) recurse.")
                     break
                 }
-                table = processTemplates(table)
+                table = processTemplates(ref, table)
             }
 
             CuTAPI.toml.encodeToString(table).toByteArray(Charsets.UTF_8)
         }
     }
 
+    /**
+     * Checks if a metadata table needs to process extend blocks.
+     *
+     * @param table The metadata table to check.
+     * @return True if extensions need to be processed, false otherwise.
+     */
     private fun metadataNeedsToProcessExtensions(table: TomlTable): Boolean {
         return table["extends"]?.asTomlTable() != null
     }
 
-
-    private fun processTemplates(table: TomlTable): TomlTable {
+    /**
+     * Processes templates in a metadata table.
+     *
+     * @param ref The reference of the resource.
+     * @param table The metadata 'extends' table to process.
+     * @return The processed metadata table.
+     */
+    private fun processTemplates(ref: ResourceRef<*>, table: TomlTable): TomlTable {
         var metadata = table
 
         val extensions = metadata["extends"]?.asTomlTable() ?: return metadata
@@ -339,8 +426,10 @@ public class ResourceManager {
 
 
         val newMetadata = refs.fold(metadata) { acc, r ->
-            val templateTable = r.first.getResource() ?: return@fold acc
-            val patchedTemplates = r.second.map { templateTable.getPatchedTable(it) }
+            val templateTable = r.first.getResource() ?: return@fold acc.also {
+                Plugin.error("Template ${r.first} not found for resource $ref.")
+            }
+            val patchedTemplates = r.second.map { templateTable.getPatchedTable(ref, it) }
 
             patchedTemplates.fold(acc) { acc2, t ->
                 acc2.combine(t, true)
@@ -351,7 +440,14 @@ public class ResourceManager {
     }
 
     /**
-     * Loads a resource from just a ref, resourceBytes, and metadataBytes.
+     * Attempts to load a resource from its reference, resource bytes, and metadata bytes.
+     *
+     * @param ref The reference of the resource.
+     * @param resourceBytes The resource data as a byte array.
+     * @param metadataBytes The metadata as a byte array.
+     * @param loader The loader to use for loading the resource.
+     * @param options Additional options for loading the resource.
+     * @return The result of the resource loading process.
      */
     @Suppress("UNCHECKED_CAST")
     private fun <T : Resource> tryLoadResource(
@@ -378,6 +474,14 @@ public class ResourceManager {
         }
     }
 
+    /**
+     * Creates clones of a resource based on its metadata.
+     *
+     * @param resource The resource to clone.
+     * @param resourceBytes The resource data as a byte array.
+     * @param metadataBytes The metadata as a byte array.
+     * @param loader The loader to use for loading the clones.
+     */
     @Suppress("UNCHECKED_CAST")
     private fun createClones(
         resource: Resource,
@@ -386,58 +490,68 @@ public class ResourceManager {
         loader: ResourceFileLoader<*>
     ) {
         if (metadataBytes == null) return
+
         val originMetadataTable = CuTAPI.toml.parseToTomlTable(metadataBytes.toString(Charsets.UTF_8))
-        val cloneBlocks = try {
-            originMetadataTable.getArrayOrNull("clone") ?: listOf()
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            listOf()
-        }
+        val cloneBlocks = extractCloneBlocks(originMetadataTable)
 
-
-        for (cloneBlock in cloneBlocks.mapNotNull { it as? TomlTable }) {
+        for (cloneBlock in cloneBlocks) {
             try {
-                val originMetadataMap = originMetadataTable.toMutableMap()
-                // we don't want infinite cloning
-                originMetadataMap.remove("clone")
+                val newMetadataBytes = generateCloneMetadata(originMetadataTable, cloneBlock)
+                val newRef = createCloneReference(resource, newMetadataBytes)
 
-                val patchedMetadata = TomlTable(originMetadataMap)
-
-                val newTable = patchedMetadata.combine(cloneBlock, false)
-
-                val newRefSubId = newTable.getStringOrNull("clone_sub_id")
-                    ?: throw SerializationException("Clone block must have a 'clone_sub_id' field.")
-
-                val newMetadataBytes = CuTAPI.toml.encodeToString(newTable).toByteArray(Charsets.UTF_8)
-                val newRef = resource.ref.cloneSubId(newRefSubId)
-
-                when (val result =
-                    tryLoadResource(newRef, resourceBytes, newMetadataBytes, loader as ResourceFileLoader<Resource>)) {
-                    is ResourceLoadResult.Success -> {
-                        register(result.resource, overwrite = true)
-                    }
-
-                    is ResourceLoadResult.Failure -> {
-                        Plugin.error("Failed to clone resource ${resource.ref}. (wrong type)")
-                        checkResourceLoading(resource.plugin)
-                    }
-
-                    is ResourceLoadResult.WrongType -> {
-                        Plugin.error("Failed to clone resource ${resource.ref}. (wrong type)")
-                        checkResourceLoading(resource.plugin)
-                    }
-
-                    else -> {}
-                }
-
+                loadAndRegisterClone(newRef, resourceBytes, newMetadataBytes, loader)
             } catch (ex: Exception) {
                 Plugin.error("Failed to clone resource ${resource.ref}.")
                 ex.printStackTrace()
             }
-
         }
     }
 
+    private fun extractCloneBlocks(originMetadataTable: TomlTable): List<TomlTable> {
+        return try {
+            originMetadataTable.getArrayOrNull("clone")?.filterIsInstance<TomlTable>() ?: emptyList()
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            emptyList()
+        }
+    }
+
+    private fun generateCloneMetadata(originMetadataTable: TomlTable, cloneBlock: TomlTable): ByteArray {
+        val patchedMetadata = TomlTable(originMetadataTable.filterKeys { it != "clone" })
+        val combinedMetadata = patchedMetadata.combine(cloneBlock, false)
+        return CuTAPI.toml.encodeToString(combinedMetadata).toByteArray(Charsets.UTF_8)
+    }
+
+    private fun createCloneReference(resource: Resource, newMetadataBytes: ByteArray): ResourceRef<*> {
+        val newTable = CuTAPI.toml.parseToTomlTable(newMetadataBytes.toString(Charsets.UTF_8))
+        val newSubId = newTable.getStringOrNull("clone_sub_id")
+            ?: throw SerializationException("Clone block must have a 'clone_sub_id' field.")
+        return resource.ref.cloneSubId(newSubId)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun loadAndRegisterClone(
+        newRef: ResourceRef<*>,
+        resourceBytes: ByteArray,
+        newMetadataBytes: ByteArray,
+        loader: ResourceFileLoader<*>
+    ) {
+        when (val result =
+            tryLoadResource(newRef, resourceBytes, newMetadataBytes, loader as ResourceFileLoader<Resource>)) {
+            is ResourceLoadResult.Success -> register(result.resource, overwrite = true)
+            is ResourceLoadResult.Failure -> Plugin.error("Failed to clone resource $newRef. (loading failure)")
+            is ResourceLoadResult.WrongType -> Plugin.error("Failed to clone resource $newRef. (wrong type)")
+        }
+    }
+
+    /**
+     * Writes a resource and its metadata to a temporary folder if needed.
+     *
+     * @param plugin The plugin associated with the resource.
+     * @param ref The reference of the resource.
+     * @param resourceFile The file containing the resource data.
+     * @param metadataFile The file containing the metadata.
+     */
     public fun writeToResourceTmpIfNeeded(
         plugin: CuTPlugin,
         ref: ResourceRef<*>,
@@ -458,6 +572,12 @@ public class ResourceManager {
 
     }
 
+    /**
+     * Retrieves the default metadata table for a folder.
+     *
+     * @param ref The reference of the folder.
+     * @return The default metadata table, or null if not found.
+     */
     private fun getFolderDefaultTable(ref: ResourceRef<*>): TomlTable? {
         val parent = ref.parent ?: return null
 
@@ -467,7 +587,9 @@ public class ResourceManager {
 
 
     /**
-     * Runs [Resource.check] on all resources.
+     * Runs checks on all registered resources.
+     *
+     * @throws ResourceCheckException if a resource fails its check.
      */
     internal fun checkAllResources() {
         resources.forEach { (ref, res) ->

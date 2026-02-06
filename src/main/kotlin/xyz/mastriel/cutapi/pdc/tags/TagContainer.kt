@@ -13,245 +13,262 @@ import java.util.*
 public interface TagContainer {
 
 
-    public fun <P : Any, C : Any> set(key: String, complexValue: C?, converter: TagConverter<P, C>)
+    public fun <P : Any, C : Any> set(id: Identifier, complexValue: C?, converter: TagConverter<P, C>)
 
-    public fun <P : Any, C : Any> get(key: String, converter: TagConverter<P, C>): C?
+    public fun <P : Any, C : Any> get(id: Identifier, converter: TagConverter<P, C>): C?
 
-    public fun has(key: String): Boolean
+    public fun has(id: Identifier): Boolean
 
-    public fun storeNull(key: String) {
-        set(key, Tag.NULL, PrimitiveTagConverter.String)
+    public fun storeNull(id: Identifier) {
+        set(id, Tag.NULL, PrimitiveTagConverter.String)
     }
 
-    public fun isNull(key: String): Boolean
-
-
+    public fun isNull(id: Identifier): Boolean
 }
 
-public fun TagContainer.setPlayer(key: String, value: OfflinePlayer? = null): Unit =
+public fun TagContainer.setPlayer(key: Identifier, value: OfflinePlayer? = null): Unit =
     set(key, value, PlayerTagConverter)
 
-public fun TagContainer.getPlayer(key: String): OfflinePlayer? =
+public fun TagContainer.getPlayer(key: Identifier): OfflinePlayer? =
     get(key, PlayerTagConverter)
 
-public fun TagContainer.setString(key: String, value: String? = null): Unit =
+public fun TagContainer.setString(key: Identifier, value: String? = null): Unit =
     set(key, value, PrimitiveTagConverter.String)
 
-public fun TagContainer.getString(key: String): String? =
+public fun TagContainer.getString(key: Identifier): String? =
     get(key, PrimitiveTagConverter.String)
 
-public fun TagContainer.setInt(key: String, value: Int? = null): Unit =
+public fun TagContainer.setInt(key: Identifier, value: Int? = null): Unit =
     set(key, value, PrimitiveTagConverter.Int)
 
-public fun TagContainer.getInt(key: String): Int? =
+public fun TagContainer.getInt(key: Identifier): Int? =
     get(key, PrimitiveTagConverter.Int)
 
-public fun TagContainer.setLong(key: String, value: Long? = null): Unit =
+public fun TagContainer.setLong(key: Identifier, value: Long? = null): Unit =
     set(key, value, PrimitiveTagConverter.Long)
 
-public fun TagContainer.getLong(key: String): Long? =
+public fun TagContainer.getLong(key: Identifier): Long? =
     get(key, PrimitiveTagConverter.Long)
 
-public fun TagContainer.setFloat(key: String, value: Float? = null): Unit =
+public fun TagContainer.setFloat(key: Identifier, value: Float? = null): Unit =
     set(key, value, PrimitiveTagConverter.Float)
 
-public fun TagContainer.getFloat(key: String): Float? =
+public fun TagContainer.getFloat(key: Identifier): Float? =
     get(key, PrimitiveTagConverter.Float)
 
-public fun TagContainer.setDouble(key: String, value: Double? = null): Unit =
+public fun TagContainer.setDouble(key: Identifier, value: Double? = null): Unit =
     set(key, value, PrimitiveTagConverter.Double)
 
-public fun TagContainer.getDouble(key: String): Double? =
+public fun TagContainer.getDouble(key: Identifier): Double? =
     get(key, PrimitiveTagConverter.Double)
 
-public fun TagContainer.setBoolean(key: String, value: Boolean? = null): Unit =
+public fun TagContainer.setBoolean(key: Identifier, value: Boolean? = null): Unit =
     set(key, value, BooleanTagConverter)
 
-public fun TagContainer.getBoolean(key: String): Boolean? =
+public fun TagContainer.getBoolean(key: Identifier): Boolean? =
     get(key, BooleanTagConverter)
 
-public fun TagContainer.setUUID(key: String, value: UUID? = null): Unit =
+public fun TagContainer.setUUID(key: Identifier, value: UUID? = null): Unit =
     set(key, value, UUIDTagConverter)
 
-public fun TagContainer.getUUID(key: String): UUID? =
+public fun TagContainer.getUUID(key: Identifier): UUID? =
     get(key, UUIDTagConverter)
 
-public fun TagContainer.setIntArray(key: String, value: IntArray? = null): Unit =
+public fun TagContainer.setIntArray(key: Identifier, value: IntArray? = null): Unit =
     set(key, value, PrimitiveTagConverter.IntArray)
 
-public fun TagContainer.getIntArray(key: String): IntArray? =
+public fun TagContainer.getIntArray(key: Identifier): IntArray? =
     get(key, PrimitiveTagConverter.IntArray)
 
-public fun TagContainer.setByteArray(key: String, value: ByteArray? = null): Unit =
+public fun TagContainer.setByteArray(key: Identifier, value: ByteArray? = null): Unit =
     set(key, value, PrimitiveTagConverter.ByteArray)
 
-public fun TagContainer.getByteArray(key: String): ByteArray? =
+public fun TagContainer.getByteArray(key: Identifier): ByteArray? =
     get(key, PrimitiveTagConverter.ByteArray)
 
-public fun TagContainer.setByte(key: String, value: Byte? = null): Unit =
+public fun TagContainer.setByte(key: Identifier, value: Byte? = null): Unit =
     set(key, value, PrimitiveTagConverter.Byte)
 
-public fun TagContainer.getByte(key: String): Byte? =
+public fun TagContainer.getByte(key: Identifier): Byte? =
     get(key, PrimitiveTagConverter.Byte)
 
-public fun TagContainer.setShort(key: String, value: Short? = null): Unit =
+public fun TagContainer.setShort(key: Identifier, value: Short? = null): Unit =
     set(key, value, PrimitiveTagConverter.Short)
 
-public fun TagContainer.getShort(key: String): Short? =
+public fun TagContainer.getShort(key: Identifier): Short? =
     get(key, PrimitiveTagConverter.Short)
 
-public fun TagContainer.setIdentifier(key: String, value: Identifier? = null): Unit =
+public fun TagContainer.setIdentifier(key: Identifier, value: Identifier? = null): Unit =
     set(key, value, IdentifierTagConverter)
 
-public fun TagContainer.getIdentifier(key: String): Identifier? =
+public fun TagContainer.getIdentifier(key: Identifier): Identifier? =
     get(key, IdentifierTagConverter)
 
-public fun TagContainer.setLocation(key: String, value: Location? = null): Unit =
+public fun TagContainer.setLocation(key: Identifier, value: Location? = null): Unit =
     set(key, value, ObjectTagConverter(Location::class, LocationSerializer))
 
-public fun TagContainer.getLocation(key: String): Location? =
+public fun TagContainer.getLocation(key: Identifier): Location? =
     get(key, ObjectTagConverter(Location::class, LocationSerializer))
 
-public inline fun <reified T : Resource> TagContainer.setResourceRef(key: String, value: ResourceRef<T>? = null): Unit =
+public inline fun <reified T : Resource> TagContainer.setResourceRef(
+    key: Identifier,
+    value: ResourceRef<T>? = null
+): Unit =
     set(key, value, ResourceRefTagConverter<T>())
 
-public inline fun <reified T : Resource> TagContainer.getResourceRef(key: String): ResourceRef<T>? =
+public inline fun <reified T : Resource> TagContainer.getResourceRef(key: Identifier): ResourceRef<T>? =
     get(key, ResourceRefTagConverter<T>())
 
-public fun TagContainer.playerTag(key: String, default: OfflinePlayer): NotNullTag<String, OfflinePlayer> =
+public fun TagContainer.playerTag(key: Identifier, default: OfflinePlayer): NotNullTag<String, OfflinePlayer> =
     NotNullTag(key, this, default, PlayerTagConverter)
 
-public fun TagContainer.nullablePlayerTag(key: String, default: OfflinePlayer? = null): NullableTag<String, OfflinePlayer> =
+public fun TagContainer.nullablePlayerTag(
+    key: Identifier,
+    default: OfflinePlayer? = null
+): NullableTag<String, OfflinePlayer> =
     NullableTag(key, this, default, PlayerTagConverter)
 
-public fun TagContainer.identifierTag(key: String, default: Identifier): NotNullTag<String, Identifier> =
+public fun TagContainer.identifierTag(key: Identifier, default: Identifier): NotNullTag<String, Identifier> =
     NotNullTag(key, this, default, IdentifierTagConverter)
 
-public fun TagContainer.nullableIdentifierTag(key: String, default: Identifier? = null): NullableTag<String, Identifier> =
+public fun TagContainer.nullableIdentifierTag(
+    key: Identifier,
+    default: Identifier? = null
+): NullableTag<String, Identifier> =
     NullableTag(key, this, default, IdentifierTagConverter)
 
-public fun TagContainer.customItemTag(key: String, default: CustomItem<*>): NotNullTag<String, CustomItem<*>> =
+public fun TagContainer.customItemTag(key: Identifier, default: CustomItem<*>): NotNullTag<String, CustomItem<*>> =
     NotNullTag(key, this, default, IdentifiableTagConverter.CustomItem)
 
 public fun TagContainer.nullableCustomItemTag(
-    key: String,
+    key: Identifier,
     default: CustomItem<*>? = null
 ): NullableTag<String, CustomItem<*>> =
     NullableTag(key, this, default, IdentifiableTagConverter.CustomItem)
 
-public fun TagContainer.customBlockTag(key: String, default: CustomBlock<*>): NotNullTag<String, CustomBlock<*>> =
+public fun TagContainer.customBlockTag(key: Identifier, default: CustomBlock<*>): NotNullTag<String, CustomBlock<*>> =
     NotNullTag(key, this, default, IdentifiableTagConverter.CustomBlock)
 
 public fun TagContainer.nullableCustomBlockTag(
-    key: String,
+    key: Identifier,
     default: CustomBlock<*>? = null
 ): NullableTag<String, CustomBlock<*>> =
     NullableTag(key, this, default, IdentifiableTagConverter.CustomBlock)
 
-public fun TagContainer.customBlockTag(key: String, default: CustomTile<*>): NotNullTag<String, CustomTile<*>> =
+public fun TagContainer.customBlockTag(key: Identifier, default: CustomTile<*>): NotNullTag<String, CustomTile<*>> =
     NotNullTag(key, this, default, IdentifiableTagConverter.CustomTile)
 
 public fun TagContainer.nullableCustomBlockTag(
-    key: String,
+    key: Identifier,
     default: CustomTile<*>? = null
 ): NullableTag<String, CustomTile<*>> =
     NullableTag(key, this, default, IdentifiableTagConverter.CustomTile)
 
 public fun TagContainer.customTileEntityTag(
-    key: String,
+    key: Identifier,
     default: CustomTileEntity<*>
 ): NotNullTag<String, CustomTileEntity<*>> =
     NotNullTag(key, this, default, IdentifiableTagConverter.CustomTileEntity)
 
 public fun TagContainer.nullableTileEntityTag(
-    key: String,
+    key: Identifier,
     default: CustomTileEntity<*>? = null
 ): NullableTag<String, CustomTileEntity<*>> =
     NullableTag(key, this, default, IdentifiableTagConverter.CustomTileEntity)
 
-public fun TagContainer.stringTag(key: String, default: String): NotNullTag<String, String> =
+public fun TagContainer.stringTag(key: Identifier, default: String): NotNullTag<String, String> =
     NotNullTag(key, this, default, PrimitiveTagConverter.String)
 
-public fun TagContainer.nullableStringTag(key: String, default: String? = null): NullableTag<String, String> =
+public fun TagContainer.nullableStringTag(key: Identifier, default: String? = null): NullableTag<String, String> =
     NullableTag(key, this, default, PrimitiveTagConverter.String)
 
-public fun TagContainer.doubleTag(key: String, default: Double): NotNullTag<Double, Double> =
+public fun TagContainer.doubleTag(key: Identifier, default: Double): NotNullTag<Double, Double> =
     NotNullTag(key, this, default, PrimitiveTagConverter.Double)
 
-public fun TagContainer.nullableDoubleTag(key: String, default: Double? = null): NullableTag<Double, Double> =
+public fun TagContainer.nullableDoubleTag(key: Identifier, default: Double? = null): NullableTag<Double, Double> =
     NullableTag(key, this, default, PrimitiveTagConverter.Double)
 
-public fun TagContainer.longTag(key: String, default: Long): NotNullTag<Long, Long> =
+public fun TagContainer.longTag(key: Identifier, default: Long): NotNullTag<Long, Long> =
     NotNullTag(key, this, default, PrimitiveTagConverter.Long)
 
-public fun TagContainer.nullableLongTag(key: String, default: Long? = null): NullableTag<Long, Long> =
+public fun TagContainer.nullableLongTag(key: Identifier, default: Long? = null): NullableTag<Long, Long> =
     NullableTag(key, this, default, PrimitiveTagConverter.Long)
 
-public fun TagContainer.intTag(key: String, default: Int): NotNullTag<Int, Int> =
+public fun TagContainer.intTag(key: Identifier, default: Int): NotNullTag<Int, Int> =
     NotNullTag(key, this, default, PrimitiveTagConverter.Int)
 
-public fun TagContainer.nullableIntTag(key: String, default: Int? = null): NullableTag<Int, Int> =
+public fun TagContainer.nullableIntTag(key: Identifier, default: Int? = null): NullableTag<Int, Int> =
     NullableTag(key, this, default, PrimitiveTagConverter.Int)
 
-public fun TagContainer.booleanTag(key: String, default: Boolean): NotNullTag<Byte, Boolean> =
+public fun TagContainer.booleanTag(key: Identifier, default: Boolean): NotNullTag<Byte, Boolean> =
     NotNullTag(key, this, default, BooleanTagConverter)
 
-public fun TagContainer.nullableBooleanTag(key: String, default: Boolean? = null): NullableTag<Byte, Boolean> =
+public fun TagContainer.nullableBooleanTag(key: Identifier, default: Boolean? = null): NullableTag<Byte, Boolean> =
     NullableTag(key, this, default, BooleanTagConverter)
 
-public fun TagContainer.uuidTag(key: String, default: UUID): NotNullTag<String, UUID> =
+public fun TagContainer.uuidTag(key: Identifier, default: UUID): NotNullTag<String, UUID> =
     NotNullTag(key, this, default, UUIDTagConverter)
 
-public fun TagContainer.nullableUuidTag(key: String, default: UUID? = null): NullableTag<String, UUID> =
+public fun TagContainer.nullableUuidTag(key: Identifier, default: UUID? = null): NullableTag<String, UUID> =
     NullableTag(key, this, default, UUIDTagConverter)
 
-public fun TagContainer.locationTag(key: String, default: Location): NotNullTag<ByteArray, Location> =
+public fun TagContainer.locationTag(key: Identifier, default: Location): NotNullTag<ByteArray, Location> =
     objectTag(key, default, LocationSerializer)
 
-public fun TagContainer.nullableLocationTag(key: String, default: Location? = null): NullableTag<ByteArray, Location> =
+public fun TagContainer.nullableLocationTag(
+    key: Identifier,
+    default: Location? = null
+): NullableTag<ByteArray, Location> =
     nullableObjectTag(key, default, LocationSerializer)
 
-public inline fun <reified T : Enum<T>> TagContainer.enumTag(key: String, default: T): NotNullTag<String, T> =
+public inline fun <reified T : Enum<T>> TagContainer.enumTag(key: Identifier, default: T): NotNullTag<String, T> =
     NotNullTag(key, this, default, EnumTagConverter(T::class))
 
-public inline fun <reified T : Enum<T>> TagContainer.nullableEnumTag(key: String, default: T? = null): NullableTag<String, T> =
+public inline fun <reified T : Enum<T>> TagContainer.nullableEnumTag(
+    key: Identifier,
+    default: T? = null
+): NullableTag<String, T> =
     NullableTag(key, this, default, EnumTagConverter(T::class))
 
 
 public inline fun <reified T : Resource> TagContainer.refTag(
-    key: String,
+    key: Identifier,
     default: ResourceRef<T>
 ): NotNullTag<String, ResourceRef<T>> =
     NotNullTag(key, this, default, ResourceRefTagConverter())
 
 public inline fun <reified T : Resource> TagContainer.nullableRefTag(
-    key: String,
+    key: Identifier,
     default: ResourceRef<T>? = null
 ): NullableTag<String, ResourceRef<T>> =
     NullableTag(key, this, default, ResourceRefTagConverter())
 
 public inline fun <reified T : Any> TagContainer.objectTag(
-    key: String,
+    key: Identifier,
     default: T,
     serializer: KSerializer<T>
 ): NotNullTag<ByteArray, T> =
     NotNullTag(key, this, default, ObjectTagConverter(T::class, serializer))
 
 public inline fun <reified T : Any> TagContainer.nullableObjectTag(
-    key: String,
+    key: Identifier,
     default: T?,
     serializer: KSerializer<T>
 ): NullableTag<ByteArray, T> =
     NullableTag(key, this, default, ObjectTagConverter(T::class, serializer))
 
-public inline fun <reified T : Enum<T>> TagContainer.setEnum(key: String, value: T? = null): Unit =
+public inline fun <reified T : Enum<T>> TagContainer.setEnum(key: Identifier, value: T? = null): Unit =
     set(key, value, EnumTagConverter(T::class))
 
-public inline fun <reified T : Enum<T>> TagContainer.getEnum(key: String): T? =
+public inline fun <reified T : Enum<T>> TagContainer.getEnum(key: Identifier): T? =
     get(key, EnumTagConverter(T::class))
 
-public inline fun <reified T : Any> TagContainer.setObject(key: String, value: T? = null, serializer: KSerializer<T>): Unit =
+public inline fun <reified T : Any> TagContainer.setObject(
+    key: Identifier,
+    value: T? = null,
+    serializer: KSerializer<T>
+): Unit =
     set(key, value, ObjectTagConverter(T::class, serializer))
 
-public inline fun <reified T : Any> TagContainer.getObject(key: String, serializer: KSerializer<T>): T? =
+public inline fun <reified T : Any> TagContainer.getObject(key: Identifier, serializer: KSerializer<T>): T? =
     get(key, ObjectTagConverter(T::class, serializer))

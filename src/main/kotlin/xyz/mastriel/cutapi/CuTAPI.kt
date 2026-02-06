@@ -5,6 +5,7 @@ import kotlinx.serialization.cbor.*
 import kotlinx.serialization.json.*
 import net.peanuuutz.tomlkt.*
 import org.bukkit.plugin.Plugin
+import xyz.mastriel.cutapi.CuTAPI.registerPlugin
 import xyz.mastriel.cutapi.block.*
 import xyz.mastriel.cutapi.block.breaklogic.*
 import xyz.mastriel.cutapi.nms.*
@@ -13,7 +14,6 @@ import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.minecraft.*
 import xyz.mastriel.cutapi.utils.*
-import kotlin.collections.set
 
 
 /**
@@ -44,6 +44,13 @@ public object CuTAPI {
     @UsesNMS
     public val packetEventManager: PacketEventManager = PacketEventManager()
     internal val blockBreakManager = BlockBreakManager()
+
+    public val experimentalBlockSupport: Boolean by cutConfigValue("experimental_block_support", false)
+
+    /**
+     * Most registries should probably be initialized here.
+     */
+    public val serverReady: EventHandlerList<Unit> = EventHandlerList()
 
     /**
      * Register a plugin with CuTAPI. This is used to namespace any items registered with the API, and
@@ -145,7 +152,7 @@ public object CuTAPI {
     }
 
 
-    private val namespaceRegex = "[a-zA-Z0-9/_+]+".toRegex()
+    private val namespaceRegex = "[a-z0-9/_+.]+".toRegex()
 
     /**
      * Validate a namespace string, to ensure that it won't cause problems. See [registerPlugin]

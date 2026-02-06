@@ -14,13 +14,18 @@ import kotlin.math.*
 public val TextureAndModelProcessor: ResourceProcessor = resourceProcessor<Resource> {
     val textures = this.resources.filterIsInstance<Texture2D>().filter { !it.metadata.transient }
     val models = this.resources.filterIsInstance<Model3D>()
-    val resourcePackManager = CuTAPI.resourcePackManager
 
-    val namespaces = textures.map { it.ref.namespace }.distinct()
-
+    // puts the textures in the right places
     generateTexturesInPack(textures)
+
+    // generates the item model and model files
+    generateTextureItemAndModelJsonFiles(textures)
+
+    // puts the models in the right places
     generateModelsInPack(models)
-    generateItemAndModelJsonFiles(textures)
+    generateModelItemFiles(models)
+
+    // generates the glyphs
     generateGlyphs(textures)
 }
 
@@ -55,7 +60,7 @@ internal fun BitmapFontProvider(
 ): MinecraftFontProvider {
     // why does this need the extension exactly??
     // it wont work without it.
-    val path = ref.path(withExtension = true, withNamespaceAsFolder = false).fixInvalidResourcePath()
+    val path = ref.path(withExtension = true, withNamespaceAsFolder = false, fixInvalids = true)
     val filePath = "${ref.namespace}:item/$path"
     return MinecraftFontProvider("bitmap", filePath, ascent, height, chars)
 }
@@ -124,11 +129,11 @@ internal fun generateGlyphs(textures: List<Texture2D>) {
             ascent = min(ascent, finalHeight)
 
             val privateUseChar = Character.toChars(privateUseCharIndex).joinToString("")
-            privateUseCharIndex += 1;
+            privateUseCharIndex += 1
             if (fontSettings.advance != null) {
                 val advance = fontSettings.advance
                 val spaceChar = Character.toChars(privateUseCharIndex).joinToString("")
-                privateUseCharIndex += 1;
+                privateUseCharIndex += 1
                 spaceProvider.advances!![spaceChar] = advance
                 texture.glyphChars[size] = spaceChar + privateUseChar
             } else {
@@ -155,7 +160,7 @@ internal fun generateTexturesInPack(textures: List<Texture2D>) {
         val texturesFolder = CuTAPI.resourcePackManager.getTexturesFolder(texture.ref.plugin)
 
         applyPostProcessing(texture)
-        texture.saveTo(texturesFolder appendPath texture.ref.path(withExtension = true).fixInvalidResourcePath())
+        texture.saveTo(texturesFolder appendPath texture.ref.path(withExtension = true, fixInvalids = true))
 
         val metadata = texture.metadata
         val animationData = metadata.animation
@@ -173,9 +178,10 @@ internal fun generateTexturesInPack(textures: List<Texture2D>) {
         val path = texture.ref.path(
             withExtension = false,
             withNamespaceAsFolder = false,
-            withNamespace = false
-        ).fixInvalidResourcePath()
-        val modelFile = CuTAPI.resourcePackManager.getItemModelFolder(texture.root.namespace) appendPath "/$path.json"
+            withNamespace = false,
+            fixInvalids = true
+        )
+        val modelFile = CuTAPI.resourcePackManager.getModelFolder(texture.root.namespace) appendPath "/$path.json"
 
         modelFile.mkdirsOfParent()
         modelFile.createAndWrite(jsonString)
@@ -185,8 +191,8 @@ internal fun generateTexturesInPack(textures: List<Texture2D>) {
 internal fun generateModelsInPack(models: List<Model3D>) {
     // for this one we only need to put the models in the correct folder.
     models.forEach { model ->
-        val modelsFolder = CuTAPI.resourcePackManager.getItemModelFolder(model.ref.root.namespace)
-        model.saveTo(modelsFolder appendPath model.ref.path(withExtension = false).fixInvalidResourcePath() + ".json")
+        val modelsFolder = CuTAPI.resourcePackManager.getModelFolder(model.ref.root.namespace)
+        model.saveTo(modelsFolder appendPath model.ref.path(withExtension = false, fixInvalids = true) + ".json")
     }
 }
 
@@ -206,15 +212,15 @@ private fun applyPostProcessing(texture: Texture2D) {
 }
 
 private fun generateModelFile(texture: Texture2D) {
-    val location = texture.getItemModel().location
+    val location = texture.getItemModel().getLocationWithItemFolder()
 
     val itemModelJson = texture.metadata.itemModelData?.copy(
-        textures = texture.metadata.itemModelData.textures + mapOf("layer0" to location)
-    ) ?: ItemModelData(parent = "minecraft:item/generated", textures = mapOf("layer0" to location))
+        _textures = texture.metadata.itemModelData.textures + mapOf("layer0" to location)
+    ) ?: ItemModelData(parent = "minecraft:item/generated", _textures = mapOf("layer0" to location))
 
     val jsonString = CuTAPI.json.encodeToString(itemModelJson)
 
-    val path = texture.ref.path(withExtension = false)
+    val path = texture.ref.path(withExtension = false, fixInvalids = true)
     val file =
         CuTAPI.resourcePackManager.getModelFolder(texture.ref.namespace) appendPath "${path}.json"
 
@@ -226,19 +232,55 @@ private fun generateModelFile(texture: Texture2D) {
 private data class ItemModelFile(
     @SerialName("hand_animation_on_swap")
     val handAnimationOnSwap: Boolean,
+    val model: ModelData
+) {
 
+    @Serializable
+    enum class ModelType {
+        @SerialName("minecraft:model")
+        Model
+    }
+
+    @Serializable
+    data class ModelData(
+        val type: ModelType,
+        val model: VanillaRef
     )
-
-// we generate 2 different item models, one with no hand swap animation and one with it
-private fun generateItemModelFile(texture: Texture2D) {
-    val folder = CuTAPI.resourcePackManager.getItemModelFolder(texture.ref.namespace)
-
-
 }
 
-private fun generateItemAndModelJsonFiles(textures: Collection<Texture2D>) {
+// we generate 2 different item models, one with no hand swap animation and one with it
+private fun generateItemModelFiles(texture: TextureLike) {
+
+    val modelData = ItemModelFile.ModelData(
+        ItemModelFile.ModelType.Model,
+        VanillaRef(texture.getItemModel().location)
+    )
+
+    val noSwap = ItemModelFile(false, modelData)
+    val swap = ItemModelFile(true, modelData)
+
+    val folder = CuTAPI.resourcePackManager.getItemModelFolder(texture.ref.namespace)
+
+    val path = texture.ref.path(withExtension = false)
+    val noSwapFile = folder appendPath "${path}__noswap.json"
+    val swapFile = folder appendPath "${path}__swap.json"
+
+    noSwapFile.parentFile.mkdirs()
+    swapFile.parentFile.mkdirs()
+
+    noSwapFile.createAndWrite(CuTAPI.json.encodeToString(noSwap))
+    swapFile.createAndWrite(CuTAPI.json.encodeToString(swap))
+}
+
+private fun generateTextureItemAndModelJsonFiles(textures: Collection<Texture2D>) {
     for (texture in textures) {
         generateModelFile(texture)
+        generateItemModelFiles(texture)
+    }
+}
 
+private fun generateModelItemFiles(textures: Collection<Model3D>) {
+    for (texture in textures) {
+        generateItemModelFiles(texture)
     }
 }

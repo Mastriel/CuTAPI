@@ -11,6 +11,8 @@ public interface TextureLike {
 
     public fun getItemModel(): VanillaItemModel
 
+    public val ref: ResourceRef<*>
+
     public val materials: List<String>
 
     public val resource: Resource
@@ -19,6 +21,10 @@ public interface TextureLike {
 
 @JvmInline
 public value class VanillaItemModel(public val location: String) {
+
+    public fun getLocationWithItemFolder(): String {
+        return "${toIdentifier().namespace}:item/${toIdentifier().key}"
+    }
 
     public fun toIdentifier(): Identifier {
         if (":" !in location) {

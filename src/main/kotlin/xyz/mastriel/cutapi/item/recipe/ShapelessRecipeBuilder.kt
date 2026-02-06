@@ -17,7 +17,8 @@ public class CustomShapelessRecipeIngredient(
     material: Material,
     quantity: Int = 1,
     itemRequirement: Computable<AgnosticItemStack, Boolean>,
-    onCraft: IngredientCraftContext.() -> Unit
+    onCraft: IngredientCraftContext.() -> Unit,
+    public val placeholderItem: CustomItem<*>
 ) : ShapelessRecipeIngredient(material, quantity, itemRequirement, onCraft)
 
 public data class CustomShapelessRecipe(
@@ -73,7 +74,8 @@ public class ShapelessRecipeBuilder(
                 item.type,
                 quantity,
                 IngredientPredicates.isItem(item),
-                onCraft
+                onCraft,
+                item
             )
         }
     }
@@ -92,7 +94,9 @@ public fun ItemDescriptorBuilder.shapelessRecipe(
 ) {
     onRegister += {
         val builder = ShapelessRecipeBuilder(item.createItemStack(amount), id).apply(block)
-        CustomShapelessRecipe.register(builder.build())
+        CustomShapelessRecipe.modifyRegistry {
+            builder.build()
+        }
     }
 }
 
@@ -105,8 +109,8 @@ public fun shapelessRecipe(
     return builder.build()
 }
 
-public fun registerShapelessRecipe(
+public fun DeferredRegistry<CustomShapelessRecipe>.registerShapelessRecipe(
     id: Identifier,
     result: ItemStack,
     block: ShapelessRecipeBuilder.() -> Unit
-): CustomShapelessRecipe = CustomShapelessRecipe.register(shapelessRecipe(id, result, block))
+): Deferred<CustomShapelessRecipe> = register { shapelessRecipe(id, result, block) }

@@ -84,6 +84,8 @@ public open class CustomItem<TStack : CuTItemStack>(
 
 
     public companion object : IdentifierRegistry<CustomItem<*>>("Custom Items") {
+        internal val DeferredRegistry = defer(RegistryPriority(Int.MAX_VALUE))
+
         public val Unknown: CustomItem<CuTItemStack> = customItem(
             unknownID(),
             Material.ANVIL
@@ -96,11 +98,11 @@ public open class CustomItem<TStack : CuTItemStack>(
             }
         }
 
-        public val InventoryBackground: CustomItem<CuTItemStack> = registerCustomItem(
+        public val InventoryBackground: CustomItem<CuTItemStack> by DeferredRegistry.registerCustomItem(
             id = id(Plugin, "inventory_background"),
             Material.GLISTERING_MELON_SLICE
         ) {
-            behavior(BlankNameBehavior)
+            behavior(HideTooltip)
 
             display {
                 texture = itemModel(Plugin, "ui/inventory_bg.model3d.json")
@@ -144,7 +146,7 @@ public sealed class AgnosticMaterial {
         }
         return false
     }
-    
+
     public infix fun materialIs(value: CustomItem<*>): Boolean {
         if (this is Custom) {
             return this.custom() == value

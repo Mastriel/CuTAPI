@@ -114,11 +114,15 @@ public sealed class ItemTexture {
     public abstract fun isAvailable(): Boolean
     public abstract fun getRef(): ResourceRef<*>
     public abstract fun getItemModelId(): Identifier
+    public abstract val showSwapAnimation: Boolean
 
-    public data class Texture(val texture: ResourceRef<Texture2D>) : ItemTexture() {
+    public data class Texture(val texture: ResourceRef<Texture2D>, override val showSwapAnimation: Boolean) :
+        ItemTexture() {
 
         override fun getItemModelId(): Identifier {
-            return texture.getResource()?.getItemModel()?.toIdentifier() ?: unknownID()
+            val id = texture.getResource()?.getItemModel()?.toIdentifier() ?: unknownID()
+            val swapMode = if (showSwapAnimation) "__swap" else "__noswap"
+            return id("${id}${swapMode}")
         }
 
         override fun isAvailable(): Boolean = texture.isAvailable()
@@ -128,12 +132,14 @@ public sealed class ItemTexture {
         }
     }
 
-    public data class Model(val model: ResourceRef<Model3D>) : ItemTexture() {
+    public data class Model(val model: ResourceRef<Model3D>, override val showSwapAnimation: Boolean) : ItemTexture() {
 
         override fun getItemModelId(): Identifier {
-            return model.getResource()?.getItemModel()?.toIdentifier() ?: unknownID()
+            val id = model.getResource()?.getItemModel()?.toIdentifier() ?: unknownID()
+            val swapMode = if (showSwapAnimation) "__swap" else "__noswap"
+            return id("${id}${swapMode}")
         }
-        
+
         override fun isAvailable(): Boolean = model.isAvailable()
 
         override fun getRef(): ResourceRef<*> {
@@ -142,17 +148,23 @@ public sealed class ItemTexture {
     }
 }
 
-public fun itemTexture(texture: ResourceRef<Texture2D>): ItemTexture.Texture = ItemTexture.Texture(texture)
+public fun itemTexture(texture: ResourceRef<Texture2D>, showSwapAnimation: Boolean = true): ItemTexture.Texture =
+    ItemTexture.Texture(texture, showSwapAnimation)
 
-public fun itemModel(model: ResourceRef<Model3D>): ItemTexture.Model = ItemTexture.Model(model)
+public fun itemModel(model: ResourceRef<Model3D>, showSwapAnimation: Boolean = true): ItemTexture.Model =
+    ItemTexture.Model(model, showSwapAnimation)
 
-public fun itemTexture(plugin: CuTPlugin, path: String): ItemTexture.Texture = ItemTexture.Texture(ref(plugin, path))
+public fun itemTexture(plugin: CuTPlugin, path: String, showSwapAnimation: Boolean = true): ItemTexture.Texture =
+    ItemTexture.Texture(ref(plugin, path), showSwapAnimation)
 
-public fun itemModel(plugin: CuTPlugin, path: String): ItemTexture.Model = ItemTexture.Model(ref(plugin, path))
+public fun itemModel(plugin: CuTPlugin, path: String, showSwapAnimation: Boolean = true): ItemTexture.Model =
+    ItemTexture.Model(ref(plugin, path), showSwapAnimation)
 
-public fun itemTexture(stringPath: String): ItemTexture.Texture = ItemTexture.Texture(ref(stringPath))
+public fun itemTexture(stringPath: String, showSwapAnimation: Boolean = true): ItemTexture.Texture =
+    ItemTexture.Texture(ref(stringPath), showSwapAnimation)
 
-public fun itemModel(stringPath: String): ItemTexture.Model = ItemTexture.Model(ref(stringPath))
+public fun itemModel(stringPath: String, showSwapAnimation: Boolean = true): ItemTexture.Model =
+    ItemTexture.Model(ref(stringPath), showSwapAnimation)
 
 /**
  * A class for creating dynamic displays (lore, name, etc.) for [CuTItemStack]s.

@@ -1,5 +1,10 @@
 package xyz.mastriel.cutapi.resources.generator
 
+/**
+ * Resource pack generator for Minecraft pack format version 46.
+ *
+ * Implements the generation steps for version 46 resource packs.
+ */
 public class PackVersion46Generator : ResourcePackGenerator() {
     override val packVersion: Int = 46
     override val generationSteps: Int = 2

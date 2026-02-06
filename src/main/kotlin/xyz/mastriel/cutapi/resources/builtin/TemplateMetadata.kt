@@ -8,6 +8,11 @@ import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.data.*
 
 
+/**
+ * A resource representing a template with metadata and string data for patching.
+ *
+ * @constructor Creates a TemplateResource with the given reference, metadata, and string data.
+ */
 public class TemplateResource(
     ref: ResourceRef<TemplateResource>,
     metadata: Metadata,
@@ -17,16 +22,20 @@ public class TemplateResource(
     @Serializable
     public class Metadata : CuTMeta()
 
-    public fun getPatchedTable(map: Map<String, TomlLiteral>): TomlTable {
+    public fun getPatchedTable(baseRef: ResourceRef<*>, map: Map<String, TomlLiteral>): TomlTable {
         var stringTable = stringData
         for ((key, value) in map) {
             stringTable = stringTable.replace("{{${key}}}", value.toString())
         }
+        stringTable = stringTable.replace("{{@ref}}", baseRef.toString())
         return CuTAPI.toml.parseToTomlTable(stringTable)
     }
 }
 
 
+/**
+ * Loader for TemplateResource.
+ */
 public val TemplateResourceLoader: ResourceFileLoader<TemplateResource> =
     resourceLoader(
         listOf("template"),
@@ -37,6 +46,7 @@ public val TemplateResourceLoader: ResourceFileLoader<TemplateResource> =
     }
 
 
+/**
+ * Type alias for a serializable reference to a TemplateResource.
+ */
 public typealias SerializableTemplateRef = ResourceRef<@Contextual TemplateResource>
-
-

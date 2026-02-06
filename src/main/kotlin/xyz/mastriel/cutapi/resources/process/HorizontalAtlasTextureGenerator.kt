@@ -34,18 +34,18 @@ public val HorizontalAtlasTextureGenerator: ResourceGenerator = resourceGenerato
 
     val amountOfTextures = texture.data.width / width
 
-    val subIdTemplate = this.suppliedSubId
+    val template = this.ref.toString()
 
 
     for (i in 0 until amountOfTextures) {
         val subTexture = texture.data.getSubimage(i * width, 0, width, texture.data.height).copy()
-        val subId = subIdTemplate.replace("#", i.toString())
+        val ref = template.replace("*", i.toString())
         var metadata = options.generatedMetadata.copy()
         if (options.specificMetadata.containsKey(i)) {
             metadata = metadata.apply(options.specificMetadata[i]!!, Texture2D.Metadata.serializer())
         }
         val subTextureResource = Texture2D(
-            ref = texture.ref.generatedSubId(subId),
+            ref = ref(ref),
             data = subTexture,
             metadata = metadata
         )

@@ -4,14 +4,13 @@ plugins {
     kotlin("jvm") version "2.0.20"
     java
 
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.2.0"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.5.31"
     id("xyz.jpenilla.run-paper") version "2.3.1"
 
     `maven-publish`
 
-    id("io.papermc.paperweight.userdev") version "2.0.0-beta.13"
-
+    id("io.papermc.paperweight.userdev") version "2.0.0-beta.19"
 }
 
 repositories {
@@ -38,6 +37,7 @@ repositories {
 val kotlinVersion: String by properties
 group = "xyz.mastriel"
 version = properties["version"]!!
+val minecraftVersion: String by properties
 
 
 
@@ -65,8 +65,8 @@ dependencies {
 
     shadow("net.lingala.zip4j:zip4j:2.11.5")
     shadow("com.jhlabs:filters:2.0.235-1")
-
-    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
+    
+    paperweight.paperDevBundle("${minecraftVersion}-R0.1-SNAPSHOT")
 }
 
 
@@ -75,7 +75,7 @@ tasks {
     runServer {
         pluginJars("../CuTAPI/build/libs/CuTAPI-0.1.0a-reobf.jar")
 
-        minecraftVersion("1.21.4")
+        minecraftVersion(minecraftVersion)
     }
 }
 
@@ -116,7 +116,7 @@ tasks.reobfJar {
 }
 
 tasks.assemble {
-    dependsOn(tasks.reobfJar)
+    dependsOn(tasks.shadowJar)
 }
 
 publishing {

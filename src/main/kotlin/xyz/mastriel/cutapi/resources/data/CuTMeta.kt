@@ -10,7 +10,7 @@ import xyz.mastriel.cutapi.utils.*
 @Serializable
 public open class CuTMeta {
     @SerialName("generate")
-    public open val generateBlock: List<GenerateBlock> = listOf()
+    public open val generateBlocks: List<GenerateBlock> = listOf()
 
     /**
      * Clone blocks will create a whole new resource,

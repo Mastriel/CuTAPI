@@ -5,6 +5,7 @@ import net.kyori.adventure.text.*
 import net.kyori.adventure.text.serializer.gson.*
 import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.pdc.tags.converters.*
+import xyz.mastriel.cutapi.registry.*
 
 public object LoreTagConverter : TagConverter<ByteArray, ItemLore>(ByteArray::class, ItemLore::class) {
     public val objectConverter: ObjectTagConverter<ItemLore> =
@@ -48,8 +49,8 @@ public class ItemLore {
     }
 }
 
-public fun TagContainer.loreTag(name: String): NotNullTag<ByteArray, ItemLore> =
-    NotNullTag(name, this, ItemLore(), LoreTagConverter)
+public fun TagContainer.loreTag(id: Identifier): NotNullTag<ByteArray, ItemLore> =
+    NotNullTag(id, this, ItemLore(), LoreTagConverter)
 
 public var CuTItemStack.displayLoreVisible: Boolean
     get() = lore.displayLoreVisible

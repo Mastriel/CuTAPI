@@ -21,7 +21,7 @@ public sealed interface CustomTile<T : CuTPlacedTile> : Identifiable {
     }
 
     public fun setAt(block: Block) {
-        block.tags.setIdentifier("cutapi.CuTID", id)
+        block.tags.setIdentifier(id(Plugin, "id"), id)
         when (val strategy = descriptor.blockStrategy) {
             is BlockStrategy.FakeEntity -> block.type = Material.BARRIER
             is BlockStrategy.Mushroom -> block.type = Material.RED_MUSHROOM

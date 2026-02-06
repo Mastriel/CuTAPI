@@ -21,7 +21,8 @@ public class CustomShapedRecipeIngredient(
     material: Material,
     quantity: Int = 1,
     itemRequirement: Computable<AgnosticItemStack, Boolean>,
-    onCraft: IngredientCraftContext.() -> Unit
+    onCraft: IngredientCraftContext.() -> Unit,
+    public val placeholderItem: CustomItem<*>
 ) : ShapedRecipeIngredient(char, material, quantity, itemRequirement, onCraft)
 
 
@@ -158,7 +159,7 @@ public class ShapedRecipeBuilder(
     ) {
         repeat(slotsRequired) {
             val predicate = IngredientPredicates.isItem(item)
-            ingredients[char] = CustomShapedRecipeIngredient(char, item.type, quantity, predicate, onCraft)
+            ingredients[char] = CustomShapedRecipeIngredient(char, item.type, quantity, predicate, onCraft, item)
         }
     }
 
@@ -180,7 +181,9 @@ public fun ItemDescriptorBuilder.shapedRecipe(
 ) {
     onRegister += {
         val builder = ShapedRecipeBuilder(item.createItemStack(amount), id, size).apply(block)
-        CustomShapedRecipe.register(builder.build())
+        CustomShapedRecipe.modifyRegistry {
+            register(builder.build())
+        }
     }
 }
 
@@ -194,9 +197,9 @@ public fun shapedRecipe(
     return builder.build()
 }
 
-public fun registerShapedRecipe(
+public fun DeferredRegistry<CustomShapedRecipe>.registerShapedRecipe(
     id: Identifier,
     size: CustomShapedRecipe.Size,
     result: ItemStack,
     block: ShapedRecipeBuilder.() -> Unit
-): CustomShapedRecipe = CustomShapedRecipe.register(shapedRecipe(id, size, result, block))
+): Deferred<CustomShapedRecipe> = register { shapedRecipe(id, size, result, block) }

@@ -10,7 +10,7 @@ import java.util.*
 public object Unstackable : ItemBehavior(id(Plugin, "unstackable")), Listener {
 
     override fun onCreate(item: CuTItemStack) {
-        var uuid by getData(item).nullableUuidTag("UnstackableUUID")
+        var uuid by getData(item).nullableUuidTag(id(Plugin, "unstackable_uuid"))
         item.handle.amount = 1
         uuid = UUID.randomUUID()
     }

@@ -113,12 +113,12 @@ public open class Texture2D(
     override fun createItemModelData(): JsonObject {
         val internalJson = CuTAPI.toml.encodeToTomlElement(metadata.itemModelData).asTomlTable().toJson()
         var jsonObject: JsonObject = internalJson
-        if (metadata.modelFile != null && metadata.modelFile!!.isAvailable()) {
-            val (fileJson) = metadata.modelFile?.getResource()!!
+        if (metadata.modelFile != null && metadata.modelFile.isAvailable()) {
+            val (fileJson) = metadata.modelFile.getResource()!!
             jsonObject = internalJson.combine(fileJson)
 
         }
-        val path = ref.path(withExtension = false, withNamespaceAsFolder = false).fixInvalidResourcePath()
+        val path = ref.path(withExtension = false, withNamespaceAsFolder = false, fixInvalids = true)
         val texturesObject = jsonObject["textures"]?.jsonObject
         val textures = texturesObject?.toMutableMap() ?: mutableMapOf()
 
@@ -134,7 +134,8 @@ public open class Texture2D(
             "${ref.namespace}:${
                 ref.path(
                     withExtension = false,
-                    withNamespaceAsFolder = false
+                    withNamespaceAsFolder = false,
+                    fixInvalids = true
                 )
             }"
         )

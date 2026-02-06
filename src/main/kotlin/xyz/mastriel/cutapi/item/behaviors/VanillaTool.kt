@@ -4,6 +4,7 @@ import net.minecraft.core.*
 import net.minecraft.core.component.*
 import net.minecraft.core.registries.*
 import net.minecraft.world.level.block.*
+import org.bukkit.*
 import org.bukkit.craftbukkit.util.*
 import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.*
@@ -42,7 +43,7 @@ public class VanillaTool(
                 val minToolTier = ToolTier.fromVanillaMaterial(material)
                 val correctToolForDrops = minToolTier.breakingLevel <= tool.tier.breakingLevel
 
-                val holder = BuiltInRegistries.BLOCK.createIntrusiveHolder(blockType)
+                val holder = BuiltInRegistries.BLOCK.wrapAsHolder(blockType)
                 materialData += ToolMaterialData(holder, correctToolForDrops, special ?: tool.toolSpeed.speed)
             }
         }
@@ -52,7 +53,12 @@ public class VanillaTool(
     override fun onCreate(item: CuTItemStack) {
         val nmsItem = item.vanilla().nms()
 
-        val tool = ToolComponent(rules.map { it.toRule() }, defaultMiningSpeed.speed, itemDamage)
+        val tool = ToolComponent(
+            rules.map { it.toRule() },
+            defaultMiningSpeed.speed,
+            itemDamage,
+            canDestroyBlocksInCreative(item.agnosticMaterial)
+        )
 
         val patch = DataComponentPatch.builder().set(
             DataComponents.TOOL,
@@ -64,7 +70,18 @@ public class VanillaTool(
 
         item.vanilla().itemMeta = nmsItem.bukkit().itemMeta
     }
+}
 
+public fun canDestroyBlocksInCreative(material: AgnosticMaterial): Boolean {
+    return material.expectedVanillaMaterial in setOf(
+        Material.STONE_SWORD,
+        Material.IRON_SWORD,
+        Material.GOLDEN_SWORD,
+        Material.WOODEN_SWORD,
+        Material.DIAMOND_SWORD,
+        Material.NETHERITE_SWORD,
+        Material.COPPER_SWORD
+    )
 }
 
 // if we don't optimize this then it becomes so fucking large that it just
@@ -73,7 +90,7 @@ public class VanillaTool(
 @TemporaryAPI
 @UsesNMS
 private fun optimize(materialData: List<ToolMaterialData>): List<PlainToolComponentRule> {
-    val map = mutableMapOf<ToolRuleProperties, MutableList<Holder.Reference<Block>>>()
+    val map = mutableMapOf<ToolRuleProperties, MutableList<Holder<Block>>>()
 
     for (data in materialData) {
         val properties = ToolRuleProperties(data.correctForBlocks, data.speed)
@@ -93,7 +110,7 @@ private fun optimize(materialData: List<ToolMaterialData>): List<PlainToolCompon
 @TemporaryAPI
 @UsesNMS
 private data class ToolMaterialData(
-    val holder: Holder.Reference<Block>,
+    val holder: Holder<Block>,
     val correctForBlocks: Boolean,
     val speed: Float
 )
@@ -108,7 +125,7 @@ private data class ToolRuleProperties(
 @TemporaryAPI
 @UsesNMS
 private data class PlainToolComponentRule(
-    val blocks: List<Holder.Reference<Block>>,
+    val blocks: List<Holder<Block>>,
     val speed: Optional<Float>,
     val correctForDrops: Optional<Boolean>
 ) {

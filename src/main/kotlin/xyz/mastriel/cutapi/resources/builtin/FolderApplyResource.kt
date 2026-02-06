@@ -8,11 +8,19 @@ import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.data.*
 
+/**
+ * A resource representing a folder-level metadata application.
+ *
+ * @constructor Creates a FolderApplyResource with the given reference and metadata.
+ */
 public class FolderApplyResource(
     ref: ResourceRef<FolderApplyResource>,
     metadata: Metadata
 ) : MetadataResource<FolderApplyResource.Metadata>(ref, metadata) {
 
+    /**
+     * Metadata for FolderApplyResource, containing TOML table to apply.
+     */
     @Serializable
     public data class Metadata(
         @SerialName("apply")
@@ -20,7 +28,9 @@ public class FolderApplyResource(
     ) : CuTMeta()
 }
 
-
+/**
+ * Loader for FolderApplyResource.
+ */
 public val FolderApplyResourceLoader: ResourceFileLoader<MetadataResource<FolderApplyResource.Metadata>> =
     metadataResourceLoader(
         listOf("meta.folder"),

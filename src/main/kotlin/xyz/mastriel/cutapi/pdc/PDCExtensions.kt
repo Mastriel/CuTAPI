@@ -1,13 +1,12 @@
 package xyz.mastriel.cutapi.pdc
 
-import org.bukkit.*
 import org.bukkit.persistence.*
-import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.registry.*
 import kotlin.reflect.*
 
 @Suppress("DuplicatedCode")
-internal fun <T: Any> PersistentDataContainer.setPrimitiveValue(primitiveClass: KClass<T>, key: String, value: T) {
-    val namespacedKey = NamespacedKey(Plugin, key)
+internal fun <T : Any> PersistentDataContainer.setPrimitiveValue(primitiveClass: KClass<T>, id: Identifier, value: T) {
+    val namespacedKey = id.toNamespacedKey()
     when (primitiveClass) {
         String::class -> set(namespacedKey, PersistentDataType.STRING, value as String)
         ByteArray::class -> set(namespacedKey, PersistentDataType.BYTE_ARRAY, value as ByteArray)
@@ -23,8 +22,8 @@ internal fun <T: Any> PersistentDataContainer.setPrimitiveValue(primitiveClass: 
 }
 
 @Suppress("DuplicatedCode", "UNCHECKED_CAST")
-internal fun <T: Any> PersistentDataContainer.getPrimitiveValue(primitiveClass: KClass<T>, key: String) : T? {
-    val namespacedKey = NamespacedKey(Plugin, key)
+internal fun <T : Any> PersistentDataContainer.getPrimitiveValue(primitiveClass: KClass<T>, id: Identifier): T? {
+    val namespacedKey = id.toNamespacedKey()
     return when (primitiveClass) {
         String::class -> get(namespacedKey, PersistentDataType.STRING)
         ByteArray::class -> get(namespacedKey, PersistentDataType.BYTE_ARRAY)

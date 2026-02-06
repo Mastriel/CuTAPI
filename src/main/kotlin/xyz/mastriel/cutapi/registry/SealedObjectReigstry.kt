@@ -38,11 +38,19 @@ public open class SealedObjectRegistry<T : Identifiable>(name: String, sealedCla
                 registerClass(subclass)
             }
         } else {
-            if (kClass.objectInstance == null) {
+            if (!hasObjectInstance(kClass)) {
                 Plugin.logger.warning("There's no object instance for ${kClass.simpleName} in a '${name}'.")
             } else {
                 register(kClass.objectInstance!!)
             }
+        }
+    }
+
+    private fun hasObjectInstance(kClass: KClass<out T>): Boolean {
+        return try {
+            kClass.objectInstance != null
+        } catch (ex: Exception) {
+            false
         }
     }
 

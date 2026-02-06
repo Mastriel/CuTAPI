@@ -15,7 +15,6 @@ public sealed interface TileDescriptor {
     public val itemPolicy: BlockItemPolicy
 }
 
-
 public class BlockDescriptor(
     override val behaviors: List<BlockBehavior> = mutableListOf(),
     override val blockStrategy: BlockStrategy,
