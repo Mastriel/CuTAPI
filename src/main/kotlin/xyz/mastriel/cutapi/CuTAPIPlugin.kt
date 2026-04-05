@@ -53,7 +53,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         registerPeriodics()
 
         CuTItemStack.registerType(
-            id = ItemStackUtility.DEFAULT_ITEMSTACK_TYPE_ID,
+            id = ItemStackUtility.DefaultItemStackTypeId,
             kClass = CuTItemStack::class,
             constructor = CuTItemStack.CONSTRUCTOR
         )

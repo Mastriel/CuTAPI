@@ -6,13 +6,13 @@ import xyz.mastriel.cutapi.resources.data.*
 import java.io.*
 import kotlin.contracts.*
 
-@OptIn(ExperimentalSerializationApi::class)
 /**
  * Represents a resource in the CuTAPI system.
  *
  * @property ref The reference to this resource.
  * @property metadata The metadata associated with this resource, if any.
  */
+@OptIn(ExperimentalSerializationApi::class)
 public open class Resource(
     public open val ref: ResourceRef<*>,
     public open val metadata: CuTMeta? = null

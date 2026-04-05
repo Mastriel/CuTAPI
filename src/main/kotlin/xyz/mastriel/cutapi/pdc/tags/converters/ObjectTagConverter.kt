@@ -23,3 +23,11 @@ public class ObjectTagConverter<T : Any>(
 
 
 }
+
+@OptIn(InternalSerializationApi::class)
+public inline fun <reified T : Any> ObjectTagConverter(): ObjectTagConverter<T> {
+    return ObjectTagConverter(T::class, T::class.serializer())
+}
+
+public inline fun <reified T : Any> ObjectTagConverter(serializer: KSerializer<T>): ObjectTagConverter<T> =
+    ObjectTagConverter(T::class, serializer)

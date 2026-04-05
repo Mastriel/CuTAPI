@@ -568,7 +568,7 @@ public class ResourceManager {
         val tempMetadataFile = pluginFolder.appendPath(ref.name + ".meta")
 
         if (!tempResourceFile.exists()) resourceFile.copyTo(tempResourceFile)
-        if (!tempMetadataFile.exists()) resourceFile.copyTo(tempMetadataFile)
+        if (!tempMetadataFile.exists()) metadataFile.copyTo(tempMetadataFile)
 
     }
 

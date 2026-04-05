@@ -8,7 +8,7 @@ import org.bukkit.inventory.*
 import org.bukkit.persistence.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.behavior.*
-import xyz.mastriel.cutapi.item.ItemStackUtility.CUT_ID_TAG
+import xyz.mastriel.cutapi.item.ItemStackUtility.TypeKey
 import xyz.mastriel.cutapi.item.ItemStackUtility.asCustomItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.customIdOrNull
 import xyz.mastriel.cutapi.item.ItemStackUtility.customItem
@@ -120,7 +120,7 @@ public open class CuTItemStack protected constructor(
      */
     protected open fun onCreate() {}
 
-    public var type: CustomItem<*> by customItemTag(id(Plugin, "type"), CustomItem.Unknown)
+    public var type: CustomItem<*> by customItemTag(ItemStackUtility.TypeId, CustomItem.Unknown)
     public var nameHasChanged: Boolean by booleanTag(id(Plugin, "name_has_changed"), false)
 
     internal var lore by loreTag(id(Plugin, "lore"))
@@ -247,8 +247,8 @@ public open class CuTItemStack protected constructor(
     public fun getStaticItemStack(viewer: Player?): ItemStack {
         return getRenderedItemStack(viewer).apply {
             val meta = itemMeta
-            meta.persistentDataContainer.remove(CUT_ID_TAG)
-            meta.persistentDataContainer.remove(ItemStackUtility.CUT_ITEMSTACK_TYPE_TAG)
+            meta.persistentDataContainer.remove(TypeKey)
+            meta.persistentDataContainer.remove(ItemStackUtility.ItemStackTypeTag)
 
             if (this@CuTItemStack.descriptor.display != null) {
                 val display = ItemDisplayBuilder(this@CuTItemStack, viewer).apply(descriptor.display!!)

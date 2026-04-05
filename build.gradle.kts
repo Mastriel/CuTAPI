@@ -1,7 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
 
 plugins {
-    kotlin("jvm") version "2.0.20"
+    kotlin("jvm") version "2.3.0"
     java
 
     id("com.gradleup.shadow") version "9.2.0"
@@ -65,7 +65,7 @@ dependencies {
 
     shadow("net.lingala.zip4j:zip4j:2.11.5")
     shadow("com.jhlabs:filters:2.0.235-1")
-    
+
     paperweight.paperDevBundle("${minecraftVersion}-R0.1-SNAPSHOT")
 }
 
