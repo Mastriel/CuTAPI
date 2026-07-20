@@ -21,6 +21,7 @@ import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
+import xyz.mastriel.cutapi.resources.data.*
 import xyz.mastriel.cutapi.resources.minecraft.*
 import xyz.mastriel.cutapi.resources.process.*
 import xyz.mastriel.cutapi.resources.uploader.*
@@ -30,6 +31,8 @@ import java.io.*
 @PublishedApi
 internal lateinit var Plugin: CuTAPIPlugin
     private set
+
+internal fun isPluginInitialized(): Boolean = ::Plugin.isInitialized
 
 @OptIn(UsesNMS::class)
 public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
@@ -85,6 +88,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         CustomItem.DeferredRegistry.commitToRegistry()
 
         CuTAPI.serverReady {
+            ResourceValueCodec.initialize()
             ResourceFileLoader.initialize()
             ResourceGenerator.initialize()
             MinecraftAssetDownloader.initialize()

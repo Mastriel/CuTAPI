@@ -206,7 +206,7 @@ private fun generateAnimationMcMeta(texture: Texture2D, texturesFolder: File, an
 
 private fun applyPostProcessing(texture: Texture2D) {
     texture.metadata.postProcessors.forEach {
-        val context = TexturePostProcessContext(it.options)
+        val context = TexturePostProcessContext(it.options, texture.ref)
         it.processor.process(texture, context)
     }
 }

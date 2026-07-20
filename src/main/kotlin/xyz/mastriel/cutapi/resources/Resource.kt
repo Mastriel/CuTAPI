@@ -147,20 +147,14 @@ public fun <T> T.saveTo(file: File) where T : ByteArraySerializable, T : Resourc
  *
  * @receiver The resource to save.
  * @param file The file to save the resource to.
- * @param metadataSerializer The serializer for the metadata, or null to use the default.
  */
 public fun <T> T.saveWithMetadata(
-    file: File,
-    metadataSerializer: KSerializer<in CuTMeta>? = null
+    file: File
 ) where T : ByteArraySerializable, T : Resource {
-    val metadataText = if (metadataSerializer == null)
-        CuTAPI.toml.encodeToString(metadata)
-    else if (metadata != null)
-        CuTAPI.toml.encodeToString(metadataSerializer, metadata!!)
-    else null
-
-    if (metadataText != null) {
-        File(file.path + ".meta").writeText(metadataText)
+    file.parentFile?.mkdirs()
+    if (metadata != null) {
+        val document = ResourceMetadataMapper.encodeMetadata(metadata!!)
+        File(file.path + ".meta").writeText(ResourceYaml.encode(document))
     }
     saveTo(file)
 }
@@ -186,6 +180,7 @@ public fun Resource.isSerializable(): Boolean {
  * @param serializer The serializer for the resource type.
  * @return The CBOR-encoded byte array.
  */
+@OptIn(ExperimentalSerializationApi::class)
 public fun <T : Resource> T.cborSerialize(serializer: KSerializer<T>): ByteArray {
     return CuTAPI.cbor.encodeToByteArray(serializer, this)
 }

@@ -3,6 +3,7 @@ package xyz.mastriel.cutapi.resources.data.minecraft
 import kotlinx.serialization.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
+import xyz.mastriel.cutapi.resources.data.*
 
 
 /**
@@ -20,6 +21,7 @@ public data class ItemModelData(
     @OptIn(ExperimentalSerializationApi::class)
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     @SerialName("textures")
+    @param:ResourceKey("textures")
     private val _textures: Map<String, String> = mapOf(),
 ) {
     @Transient

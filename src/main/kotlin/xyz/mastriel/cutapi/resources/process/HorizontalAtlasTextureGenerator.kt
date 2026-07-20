@@ -1,21 +1,17 @@
 package xyz.mastriel.cutapi.resources.process
 
-import kotlinx.serialization.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
+import xyz.mastriel.cutapi.resources.data.*
 import xyz.mastriel.cutapi.utils.*
 
 
-@Serializable
 private data class HorizontalAtlasTextureGeneratorOptions(
-    @SerialName("metadata")
-    val generatedMetadata: Texture2D.Metadata,
+    val metadata: Texture2D.Metadata,
     // For non-square textures, this must be supplied.
-    @SerialName("width")
     val width: Int? = null,
-    @SerialName("specific")
     val specificMetadata: MutableMap<Int, Texture2D.Metadata> = mutableMapOf()
 )
 
@@ -24,7 +20,7 @@ public val HorizontalAtlasTextureGenerator: ResourceGenerator = resourceGenerato
     id(Plugin, "h_atlas"),
     ResourceGenerationStage.BeforeProcessors
 ) {
-    val options = castOptions(HorizontalAtlasTextureGeneratorOptions.serializer())
+    val options = castOptions<HorizontalAtlasTextureGeneratorOptions>()
 
     val texture = this.resource
     if (texture.data.width % texture.data.height != 0 && options.width == null) {
@@ -40,9 +36,13 @@ public val HorizontalAtlasTextureGenerator: ResourceGenerator = resourceGenerato
     for (i in 0 until amountOfTextures) {
         val subTexture = texture.data.getSubimage(i * width, 0, width, texture.data.height).copy()
         val ref = template.replace("*", i.toString())
-        var metadata = options.generatedMetadata.copy()
+        var metadata = options.metadata.copy()
         if (options.specificMetadata.containsKey(i)) {
-            metadata = metadata.apply(options.specificMetadata[i]!!, Texture2D.Metadata.serializer())
+            metadata = ResourceMetadataMapper.merge(
+                Texture2D.Metadata::class,
+                metadata,
+                options.specificMetadata[i]!!
+            )
         }
         val subTextureResource = Texture2D(
             ref = ref(ref),

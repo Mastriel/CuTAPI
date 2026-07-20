@@ -3,7 +3,6 @@ package xyz.mastriel.cutapi
 import kotlinx.serialization.*
 import kotlinx.serialization.cbor.*
 import kotlinx.serialization.json.*
-import net.peanuuutz.tomlkt.*
 import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI.registerPlugin
 import xyz.mastriel.cutapi.block.*
@@ -192,9 +191,5 @@ public object CuTAPI {
         ignoreUnknownKeys = true
         prettyPrint = true
         encodeDefaults = true
-    }
-
-    internal val toml = Toml {
-        ignoreUnknownKeys = true
     }
 }

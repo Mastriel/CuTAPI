@@ -9,7 +9,6 @@ import kotlinx.serialization.encoding.*
 import kotlinx.serialization.json.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.block.*
-import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.data.*
 
@@ -25,14 +24,11 @@ public open class Model3D(
         inspector.map("Textures") { metadata.textures.mapValues { (_, v) -> v.toString() } }
     }
 
-    @Serializable
+    @ResourceMetadata(id = "cutapi:model3d")
     public data class Metadata(
-        @SerialName("block_strategies")
         val blockStrategies: List<AllowedBlockStrategy> = AllowedBlockStrategy.entries.toList(),
-        @SerialName("materials")
         val materials: List<String> = listOf(),
-        @SerialName("textures")
-        val textures: Map<String, ResourceRef<@Contextual Texture2D>> = mapOf(),
+        val textures: Map<String, ResourceRef<Texture2D>> = mapOf(),
     ) : CuTMeta()
 
 
@@ -64,8 +60,7 @@ public open class Model3D(
 
 public val Model3DResourceLoader: ResourceFileLoader<Model3D> = resourceLoader(
     extensions = listOf("model3d.json"),
-    resourceTypeId = id(Plugin, "model3d"),
-    metadataSerializer = Model3D.Metadata.serializer(),
+    metadataClass = Model3D.Metadata::class,
     // we need to know how to remap the textures.
     dependencies = listOf(Texture2DResourceLoader),
 ) {

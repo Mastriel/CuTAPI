@@ -21,7 +21,6 @@ public class CuTAPILoader implements PluginLoader {
         // addLibrary(classpathBuilder, "com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.6.0");
         // addLibrary(classpathBuilder, "org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1");
         // addLibrary(classpathBuilder, "org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1");
-        // addLibrary(classpathBuilder, "net.peanuuutz.tomlkt:tomlkt:0.3.7");
     }
 
     private void addLibrary(PluginClasspathBuilder builder, String notation, RemoteRepository repo) {

@@ -1,7 +1,5 @@
 package xyz.mastriel.cutapi.resources
 
-import kotlinx.serialization.*
-import net.peanuuutz.tomlkt.*
 import org.bukkit.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.resources.builtin.*
@@ -198,20 +196,66 @@ public class ResourceManager {
 
         val found = mutableListOf<Pair<File, ResourceRef<*>>>()
         findResourcesInFolder(File(tempFolder, namespace), folderRef(root, ""), found)
-
-        // make sure templates go first
-        val alreadyFound: MutableList<ResourceRef<*>> = mutableListOf()
-
-        for (loader in ResourceFileLoader.getDependencySortedLoaders()) {
-            found.sortedByDescending { "template" in it.second.extension }.forEach {
-                val (file, ref) = it
-                if (alreadyFound.contains(ref)) return@forEach
-                if (loadResource(file, ref, loader) is ResourceLoadResult.Success) {
-                    alreadyFound += ref
-                }
-            }
+        val sortedLoaders = ResourceFileLoader.getDependencySortedLoaders()
+        val selectedLoaders = found.associate { (file, ref) ->
+            ref to selectLoader(file, ref, sortedLoaders)
         }
 
+        for (loader in sortedLoaders) {
+            found.sortedByDescending { (file, _) ->
+                when {
+                    file.name == "apply.meta.folder" -> 2
+                    file.extension == "template" -> 1
+                    else -> 0
+                }
+            }.forEach { (file, ref) ->
+                if (selectedLoaders[ref] == loader) loadResource(file, ref, loader)
+            }
+        }
+    }
+
+    private fun selectLoader(
+        resourceFile: File,
+        ref: ResourceRef<*>,
+        loaders: List<ResourceFileLoader<*>>
+    ): ResourceFileLoader<*>? {
+        val metadataFile = File(resourceFile.absolutePath + ".meta")
+        try {
+            if (metadataFile.exists()) {
+                val tag = ResourceYaml.parse(metadataFile.readText(), metadataFile.path).requireTag()
+                val loader = ResourceFileLoader.getOrNull(tag)
+                if (loader == null) {
+                    Plugin.error("No resource loader is registered for metadata tag $tag on $ref.")
+                    return null
+                }
+                if (!loader.acceptsExtension(ref.extension)) {
+                    Plugin.error("Resource loader $tag does not accept extension '${ref.extension}' for $ref.")
+                    return null
+                }
+                return loader
+            }
+
+            val candidates = loaders.filter { it.acceptsExtension(ref.extension) }
+            if (candidates.isEmpty()) return null
+
+            val metadataResourceCandidates = candidates.filter { it.usesDataAsMetadata }
+            if (metadataResourceCandidates.isNotEmpty()) {
+                val dataTag = ResourceYaml.parse(resourceFile.readText(), resourceFile.path).requireTag()
+                metadataResourceCandidates.singleOrNull { it.id == dataTag }?.let { return it }
+                Plugin.error("No metadata resource loader for extension '${ref.extension}' accepts tag $dataTag on $ref.")
+                return null
+            }
+
+            if (candidates.size == 1) return candidates.single()
+            Plugin.error(
+                "Resource $ref matches multiple loaders (${candidates.joinToString { it.id.toString() }}); " +
+                    "add a tagged .meta file."
+            )
+        } catch (exception: Exception) {
+            Plugin.error("Cannot select a resource loader for $ref: ${exception.message}")
+            checkResourceLoading(ref.plugin)
+        }
+        return null
     }
 
     /**
@@ -260,6 +304,8 @@ public class ResourceManager {
                     findResourcesInFolder(root, name, found)
                     return@forEach
                 }
+
+                if (file.isResourceMetadataSidecar()) return@forEach
 
                 found += file to folder.child<Resource>(file.name)
             }
@@ -319,7 +365,6 @@ public class ResourceManager {
      * @param options Additional options for loading the resource.
      * @return The result of the resource loading process.
      */
-    @OptIn(InternalSerializationApi::class)
     public fun <T : Resource> loadResourceWithoutRegistering(
         resourceFile: File,
         ref: ResourceRef<T>,
@@ -333,14 +378,10 @@ public class ResourceManager {
         try {
             val resourceBytes = resourceFile.readBytes()
 
-            val encoded = loadOptions.metadata?.let {
-                @Suppress("UNCHECKED_CAST") val serializer = it::class.serializer() as KSerializer<CuTMeta>
-                CuTAPI.toml.encodeToString(serializer, it).encodeToByteArray()
-            }
+            val metadataDocument = loadOptions.metadata?.let(ResourceMetadataMapper::encodeMetadata)
+                ?: loadMetadata(metadataFile, ref)
 
-            val metadataBytes = encoded ?: loadMetadata(metadataFile, ref)
-
-            return tryLoadResource(ref, resourceBytes, metadataBytes, loader, loadOptions)
+            return tryLoadResource(ref, resourceBytes, metadataDocument, loader, loadOptions)
         } catch (ex: Exception) {
             ex.printStackTrace()
             return ResourceLoadResult.Failure()
@@ -352,99 +393,80 @@ public class ResourceManager {
      *
      * @param metadataFile The file containing the metadata.
      * @param ref The reference of the resource.
-     * @return The metadata as a byte array, or null if not found.
+     * @return The parsed metadata document, or null if not found.
      */
-    private fun loadMetadata(metadataFile: File, ref: ResourceRef<*>): ByteArray? {
-        // TODO we're deserializing this a lot. we should cache it or something.
-        return try {
-            val folderTable = getFolderDefaultTable(ref)
+    private fun loadMetadata(metadataFile: File, ref: ResourceRef<*>): ResourceConfigDocument? {
+        val folderDocument = getFolderDefaultDocument(ref)
+        val fileDocument = if (metadataFile.exists()) {
+            ResourceYaml.parse(metadataFile.readText(), metadataFile.path).also { it.requireTag() }
+        } else null
 
-            if (folderTable == null) {
-                metadataFile.readBytes()
-            } else {
-                val metadataTable = if (metadataFile.exists())
-                    CuTAPI.toml.parseToTomlTable(metadataFile.readText())
-                else
-                    TomlTable()
-
-                val newTable = folderTable.combine(metadataTable, true)
-                println("${ref}: " + CuTAPI.toml.encodeToString(newTable))
-                CuTAPI.toml.encodeToString(newTable).toByteArray(Charsets.UTF_8)
-            }
-        } catch (e: Exception) {
-            null
-        }.let { bytes ->
-            if (bytes == null) return@let null
-
-            val depthLimit = 30
-            var depth = 0
-            var table = CuTAPI.toml.parseToTomlTable(bytes.toString(Charsets.UTF_8))
-            while (metadataNeedsToProcessExtensions(table)) {
-                println("Processing extends for $ref at depth $depth ts")
-                depth++
-                if (depth > depthLimit) {
-                    Plugin.error("Metadata extensions for $ref excessively (or infinitely) recurse.")
-                    break
-                }
-                table = processTemplates(ref, table)
-            }
-
-            CuTAPI.toml.encodeToString(table).toByteArray(Charsets.UTF_8)
+        var document = when {
+            folderDocument != null && fileDocument != null -> fileDocument.copy(
+                root = folderDocument.root.combine(fileDocument.root, combineLists = true)
+            )
+            fileDocument != null -> fileDocument
+            folderDocument != null -> folderDocument
+            else -> return null
         }
+
+        var depth = 0
+        while (metadataNeedsToProcessExtensions(document)) {
+            depth++
+            if (depth > 30) {
+                throw ResourceConfigException("Metadata templates for $ref recurse more than 30 levels.")
+            }
+            document = processTemplates(ref, document)
+        }
+        return document
     }
 
     /**
-     * Checks if a metadata table needs to process extend blocks.
+     * Checks if a metadata document needs to process template extensions.
      *
-     * @param table The metadata table to check.
      * @return True if extensions need to be processed, false otherwise.
      */
-    private fun metadataNeedsToProcessExtensions(table: TomlTable): Boolean {
-        return table["extends"]?.asTomlTable() != null
+    private fun metadataNeedsToProcessExtensions(document: ResourceConfigDocument): Boolean {
+        return document.requireMap()["extends"] != null
     }
 
     /**
-     * Processes templates in a metadata table.
+     * Processes templates in a metadata document.
      *
      * @param ref The reference of the resource.
-     * @param table The metadata 'extends' table to process.
-     * @return The processed metadata table.
+     * @return The processed metadata document.
      */
-    private fun processTemplates(ref: ResourceRef<*>, table: TomlTable): TomlTable {
-        var metadata = table
+    private fun processTemplates(
+        ref: ResourceRef<*>,
+        document: ResourceConfigDocument
+    ): ResourceConfigDocument {
+        val root = document.requireMap()
+        val extensions = root["extends"]?.asConfigMap() ?: return document
+        var metadata: ResourceConfigValue = root.without("extends")
 
-        val extensions = metadata["extends"]?.asTomlTable() ?: return metadata
-
-        metadata = TomlTable(metadata.filter { (k, _) -> k != "extends" })
-
-        val refs = extensions.map { (k, v) ->
-            val templateRef = ref<TemplateResource>(k)
-            val map = v.asTomlArray().map { i -> i.asTomlTable().mapValues { (_, v) -> v.asTomlLiteral() } }
-            templateRef to map
-        }
-        println(refs)
-
-
-        val newMetadata = refs.fold(metadata) { acc, r ->
-            val templateTable = r.first.getResource() ?: return@fold acc.also {
-                Plugin.error("Template ${r.first} not found for resource $ref.")
+        for ((templatePath, argumentLists) in extensions) {
+            val templateRef = ref<TemplateResource>(templatePath)
+            val template = templateRef.getResource()
+            if (template == null) {
+                Plugin.error("Template $templateRef not found for resource $ref.")
+                continue
             }
-            val patchedTemplates = r.second.map { templateTable.getPatchedTable(ref, it) }
-
-            patchedTemplates.fold(acc) { acc2, t ->
-                acc2.combine(t, true)
+            for (arguments in argumentLists.asConfigList()) {
+                metadata = metadata.combine(
+                    template.getPatchedConfig(ref, arguments.asConfigMap()),
+                    combineLists = true
+                )
             }
         }
-
-        return newMetadata
+        return document.copy(root = metadata)
     }
 
     /**
-     * Attempts to load a resource from its reference, resource bytes, and metadata bytes.
+     * Attempts to load a resource from its reference, resource bytes, and metadata document.
      *
      * @param ref The reference of the resource.
      * @param resourceBytes The resource data as a byte array.
-     * @param metadataBytes The metadata as a byte array.
+     * @param metadataDocument The parsed metadata document.
      * @param loader The loader to use for loading the resource.
      * @param options Additional options for loading the resource.
      * @return The result of the resource loading process.
@@ -453,14 +475,14 @@ public class ResourceManager {
     private fun <T : Resource> tryLoadResource(
         ref: ResourceRef<T>,
         resourceBytes: ByteArray,
-        metadataBytes: ByteArray?,
+        metadataDocument: ResourceConfigDocument?,
         loader: ResourceFileLoader<T>,
         options: ResourceLoadOptions = ResourceLoadOptions()
     ): ResourceLoadResult<T> {
 
-        when (val result = loader.loadResource(ref, resourceBytes, metadataBytes, options)) {
+        when (val result = loader.loadResource(ref, resourceBytes, metadataDocument, options)) {
             is ResourceLoadResult.Success -> {
-                createClones(result.resource, resourceBytes, metadataBytes, loader)
+                createClones(result.resource, resourceBytes, metadataDocument, loader)
                 return result as ResourceLoadResult<T>
             }
 
@@ -479,27 +501,27 @@ public class ResourceManager {
      *
      * @param resource The resource to clone.
      * @param resourceBytes The resource data as a byte array.
-     * @param metadataBytes The metadata as a byte array.
+     * @param metadataDocument The parsed metadata document.
      * @param loader The loader to use for loading the clones.
      */
     @Suppress("UNCHECKED_CAST")
     private fun createClones(
         resource: Resource,
         resourceBytes: ByteArray,
-        metadataBytes: ByteArray?,
+        metadataDocument: ResourceConfigDocument?,
         loader: ResourceFileLoader<*>
     ) {
-        if (metadataBytes == null) return
+        if (metadataDocument == null) return
 
-        val originMetadataTable = CuTAPI.toml.parseToTomlTable(metadataBytes.toString(Charsets.UTF_8))
-        val cloneBlocks = extractCloneBlocks(originMetadataTable)
+        val cloneBlocks = extractCloneBlocks(metadataDocument)
 
         for (cloneBlock in cloneBlocks) {
             try {
-                val newMetadataBytes = generateCloneMetadata(originMetadataTable, cloneBlock)
-                val newRef = createCloneReference(resource, newMetadataBytes)
+                val newMetadata = generateCloneMetadata(metadataDocument, cloneBlock)
+                val newRef = createCloneReference(resource, newMetadata)
+                val loadableMetadata = newMetadata.copy(root = newMetadata.requireMap().without("cloneSubId"))
 
-                loadAndRegisterClone(newRef, resourceBytes, newMetadataBytes, loader)
+                loadAndRegisterClone(newRef, resourceBytes, loadableMetadata, loader)
             } catch (ex: Exception) {
                 Plugin.error("Failed to clone resource ${resource.ref}.")
                 ex.printStackTrace()
@@ -507,25 +529,24 @@ public class ResourceManager {
         }
     }
 
-    private fun extractCloneBlocks(originMetadataTable: TomlTable): List<TomlTable> {
-        return try {
-            originMetadataTable.getArrayOrNull("clone")?.filterIsInstance<TomlTable>() ?: emptyList()
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            emptyList()
-        }
+    private fun extractCloneBlocks(document: ResourceConfigDocument): List<ResourceConfigMap> {
+        val cloneValue = document.requireMap()["clone"] ?: return emptyList()
+        return cloneValue.asConfigList().map(ResourceConfigValue::asConfigMap)
     }
 
-    private fun generateCloneMetadata(originMetadataTable: TomlTable, cloneBlock: TomlTable): ByteArray {
-        val patchedMetadata = TomlTable(originMetadataTable.filterKeys { it != "clone" })
-        val combinedMetadata = patchedMetadata.combine(cloneBlock, false)
-        return CuTAPI.toml.encodeToString(combinedMetadata).toByteArray(Charsets.UTF_8)
+    private fun generateCloneMetadata(
+        origin: ResourceConfigDocument,
+        cloneBlock: ResourceConfigMap
+    ): ResourceConfigDocument {
+        val patchedMetadata = origin.requireMap().without("clone")
+        return origin.copy(root = patchedMetadata.combine(cloneBlock, combineLists = false))
     }
 
-    private fun createCloneReference(resource: Resource, newMetadataBytes: ByteArray): ResourceRef<*> {
-        val newTable = CuTAPI.toml.parseToTomlTable(newMetadataBytes.toString(Charsets.UTF_8))
-        val newSubId = newTable.getStringOrNull("clone_sub_id")
-            ?: throw SerializationException("Clone block must have a 'clone_sub_id' field.")
+    private fun createCloneReference(resource: Resource, metadata: ResourceConfigDocument): ResourceRef<*> {
+        val subIdNode = metadata.requireMap()["cloneSubId"]
+            ?: throw ResourceConfigException("Clone block must have a 'cloneSubId' field.")
+        val newSubId = subIdNode.asConfigScalar().value as? String
+            ?: throw ResourceConfigException("Clone 'cloneSubId' must be a string.", subIdNode.span)
         return resource.ref.cloneSubId(newSubId)
     }
 
@@ -533,11 +554,11 @@ public class ResourceManager {
     private fun loadAndRegisterClone(
         newRef: ResourceRef<*>,
         resourceBytes: ByteArray,
-        newMetadataBytes: ByteArray,
+        newMetadata: ResourceConfigDocument,
         loader: ResourceFileLoader<*>
     ) {
         when (val result =
-            tryLoadResource(newRef, resourceBytes, newMetadataBytes, loader as ResourceFileLoader<Resource>)) {
+            tryLoadResource(newRef, resourceBytes, newMetadata, loader as ResourceFileLoader<Resource>)) {
             is ResourceLoadResult.Success -> register(result.resource, overwrite = true)
             is ResourceLoadResult.Failure -> Plugin.error("Failed to clone resource $newRef. (loading failure)")
             is ResourceLoadResult.WrongType -> Plugin.error("Failed to clone resource $newRef. (wrong type)")
@@ -573,16 +594,17 @@ public class ResourceManager {
     }
 
     /**
-     * Retrieves the default metadata table for a folder.
+     * Retrieves the default metadata document for a folder.
      *
      * @param ref The reference of the folder.
-     * @return The default metadata table, or null if not found.
+     * @return The default metadata document, or null if not found.
      */
-    private fun getFolderDefaultTable(ref: ResourceRef<*>): TomlTable? {
+    private fun getFolderDefaultDocument(ref: ResourceRef<*>): ResourceConfigDocument? {
         val parent = ref.parent ?: return null
 
         val resource = parent.child<FolderApplyResource>("apply.meta.folder")
-        return resource.getResource()?.metadata?.applyTable
+        val apply = resource.getResource()?.metadata?.apply ?: return null
+        return ResourceConfigDocument(apply.id, apply.value, "${resource}.apply")
     }
 
 
@@ -612,3 +634,5 @@ public class ResourceLoadOptions(
     public var metadata: CuTMeta? = null,
     public var log: Boolean = true
 )
+
+internal fun File.isResourceMetadataSidecar(): Boolean = name.endsWith(".meta")

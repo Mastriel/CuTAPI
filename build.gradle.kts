@@ -44,6 +44,8 @@ val minecraftVersion: String by properties
 
 dependencies {
     testImplementation(kotlin("test"))
+    testImplementation(kotlin("reflect"))
+    testImplementation("org.snakeyaml:snakeyaml-engine:3.0.1")
 
     // god hates me so we're shadowing everything
     shadow("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
@@ -51,7 +53,7 @@ dependencies {
     shadow("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
     shadow("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
     shadow("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
-    shadow("net.peanuuutz.tomlkt:tomlkt:0.3.7")
+    shadow("org.snakeyaml:snakeyaml-engine:3.0.1")
 
     shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.16.0")
     shadow("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.16.0")

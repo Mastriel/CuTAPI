@@ -1,7 +1,5 @@
 package xyz.mastriel.cutapi.resources.process
 
-import kotlinx.serialization.*
-import net.peanuuutz.tomlkt.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
@@ -14,22 +12,19 @@ public class GenerateResource(
     override val metadata: Metadata
 ) : MetadataResource<GenerateResource.Metadata>(ref, metadata) {
 
-    @Serializable
+    @ResourceMetadata(id = "cutapi:generate")
     public data class Metadata(
-        @SerialName("gen_id")
         val generatorId: Identifier,
-        @SerialName("base_id")
-        val baseId: ResourceRef<@Contextual Resource>,
-        val options: TomlTable
+        val baseId: ResourceRef<Resource>,
+        val options: ResourceConfigMap
     ) : CuTMeta()
 
     public companion object {
         public val Loader: ResourceFileLoader<GenerateResource> = metadataResourceLoader(
-            extensions = listOf("gen.toml"),
-            resourceTypeId = id(Plugin, "generate"),
-            serializer = Metadata.serializer(),
+            extensions = listOf("gen"),
+            metadataClass = Metadata::class,
         ) {
-            success(GenerateResource(ref, CuTAPI.toml.decodeFromString(dataAsString)))
+            success(GenerateResource(ref, metadata!!))
         }
     }
 }
@@ -43,13 +38,13 @@ internal fun generateResources(resources: List<Resource>, stage: ResourceGenerat
                 ?: error("'${resource.metadata.generatorId}' is not a valid Resource Generator for ${resource::class.simpleName}.")
             if (generator.stage != stage) continue
 
-            val ref = resource.ref.toString().removeSuffix("gen.toml") + resource.ref.extension
+            val ref = resource.ref.toString().removeSuffix("gen") + resource.ref.extension
 
-            val generateBlock = object : GenerateBlock() {
-                override val generatorId: Identifier = resource.metadata.generatorId
-                override val subId: String? = null
-                override val options: TomlTable = resource.metadata.options
-            }
+            val generateBlock = GenerateBlock(
+                resource.metadata.generatorId,
+                subId = null,
+                resource.metadata.options
+            )
 
             val newResources = mutableListOf<Resource>()
             fun register(resource: Resource) {

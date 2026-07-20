@@ -89,7 +89,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
         }
 
         isOpen = false
-        Plugin.info("[REGISTRY] '$name' initialized with ${values.size} items.")
+        if (isPluginInitialized()) Plugin.info("[REGISTRY] '$name' initialized with ${values.size} items.")
         eventHandlers.clear() // we don't need to keep the handlers around anymore
     }
 
@@ -141,7 +141,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
                 return item
             }
         }
-        Plugin.info("[REGISTRY] ${item.id} added to '$name'.")
+        if (isPluginInitialized()) Plugin.info("[REGISTRY] ${item.id} added to '$name'.")
         return item
     }
 

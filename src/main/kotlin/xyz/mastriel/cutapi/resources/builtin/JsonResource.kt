@@ -3,8 +3,8 @@ package xyz.mastriel.cutapi.resources.builtin
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import xyz.mastriel.cutapi.*
-import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.data.*
 
 /**
  * Represents a resource loaded from a JSON file.
@@ -16,6 +16,8 @@ public open class JsonResource(
     override val ref: ResourceRef<JsonResource>,
     public val data: JsonObject
 ) : Resource(ref), ByteArraySerializable {
+    @ResourceMetadata(id = "cutapi:json")
+    public class Metadata : CuTMeta()
 
     override fun toBytes(): ByteArray {
         val str = CuTAPI.json.encodeToString(data)
@@ -28,10 +30,8 @@ public open class JsonResource(
 /**
  * Loader for JsonResource, parses JSON files into JsonResource objects.
  */
-public val JsonResourceLoader: ResourceFileLoader<JsonResource> = resourceLoader<JsonResource, Nothing>(
+public val JsonResourceLoader: ResourceFileLoader<JsonResource> = resourceLoader<JsonResource, JsonResource.Metadata>(
     extensions = listOf("json"),
-    resourceTypeId = id(Plugin, "json"),
-    metadataSerializer = null
 ) {
     val string = this.data.toString(Charsets.UTF_8)
     try {

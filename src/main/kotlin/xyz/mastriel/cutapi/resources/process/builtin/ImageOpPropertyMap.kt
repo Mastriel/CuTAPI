@@ -1,8 +1,8 @@
 package xyz.mastriel.cutapi.resources.process.builtin
 
 import com.jhlabs.image.*
-import net.peanuuutz.tomlkt.*
 import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.data.*
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*
 
@@ -39,45 +39,47 @@ public class ImageOpPropertyMap<B : AbstractBufferedImageOp> internal constructo
      * @param properties the map of properties from a texture's post process properties for B.
      */
     @OptIn(ExperimentalReflectionOnLambdas::class)
-    internal fun setValues(reciever: B, properties: Map<String, TomlElement>) {
+    internal fun setValues(reciever: B, properties: Map<String, ResourceConfigValue>) {
         for ((name, element) in properties) {
             val setterType = getSetter<Any>(name)!!.parameters[1]
                 .type.classifier ?: continue
-            if (element is TomlLiteral) {
+            if (element is ResourceConfigScalar) {
+                val number = element.value as? Number
                 when {
-                    setterType == Int::class && element.toIntOrNull() != null -> // int
-                        getSetter<Int>(name)?.invoke(reciever, element.toInt())
+                    setterType == Int::class && number != null ->
+                        getSetter<Int>(name)?.invoke(reciever, number.toInt())
 
-                    setterType == Float::class && element.toFloatOrNull() != null -> // float
-                        getSetter<Float>(name)?.invoke(reciever, element.toFloat())
+                    setterType == Float::class && number != null ->
+                        getSetter<Float>(name)?.invoke(reciever, number.toFloat())
 
-                    setterType == Double::class && element.toDoubleOrNull() != null -> // double
-                        getSetter<Double>(name)?.invoke(reciever, element.toDouble())
+                    setterType == Double::class && number != null ->
+                        getSetter<Double>(name)?.invoke(reciever, number.toDouble())
 
-                    setterType == Long::class && element.toLongOrNull() != null -> // long
-                        getSetter<Long>(name)?.invoke(reciever, element.toLong())
+                    setterType == Long::class && number != null ->
+                        getSetter<Long>(name)?.invoke(reciever, number.toLong())
 
-                    setterType == Boolean::class && element.toBooleanOrNull() != null -> // boolean
-                        getSetter<Boolean>(name)?.invoke(reciever, element.toBoolean())
+                    setterType == Boolean::class && element.value is Boolean ->
+                        getSetter<Boolean>(name)?.invoke(reciever, element.value)
                 }
-            } else if (element is TomlArray) {
+            } else if (element is ResourceConfigList) {
+                val numbers = element.map { it.asConfigScalar().value as Number }
                 when (setterType) {
-                    IntArray::class -> // int
+                    IntArray::class ->
                         getSetter<IntArray>(name)?.invoke(
                             reciever,
-                            element.map { it.asTomlLiteral().toInt() }.toIntArray()
+                            numbers.map(Number::toInt).toIntArray()
                         )
 
-                    FloatArray::class -> // float
+                    FloatArray::class ->
                         getSetter<FloatArray>(name)?.invoke(
                             reciever,
-                            element.map { it.asTomlLiteral().toFloat() }.toFloatArray()
+                            numbers.map(Number::toFloat).toFloatArray()
                         )
 
-                    DoubleArray::class -> // double
+                    DoubleArray::class ->
                         getSetter<DoubleArray>(name)?.invoke(
                             reciever,
-                            element.map { it.asTomlLiteral().toDouble() }.toDoubleArray()
+                            numbers.map(Number::toDouble).toDoubleArray()
                         )
                 }
             }

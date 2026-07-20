@@ -1,84 +1,71 @@
 package xyz.mastriel.cutapi.resources.builtin
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerializationException
 import xyz.mastriel.cutapi.*
-import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.data.*
+import kotlin.reflect.*
 
-
-/**
- * A resource which is only metadata. Extend CuTMeta and use it as the type argument
- * to make what are effectively TOML resources.
- */
+/** A resource whose data file is itself a typed YAML metadata document. */
 public open class MetadataResource<M : CuTMeta>(
     override val ref: ResourceRef<MetadataResource<M>>,
     override val metadata: M?
 ) : Resource(ref, metadata) {
+    @ResourceMetadata(id = "cutapi:metadata")
+    public class GenericMetadata : CuTMeta()
 
     public companion object {
-        public val Loader: ResourceFileLoader<MetadataResource<CuTMeta>> = metadataResourceLoader(
-            extensions = listOf("toml"),
-            resourceTypeId = Identifier("cutapi", "metadata"),
-            serializer = CuTMeta.serializer()
+        public val Loader: ResourceFileLoader<MetadataResource<GenericMetadata>> = metadataResourceLoader(
+            extensions = listOf("metadata"),
+            metadataClass = GenericMetadata::class
         ) {
-            ResourceLoadResult.Success(MetadataResource(ref, metadata))
+            success(MetadataResource(ref, metadata))
         }
     }
 }
 
-
 public fun <T : MetadataResource<M>, M : CuTMeta> metadataResourceLoader(
     extensions: Collection<String>,
-    resourceTypeId: Identifier,
-    serializer: KSerializer<M>,
-    dependencies: List<ResourceFileLoader<*>> = listOf(),
+    metadataClass: KClass<M>,
+    dependencies: List<ResourceFileLoader<*>> = emptyList(),
     func: ResourceFileLoaderContext<T, M>.() -> ResourceLoadResult<T>
 ): ResourceFileLoader<T> {
-    // in this case, a metadata resource should *probably* have no metadata,
-    // so we ignore it.
-    return object : ResourceFileLoader<T> {
+    val resourceTypeId = ResourceMetadataMapper.metadataId(metadataClass)
 
+    return object : ResourceFileLoader<T> {
         override val dependencies: List<ResourceFileLoader<*>> = dependencies
-        override val id: Identifier = resourceTypeId
+        override val extensions: Set<String> = extensions.toSet()
+        override val metadataClass: KClass<M> = metadataClass
+        override val id = resourceTypeId
+        override val usesDataAsMetadata: Boolean = true
 
         override fun loadResource(
             ref: ResourceRef<T>,
             data: ByteArray,
-            metadata: ByteArray?,
+            metadata: ResourceConfigDocument?,
             options: ResourceLoadOptions
         ): ResourceLoadResult<T> {
-            if (ref.extension in extensions) {
-                try {
-                    val metadataText = data.toString(Charsets.UTF_8)
+            if (!acceptsExtension(ref.extension)) return ResourceLoadResult.WrongType()
 
-                    if (!checkIsResourceTypeOrUnknown(ref, metadataText, resourceTypeId)) {
-                        return ResourceLoadResult.WrongType()
-                    }
-
-                    val parsedMetadata = CuTAPI.toml.decodeFromString(serializer, metadataText)
-                    return func(ResourceFileLoaderContext(ref, data, parsedMetadata, data))
-
-                } catch (e: IllegalArgumentException) {
-                    Plugin.error("Metadata of $ref is not valid. Skipping! " + e.message)
-                    checkResourceLoading(ref.plugin)
-                    return ResourceLoadResult.WrongType()
-
-                } catch (e: SerializationException) {
-                    Plugin.error("Failed deserializing $ref. Skipping! " + e.message)
-                    checkResourceLoading(ref.plugin)
-                    return ResourceLoadResult.WrongType()
-
-                } catch (e: Exception) {
-                    Plugin.error("Error loading $ref. Skipping!")
-                    e.printStackTrace()
-                    checkResourceLoading(ref.plugin)
-                    return ResourceLoadResult.WrongType()
-                }
+            return try {
+                val document = ResourceYaml.parse(data.toString(Charsets.UTF_8), ref.toString())
+                if (document.requireTag() != resourceTypeId) return ResourceLoadResult.WrongType()
+                val parsed = ResourceMetadataMapper.decodeMetadata(
+                    metadataClass,
+                    document.requireMap(),
+                    mappingContext(ref)
+                )
+                func(ResourceFileLoaderContext(ref, data, parsed, document, options))
+            } catch (exception: Exception) {
+                Plugin.error("Failed loading metadata resource $ref: ${exception.message}")
+                checkResourceLoading(ref.plugin)
+                ResourceLoadResult.Failure(exception)
             }
-
-            return ResourceLoadResult.WrongType()
         }
     }
 }
+
+public inline fun <T : MetadataResource<M>, reified M : CuTMeta> metadataResourceLoader(
+    extensions: Collection<String>,
+    dependencies: List<ResourceFileLoader<*>> = emptyList(),
+    noinline func: ResourceFileLoaderContext<T, M>.() -> ResourceLoadResult<T>
+): ResourceFileLoader<T> = metadataResourceLoader(extensions, M::class, dependencies, func)

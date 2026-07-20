@@ -1,9 +1,6 @@
 package xyz.mastriel.cutapi.resources.builtin
 
-import kotlinx.serialization.*
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-import net.peanuuutz.tomlkt.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
@@ -14,7 +11,6 @@ import xyz.mastriel.cutapi.utils.*
 import java.awt.image.*
 import java.io.*
 import javax.imageio.*
-import kotlin.collections.set
 
 
 public open class Texture2D(
@@ -33,37 +29,25 @@ public open class Texture2D(
 
     public fun toMinecraftLocator(): String = ref.toMinecraftLocator()
 
-    @Serializable
+    @ResourceMetadata(id = "cutapi:texture2d")
     public open class Metadata(
-        @SerialName("extend_post_process")
-        private val postProcessExtensions: List<ResourceRef<@Contextual PostProcessDefinitionsResource>> = listOf(),
-        @SerialName("post_process")
-        private val _postProcessors: List<TexturePostprocessTable> = listOf(),
-        @SerialName("materials")
+        public val extendPostProcess: List<ResourceRef<PostProcessDefinitionsResource>> = emptyList(),
+        public val postProcess: List<TaggedResourceConfig> = emptyList(),
         public val materials: List<String> = listOf(),
-        @SerialName("animation")
         public val animation: Animation? = null,
-        @SerialName("item_model_data")
         public val itemModelData: ItemModelData? =
             ItemModelData(
                 parent = "minecraft:item/handheld",
             ),
-        @SerialName("model_file")
-        public val modelFile: ResourceRef<@Contextual JsonResource>? = null,
-        @SerialName("font")
+        public val modelFile: ResourceRef<JsonResource>? = null,
         public val fontSettings: FontSettings = FontSettings(),
         // If this is true, the resource will not be saved to the resource pack
-        @SerialName("transient")
         public val transient: Boolean = false
     ) : CuTMeta() {
-
-        override val resourceType: Identifier
-            get() = id(Plugin, "texture2d")
-
         public fun copy(): Metadata {
             return Metadata(
-                postProcessExtensions = postProcessExtensions,
-                _postProcessors = _postProcessors,
+                extendPostProcess = extendPostProcess,
+                postProcess = postProcess,
                 materials = materials,
                 animation = animation,
                 itemModelData = itemModelData,
@@ -79,14 +63,14 @@ public open class Texture2D(
         public val postProcessors: List<TexturePostprocessTable>
             get() {
                 val list = mutableListOf<TexturePostprocessTable>()
-                for (extension in postProcessExtensions) {
+                for (extension in extendPostProcess) {
                     val processors = extension.getResource()?.metadata?.postProcessors
                     if (processors == null) {
                         Plugin.warn("Post process extension [$extension] has no processors, or does not exist.")
                     }
                     list.addAll(processors ?: emptyList())
                 }
-                list.addAll(_postProcessors)
+                list.addAll(postProcess.map(TexturePostprocessTable::fromConfig))
                 return list
             }
     }
@@ -111,7 +95,7 @@ public open class Texture2D(
     }
 
     override fun createItemModelData(): JsonObject {
-        val internalJson = CuTAPI.toml.encodeToTomlElement(metadata.itemModelData).asTomlTable().toJson()
+        val internalJson = CuTAPI.json.encodeToJsonElement(metadata.itemModelData).jsonObject
         var jsonObject: JsonObject = internalJson
         if (metadata.modelFile != null && metadata.modelFile.isAvailable()) {
             val (fileJson) = metadata.modelFile.getResource()!!
@@ -184,28 +168,27 @@ public fun ResourceRef<Texture2D>.getGlyphOrNull(): String? {
 
 public val Texture2DResourceLoader: ResourceFileLoader<Texture2D> = resourceLoader(
     extensions = listOf("png"),
-    resourceTypeId = id(Plugin, "texture2d"),
     dependencies = listOf(PostProcessDefinitionsResource.Loader),
-    metadataSerializer = Texture2D.Metadata.serializer()
+    metadataClass = Texture2D.Metadata::class
 ) {
     val bis = ByteArrayInputStream(data)
     val image = ImageIO.read(bis)
     success(Texture2D(ref, image, metadata ?: Texture2D.Metadata()))
 }
 
-@Serializable
-public open class TexturePostprocessTable {
-    @SerialName("post_process_id")
-    public open val postProcessId: Identifier = unknownID()
-
-    @SerialName("options")
-    public open val options: TomlTable = TomlTable()
+public data class TexturePostprocessTable(
+    public val postProcessId: Identifier,
+    public val options: ResourceConfigMap
+) {
+    public companion object {
+        public fun fromConfig(config: TaggedResourceConfig): TexturePostprocessTable =
+            TexturePostprocessTable(config.id, config.value.asConfigMap())
+    }
 
     public val processor: TexturePostProcessor get() = TexturePostProcessor.get(postProcessId)
 }
 
 
-@Serializable
 public open class FontSettings(
     public val enabled: Boolean = true,
     public val ascent: Int? = null,

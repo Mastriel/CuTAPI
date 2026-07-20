@@ -1,9 +1,9 @@
 package xyz.mastriel.cutapi.resources
 
-import kotlinx.serialization.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.data.*
+import kotlin.reflect.*
 
 
 /**
@@ -91,12 +91,12 @@ public data class ResourceGeneratorContext<out T : Resource>(
      * Deserializes the options for this generator into a new object.
      *
      * @param S The type to deserialize into.
-     * @param serializer The serializer for the type [S].
      * @return The deserialized options object.
      */
-    public fun <S> castOptions(serializer: KSerializer<S>): S {
-        return CuTAPI.toml.decodeFromTomlElement(serializer, generateBlock.options)
-    }
+    public fun <S : Any> castOptions(type: KClass<S>): S =
+        ResourceMetadataMapper.decode(type, generateBlock.options, mappingContext(ref))
+
+    public inline fun <reified S : Any> castOptions(): S = castOptions(S::class)
 }
 
 /**
