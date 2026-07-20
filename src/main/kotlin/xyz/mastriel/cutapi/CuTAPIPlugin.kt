@@ -87,6 +87,8 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
         CustomItem.DeferredRegistry.commitToRegistry()
 
+
+
         CuTAPI.serverReady {
             ResourceValueCodec.initialize()
             ResourceFileLoader.initialize()

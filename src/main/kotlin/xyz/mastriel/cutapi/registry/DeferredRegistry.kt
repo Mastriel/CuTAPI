@@ -20,17 +20,17 @@ public class SingleProducer<T>(private val producer: () -> T) {
     }
 }
 
-public class DeferredDelegate<T : Identifiable> internal constructor(
+public class DeferredDelegate<T : Identifiable, V : T> internal constructor(
     private val idRegistry: IdentifierRegistry<T>,
     private val deferredRegistry: DeferredRegistry<T>,
-    private val producer: SingleProducer<T>
-) : Deferred<T> {
+    private val producer: SingleProducer<V>
+) : Deferred<V> {
     internal var id: Identifier? = null
-    public override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+    public override operator fun getValue(thisRef: Any?, property: KProperty<*>): V {
         return get();
     }
 
-    public override fun get(): T {
+    public override fun get(): V {
         return producer.produce()
     }
 }
@@ -42,7 +42,7 @@ public interface DeferredRegistry<T : Identifiable> {
     /**
      * Registers a deferred item. Note that this must return an Identifiable with a consistent Identifier.
      */
-    public fun register(producer: () -> T): Deferred<T>
+    public fun <V : T> register(producer: () -> V): Deferred<V>
     public fun getByProducer(producer: () -> T): Identifier
     public fun associateId(producer: () -> T, id: Identifier)
     public fun commitToRegistry()
@@ -52,12 +52,12 @@ public open class BasicDeferredRegistry<T : Identifiable> internal constructor(
     private val registry: IdentifierRegistry<T>,
     private val priority: RegistryPriority
 ) : DeferredRegistry<T> {
-    protected data class DeferredItem<T : Identifiable>(
-        val producer: SingleProducer<T>,
-        val delegate: DeferredDelegate<T>
+    protected data class DeferredItem<T : Identifiable, V : T>(
+        val producer: SingleProducer<V>,
+        val delegate: DeferredDelegate<T, V>
     )
 
-    private val items: MutableList<DeferredItem<T>> = mutableListOf()
+    private val items: MutableList<DeferredItem<T, *>> = mutableListOf()
     private val producersToIds = mutableMapOf<SingleProducer<T>, Identifier>()
     final override var isOpen: Boolean = true
         protected set
@@ -65,7 +65,7 @@ public open class BasicDeferredRegistry<T : Identifiable> internal constructor(
     /**
      * Registers a deferred item. Note that this must return an Identifiable with a consistent Identifier.
      */
-    override fun register(producer: () -> T): Deferred<T> {
+    override fun <V : T> register(producer: () -> V): Deferred<V> {
         if (!isOpen) error("Deferred registry is already closed")
         val single = SingleProducer(producer)
         return DeferredDelegate(registry, this, single).also {
