@@ -62,10 +62,9 @@ public interface IntrinsicPlayerAttachmentProvider<T : Attachment> {
  * The attachment schema is resolved lazily after companion initialization.
  */
 public inline fun <reified T : Attachment> provideIntrinsicPlayerAttachment(
-    noinline create: (Player) -> T
+    noinline factory: (Player) -> T
 ): IntrinsicPlayerAttachmentProvider<T> {
     val attachmentType = T::class
-    val factory = create
     val provider = object : IntrinsicPlayerAttachmentProvider<T> {
         override val schema: Schema<T>
             get() = schemaForAttachment(attachmentType)
