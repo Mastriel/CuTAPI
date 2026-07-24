@@ -1,8 +1,9 @@
 package xyz.mastriel.cutapi.resources.data
 
+import xyz.mastriel.cutapi.testing.*
 import kotlin.test.*
 
-class BundledResourceYamlTest {
+class BundledResourceYamlTest : MockBukkitTest() {
     @Test
     fun `bundled metadata files are tagged YAML`() {
         val resources = mapOf(

@@ -61,6 +61,12 @@ internal class CuTItemStackAttachmentHolder(private val item: CuTItemStack) : At
     }
 }
 
+/**
+ * Persists [attachment] as this stack's replacement for its schema.
+ *
+ * Use this operation instead of mutating an attachment returned by a lookup. Attachments are not
+ * reactive, and mutations to a returned instance are not persisted.
+ */
 public fun CuTItemStack.setAttachment(attachment: Attachment) {
     val schema = attachment.schema()
     val overlay = readOverlay(this)

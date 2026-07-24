@@ -11,7 +11,7 @@ public class ObjectTagConverter<T : Any>(
     public val serializer: KSerializer<T>
 ) : TagConverter<ByteArray, T>(ByteArray::class, kClass) {
 
-    public val cbor: Cbor = CuTAPI.cbor
+    public val cbor: Cbor = CuTApiCbor
 
     override fun fromPrimitive(primitive: ByteArray): T {
         return cbor.decodeFromByteArray(serializer, primitive)

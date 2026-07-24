@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
+import org.gradle.api.plugins.*
 
 plugins {
     kotlin("jvm") version "2.3.0"
@@ -45,6 +46,10 @@ val minecraftVersion: String by properties
 dependencies {
     testImplementation(kotlin("test"))
     testImplementation(kotlin("reflect"))
+    testImplementation("io.papermc.paper:paper-api:${minecraftVersion}-R0.1-SNAPSHOT")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.4.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
+    testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.110.0")
     testImplementation("org.snakeyaml:snakeyaml-engine:3.0.1")
 
     // god hates me so we're shadowing everything
@@ -81,8 +86,13 @@ tasks {
     }
 }
 
-// use mojang mappings
-paperweight.reobfArtifactConfiguration = io.papermc.paperweight.userdev.ReobfArtifactConfiguration.MOJANG_PRODUCTION
+paperweight {
+    // MockBukkit supplies the server implementation used by tests.
+    addServerDependencyTo = configurations.named(JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME).map { setOf(it) }
+
+    // use mojang mappings
+    reobfArtifactConfiguration = io.papermc.paperweight.userdev.ReobfArtifactConfiguration.MOJANG_PRODUCTION
+}
 
 tasks.withType<ShadowJar> {
     configurations = listOf(project.configurations.shadow.get())

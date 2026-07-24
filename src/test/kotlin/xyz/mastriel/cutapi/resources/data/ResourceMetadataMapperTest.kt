@@ -1,10 +1,11 @@
 package xyz.mastriel.cutapi.resources.data
 
 import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.testing.*
 import kotlin.reflect.*
 import kotlin.test.*
 
-class ResourceMetadataMapperTest {
+class ResourceMetadataMapperTest : MockBukkitTest() {
     @ResourceMetadata(id = "test:widget_metadata")
     data class WidgetMetadata(
         val displayName: String,

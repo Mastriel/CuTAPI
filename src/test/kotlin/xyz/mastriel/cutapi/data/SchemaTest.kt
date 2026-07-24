@@ -3,10 +3,11 @@ package xyz.mastriel.cutapi.data
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.testing.*
 import java.io.*
 import kotlin.test.*
 
-class SchemaTest {
+class SchemaTest : MockBukkitTest() {
     @Test
     fun `schema serializes and deserializes a data class`() {
         val original = MyData("Ada", 37)

@@ -24,14 +24,18 @@ public class IdentifiableTagConverter<T : Identifiable>(
     }
 
     public companion object {
-        public val CustomItem: IdentifiableTagConverter<CustomItemRegistry> =
+        public val CustomItem: IdentifiableTagConverter<CustomItemRegistry> by lazy {
             IdentifiableTagConverter(CustomItemRegistry)
-        public val CustomBlock: IdentifiableTagConverter<CustomBlockRegistry> =
+        }
+        public val CustomBlock: IdentifiableTagConverter<CustomBlockRegistry> by lazy {
             IdentifiableTagConverter(CustomBlockRegistry)
-        public val CustomTile: IdentifiableTagConverter<CustomTileRegistry> =
+        }
+        public val CustomTile: IdentifiableTagConverter<CustomTileRegistry> by lazy {
             IdentifiableTagConverter(CustomTileRegistry)
-        public val CustomTileEntity: IdentifiableTagConverter<CustomTileEntityRegistry> =
+        }
+        public val CustomTileEntity: IdentifiableTagConverter<CustomTileEntityRegistry> by lazy {
             IdentifiableTagConverter(CustomTileEntityRegistry)
+        }
     }
 }
 

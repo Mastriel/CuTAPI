@@ -14,6 +14,16 @@ import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.minecraft.*
 import xyz.mastriel.cutapi.utils.*
 
+@OptIn(ExperimentalSerializationApi::class)
+internal val CuTApiCbor: Cbor = Cbor {
+    ignoreUnknownKeys = true
+}
+
+internal val CuTApiJson: Json = Json {
+    ignoreUnknownKeys = true
+    prettyPrint = true
+    encodeDefaults = true
+}
 
 /**
  * The general manager for all the API. Plugins should be registered here, so they can be properly managed.
@@ -183,13 +193,7 @@ public object CuTAPI {
 
 
     @OptIn(ExperimentalSerializationApi::class)
-    internal val cbor = Cbor {
-        this.ignoreUnknownKeys = true
-    }
+    internal val cbor: Cbor get() = CuTApiCbor
 
-    internal val json = Json {
-        ignoreUnknownKeys = true
-        prettyPrint = true
-        encodeDefaults = true
-    }
+    internal val json: Json get() = CuTApiJson
 }

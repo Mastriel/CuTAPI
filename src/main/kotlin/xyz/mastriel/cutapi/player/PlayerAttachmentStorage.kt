@@ -40,7 +40,8 @@ public fun Player.getAllAttachments(): List<Attachment> {
  * Stores an attachment as the player's value for its schema.
  *
  * For an intrinsic schema, this value overrides the provider-created value until [removeAttachment]
- * clears the override.
+ * clears the override. Use this operation instead of mutating an attachment returned by a lookup;
+ * attachments are not reactive, and mutations to a returned instance are not persisted.
  */
 public fun Player.setAttachment(attachment: Attachment) {
     val schema = attachment.schema()

@@ -4,7 +4,17 @@ import xyz.mastriel.cutapi.data.*
 import kotlin.reflect.*
 import kotlin.reflect.full.*
 
-/** Passive data that can be attached to a domain object and read by systems. */
+/**
+ * Passive data that can be attached to a domain object and read by systems.
+ *
+ * Attachments are not reactive. Mutating an attachment does not notify systems, refresh its
+ * holder, or reliably persist the change. Some holders also return newly deserialized attachment
+ * instances, so a mutation may affect only that particular object.
+ *
+ * Attachment implementations are therefore strongly recommended to be immutable. Prefer
+ * constructor properties declared with `val`, and replace an attachment through the holder's
+ * `setAttachment`, `addAttachment`, or `removeAttachment` APIs when its configuration changes.
+ */
 public interface Attachment
 
 @Target(AnnotationTarget.CLASS)
@@ -38,6 +48,12 @@ public fun <T : Attachment> schemaForAttachment(type: KClass<T>): Schema<T> {
 public inline fun <reified T : Attachment> schemaForAttachment(): Schema<T> =
     schemaForAttachment(T::class)
 
+/**
+ * Provides attachment snapshots associated with a domain object.
+ *
+ * Returned attachments should be treated as read-only values. Mutating one is not an update
+ * operation and is not guaranteed to affect subsequent lookups.
+ */
 public interface AttachmentHolder {
     public fun hasAttachment(schema: Schema<out Attachment>): Boolean
 

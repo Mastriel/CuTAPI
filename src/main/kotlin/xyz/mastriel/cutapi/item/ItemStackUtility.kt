@@ -11,9 +11,9 @@ import kotlin.reflect.*
 
 
 public object ItemStackUtility {
-    public val TypeId: Identifier = id(Plugin, "type")
+    public val TypeId: Identifier = id("cutapi:type")
     public val TypeKey: NamespacedKey = TypeId.toNamespacedKey()
-    public val ItemStackTypeTag: NamespacedKey = NamespacedKey(Plugin, "itemstack_type")
+    public val ItemStackTypeTag: NamespacedKey = id("cutapi:itemstack_type").toNamespacedKey()
     public val DefaultItemStackTypeId: Identifier = id("cutapi:builtin")
 
     /**
@@ -115,7 +115,7 @@ public object ItemStackUtility {
         if (!isCustom) return false
 
         return itemMeta.persistentDataContainer.get(
-            NamespacedKey(Plugin, "is_display"),
+            id("cutapi:is_display").toNamespacedKey(),
             PersistentDataType.BYTE
         ) == 1.toByte()
     }

@@ -19,10 +19,13 @@ public data class Identifier internal constructor(val namespace: String, val key
      * because a plugin cannot be found to handle its logic.
      */
     val plugin: CuTPlugin?
-        get() = try {
-            CuTAPI.getPluginFromNamespace(namespace)
-        } catch (ex: IllegalStateException) {
-            null
+        get() {
+            if (!isPluginInitialized()) return null
+            return try {
+                CuTAPI.getPluginFromNamespace(namespace)
+            } catch (ex: IllegalStateException) {
+                null
+            }
         }
 
     override fun toString(): String {
@@ -96,7 +99,7 @@ public fun idOrNull(stringRepresentation: String): Identifier? {
     return Identifier(list[0], list[1])
 }
 
-public fun unknownID(): Identifier = id(Plugin, "unknown")
+public fun unknownID(): Identifier = id("cutapi:unknown")
 
 public object IdentifierSerializer : KSerializer<Identifier> {
 

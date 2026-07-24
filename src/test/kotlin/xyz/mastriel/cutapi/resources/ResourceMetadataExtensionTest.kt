@@ -1,9 +1,10 @@
 package xyz.mastriel.cutapi.resources
 
+import xyz.mastriel.cutapi.testing.*
 import java.io.*
 import kotlin.test.*
 
-class ResourceMetadataExtensionTest {
+class ResourceMetadataExtensionTest : MockBukkitTest() {
     @Test
     fun `only dot meta is an attached metadata sidecar`() {
         assertTrue(File("widget.png.meta").isResourceMetadataSidecar())

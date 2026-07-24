@@ -84,20 +84,21 @@ public open class CustomItem<TStack : CuTItemStack>(
     public companion object : IdentifierRegistry<CustomItem<*>>(id("cutapi:registry/custom_item")) {
         internal val DeferredRegistry = defer(RegistryPriority(Int.MAX_VALUE))
 
-        public val Unknown: CustomItem<CuTItemStack> = customItem(
-            unknownID(),
-            Material.ANVIL
-        ) {
-
-            attach(StaticLore("&cYou probably shouldn't have this...".colored))
-            attach(DisplayAs(Material.GLISTERING_MELON_SLICE))
-            display {
-                texture = itemTexture(Plugin, "items/unknown_item.png")
+        public val Unknown: CustomItem<CuTItemStack> by lazy {
+            customItem(
+                unknownID(),
+                Material.ANVIL
+            ) {
+                attach(StaticLore("&cYou probably shouldn't have this...".colored))
+                attach(DisplayAs(Material.GLISTERING_MELON_SLICE))
+                display {
+                    texture = itemTexture(Plugin, "items/unknown_item.png")
+                }
             }
         }
 
         public val InventoryBackground: CustomItem<CuTItemStack> by DeferredRegistry.registerCustomItem(
-            id = id(Plugin, "inventory_background"),
+            id = id("cutapi:inventory_background"),
             Material.GLISTERING_MELON_SLICE
         ) {
             attach(HideTooltip)

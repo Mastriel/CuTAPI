@@ -1,8 +1,9 @@
 package xyz.mastriel.cutapi.registry
 
+import xyz.mastriel.cutapi.testing.*
 import kotlin.test.*
 
-public class IdentifierRegistryTest {
+public class IdentifierRegistryTest : MockBukkitTest() {
     @Test
     public fun `registry identity is its identifier`() {
         val registryId = id("test:registry/example")

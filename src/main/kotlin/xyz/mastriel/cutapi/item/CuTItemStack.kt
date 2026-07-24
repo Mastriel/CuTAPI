@@ -19,6 +19,7 @@ import xyz.mastriel.cutapi.item.PacketItemHandler.setPrerenderItemStack
 import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.pdc.tags.*
+import xyz.mastriel.cutapi.pdc.tags.converters.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.utils.*
 import xyz.mastriel.cutapi.utils.personalized.*
@@ -120,10 +121,15 @@ public open class CuTItemStack protected constructor(
      */
     protected open fun onCreate() {}
 
-    public var type: CustomItem<*> by customItemTag(ItemStackUtility.TypeId, CustomItem.Unknown)
-    public var nameHasChanged: Boolean by booleanTag(id(Plugin, "name_has_changed"), false)
+    public var type: CustomItem<*>
+        get() = get(ItemStackUtility.TypeId, IdentifiableTagConverter.CustomItem) ?: CustomItem.Unknown
+        set(value) {
+            set(ItemStackUtility.TypeId, value, IdentifiableTagConverter.CustomItem)
+        }
 
-    internal var lore by loreTag(id(Plugin, "lore"))
+    public var nameHasChanged: Boolean by booleanTag(id("cutapi:name_has_changed"), false)
+
+    internal var lore by loreTag(id("cutapi:lore"))
 
     private val attachmentHolder by lazy { CuTItemStackAttachmentHolder(this) }
 
