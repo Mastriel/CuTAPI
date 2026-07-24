@@ -1,6 +1,8 @@
 package xyz.mastriel.cutapi.data
 
 import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.*
+import java.util.function.*
 
 /**
  * The storage-independent value tree used by CuTAPI serializers.
@@ -43,11 +45,28 @@ public sealed interface Variant {
     public value class Char(override val value: kotlin.Char) : Variant
 
     @JvmInline
-    public value class List(override val value: kotlin.collections.List<Variant>) : Variant
+    public value class Identifier(override val value: xyz.mastriel.cutapi.registry.Identifier) : Variant
 
     @JvmInline
-    public value class Map(override val value: kotlin.collections.Map<Variant, Variant>) : Variant {
-        public operator fun get(key: Variant): Variant? = value[key]
+    public value class ResourceRef(override val value: xyz.mastriel.cutapi.resources.ResourceRef<*>) : Variant
+
+    private typealias VariantBackingMap = kotlin.collections.Map<Variant, Variant>;
+    private typealias VariantBackingList = kotlin.collections.List<Variant>;
+
+    @JvmInline
+    public value class List(override val value: VariantBackingList) : Variant,
+        VariantBackingList by value {
+
+        @Deprecated("required by delegation")
+        override fun <T> toArray(generator: IntFunction<Array<out T?>?>): Array<out T?>? {
+            @Suppress("DEPRECATION")
+            return super.toArray(generator)
+        }
+    }
+
+    @JvmInline
+    public value class Map(override val value: kotlin.collections.Map<Variant, Variant>) : Variant,
+        kotlin.collections.Map<Variant, Variant> by value {
 
         public operator fun get(key: kotlin.String): Variant? = value[String(key)]
     }
@@ -74,6 +93,8 @@ public sealed interface Variant {
             is kotlin.Float -> Float(value)
             is kotlin.Double -> Double(value)
             is kotlin.Char -> Char(value)
+            is xyz.mastriel.cutapi.registry.Identifier -> Identifier(value)
+            is xyz.mastriel.cutapi.resources.ResourceRef<*> -> ResourceRef(value)
             is kotlin.collections.List<*> -> List(value.map { uncheckedFrom(it) })
             is kotlin.collections.Map<*, *> -> Map(value.map { uncheckedFrom(it.key) to uncheckedFrom(it.value) }
                 .toMap())
@@ -89,7 +110,7 @@ public interface VariantFormat<T> : Identifiable {
 
     public fun decode(value: T): Variant
 
-    public companion object : IdentifierRegistry<VariantFormat<*>>("Variant Formats")
+    public companion object : IdentifierRegistry<VariantFormat<*>>(id("cutapi:registry/variant_format"))
 }
 
 
@@ -129,10 +150,26 @@ public fun Char.toVariant(): Variant.Char {
     return Variant.Char(this);
 }
 
+public fun Identifier.toVariant(): Variant.Identifier {
+    return Variant.Identifier(this);
+}
+
+public fun ResourceRef<*>.toVariant(): Variant.ResourceRef {
+    return Variant.ResourceRef(this);
+}
+
+/**
+ * Throws if the collection does not entirely conform to Variants.
+ */
+@Throws(IllegalArgumentException::class)
 public inline fun <reified T : Variant> Collection<*>.toVariant(): Variant.List {
     return Variant.uncheckedFrom(this) as Variant.List;
 }
 
+/**
+ * Throws if the map does not entirely conform to Variants.
+ */
+@Throws(IllegalArgumentException::class)
 public inline fun <reified K : Variant, reified V : Variant> Map<*, *>.toVariant(): Variant.Map {
     return Variant.uncheckedFrom(this) as Variant.Map;
 }

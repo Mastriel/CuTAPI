@@ -25,7 +25,7 @@ public interface ResourceValueCodec : Identifiable {
 
     public fun encode(value: Any, type: KType): ResourceConfigValue
 
-    public companion object : IdentifierRegistry<ResourceValueCodec>("Resource Value Codecs") {
+    public companion object : IdentifierRegistry<ResourceValueCodec>(id("cutapi:registry/resource_value_codec")) {
         internal fun find(type: KType): ResourceValueCodec? =
             getAllValues().firstOrNull { it.supports(type) }
     }

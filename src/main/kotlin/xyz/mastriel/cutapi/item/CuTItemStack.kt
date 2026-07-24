@@ -7,7 +7,7 @@ import org.bukkit.entity.*
 import org.bukkit.inventory.*
 import org.bukkit.persistence.*
 import xyz.mastriel.cutapi.*
-import xyz.mastriel.cutapi.behavior.*
+import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.item.ItemStackUtility.TypeKey
 import xyz.mastriel.cutapi.item.ItemStackUtility.asCustomItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.customIdOrNull
@@ -16,7 +16,7 @@ import xyz.mastriel.cutapi.item.ItemStackUtility.cutItemStackType
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.item.PacketItemHandler.hasPrerenderStack
 import xyz.mastriel.cutapi.item.PacketItemHandler.setPrerenderItemStack
-import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
@@ -91,7 +91,7 @@ public open class CuTItemStack protected constructor(
      */
     public val handle: ItemStack
 ) : TagContainer by ItemTagContainer(handle),
-    BehaviorHolder<ItemBehavior> by handle.customItem,
+    AttachmentHolder,
     PersonalizedWithDefault<ItemStack> {
 
     /**
@@ -124,6 +124,22 @@ public open class CuTItemStack protected constructor(
     public var nameHasChanged: Boolean by booleanTag(id(Plugin, "name_has_changed"), false)
 
     internal var lore by loreTag(id(Plugin, "lore"))
+
+    private val attachmentHolder by lazy { CuTItemStackAttachmentHolder(this) }
+
+    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out Attachment>): Boolean =
+        attachmentHolder.hasAttachment(schema)
+
+    override fun <T : Attachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
+        attachmentHolder.getAttachment(schema)
+
+    override fun <T : Attachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
+        attachmentHolder.getAttachmentOrNull(schema)
+
+    override fun <T : Attachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
+        attachmentHolder.getAttachments(schema)
+
+    override fun getAllAttachments(): List<Attachment> = attachmentHolder.getAllAttachments()
 
 
     /**
@@ -170,8 +186,6 @@ public open class CuTItemStack protected constructor(
         return lore
     }
 
-
-    final override fun getAllBehaviors(): Set<ItemBehavior> = handle.customItem.getAllBehaviors()
 
     /**
      * Calls [getRenderedItemStack].
@@ -229,7 +243,7 @@ public open class CuTItemStack protected constructor(
 
         }
 
-        getAllBehaviors().forEach { it.onRender(viewer, itemStack.wrap()!!) }
+        ItemSystem.dispatchRender(ItemRenderContext(itemStack.wrap()!!, viewer))
 
         return itemStack
     }
@@ -307,14 +321,20 @@ public open class CuTItemStack protected constructor(
 
         public fun create(customItem: CustomItem<*>, quantity: Int = 1): CuTItemStack {
             return wrap(ItemStack(customItem.type, quantity).asCustomItem(customItem))
-                .also { it.getAllBehaviors().forEach { b -> b.onCreate(it) }; it.onCreate() }
+                .also {
+                    ItemSystem.dispatchCreate(ItemCreateContext(it))
+                    it.onCreate()
+                }
 
         }
 
         @JvmName("createWithType")
         public fun <T : CuTItemStack> create(customItem: CustomItem<T>, quantity: Int = 1): T {
             return wrap<T>(ItemStack(customItem.type, quantity).asCustomItem(customItem))
-                .also { it.getAllBehaviors().forEach { b -> b.onCreate(it) }; it.onCreate() }
+                .also {
+                    ItemSystem.dispatchCreate(ItemCreateContext(it))
+                    it.onCreate()
+                }
         }
 
     }

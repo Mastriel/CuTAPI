@@ -1,6 +1,7 @@
 package xyz.mastriel.cutapi.registry
 
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.data.*
 import java.lang.ref.*
 
 private typealias HookFunction<T> = HookContext<T>.() -> Unit
@@ -47,7 +48,9 @@ public value class RegistryPriority(public val value: Int) : Comparable<Registry
  *
  * @param T The identifiable that is being tracked.
  */
-public open class IdentifierRegistry<T : Identifiable>(public val name: String) {
+public open class IdentifierRegistry<T : Identifiable>(
+    final override val id: Identifier
+) : Serializer<T>, Identifiable {
 
     protected data class Handler<T : Identifiable>(
         public val priority: RegistryPriority,
@@ -71,7 +74,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
         priority: RegistryPriority = RegistryPriority.Medium,
         handler: RegistryEvent<T>.() -> Unit
     ) {
-        if (!isOpen) Plugin.warn("Registry '$name' is already initialized. Cannot add more handlers.")
+        if (!isOpen) Plugin.warn("Registry '${this.id}' is already initialized. Cannot add more handlers.")
         eventHandlers += Handler(priority, handler)
     }
 
@@ -80,7 +83,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
      * Call this when the registry is ready to be used, and all handlers have already been added.
      */
     public open fun initialize() {
-        if (!isOpen) Plugin.warn("Registry '$name' is already initialized.")
+        if (!isOpen) Plugin.warn("Registry '${this.id}' is already initialized.")
 
         // run all handlers
         for (handler in getSortedEventHandlers()) {
@@ -89,17 +92,17 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
         }
 
         isOpen = false
-        if (isPluginInitialized()) Plugin.info("[REGISTRY] '$name' initialized with ${values.size} items.")
+        if (isPluginInitialized()) Plugin.info("[REGISTRY] '${this.id}' initialized with ${values.size} items.")
         eventHandlers.clear() // we don't need to keep the handlers around anymore
     }
 
     protected open fun replace(id: Identifier, item: T) {
-        if (!isOpen) Plugin.warn("Registry '$name' is already initialized. Cannot replace items.")
+        if (!isOpen) Plugin.warn("Registry '${this.id}' is already initialized. Cannot replace items.")
 
         if (values.containsKey(id)) {
             unregister(id)
         } else {
-            Plugin.warn("[REGISTRY] $id tried to be replaced in '$name', but it doesn't exist in this registry. Creating a new entry instead...")
+            Plugin.warn("[REGISTRY] $id tried to be replaced in '${this.id}', but it doesn't exist in this registry. Creating a new entry instead...")
         }
         register(item)
     }
@@ -112,7 +115,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
      * @return A [DeferredRegistry] that can be used to register items later.
      */
     public open fun defer(priority: RegistryPriority = RegistryPriority.Medium): DeferredRegistry<T> {
-        if (!isOpen) Plugin.warn("Registry '$name' is already initialized. Cannot create a deferred registry.")
+        if (!isOpen) Plugin.warn("Registry '${this.id}' is already initialized. Cannot create a deferred registry.")
         return BasicDeferredRegistry(this, priority)
     }
 
@@ -137,11 +140,11 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
             hook(context)
             if (context.preventRegister) {
                 values.remove(item.id)
-                Plugin.info("[REGISTRY] ${item.id} failed to add to '$name' because of a hook.")
+                Plugin.info("[REGISTRY] ${item.id} failed to add to '${this.id}' because of a hook.")
                 return item
             }
         }
-        if (isPluginInitialized()) Plugin.info("[REGISTRY] ${item.id} added to '$name'.")
+        if (isPluginInitialized()) Plugin.info("[REGISTRY] ${item.id} added to '${this.id}'.")
         return item
     }
 
@@ -175,7 +178,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
      */
     protected open fun unregister(id: Identifier) {
         if (!values.containsKey(id)) {
-            Plugin.warn("[REGISTRY] $id tried to be removed from '${this.name}', but it doesn't exist in this registry.")
+            Plugin.warn("[REGISTRY] $id tried to be removed from '${this.id}', but it doesn't exist in this registry.")
             return
         }
         values.remove(id)
@@ -185,7 +188,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
             usedRegistries.removeIf { it.get() == this }
         }
 
-        Plugin.info("[REGISTRY] $id removed from '$name'.")
+        Plugin.info("[REGISTRY] $id removed from '${this.id}'.")
     }
 
     /**
@@ -196,7 +199,7 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
      * @throws IllegalStateException If this could not be found.
      */
     public open fun get(id: Identifier): T {
-        return getOrNull(id) ?: error("Identifier (${id}) points to nothing in '${name}'.")
+        return getOrNull(id) ?: error("Identifier ($id) points to nothing in '${this.id}'.")
     }
 
     /**
@@ -249,6 +252,18 @@ public open class IdentifierRegistry<T : Identifiable>(public val name: String) 
      */
     public open fun addHook(priority: HookPriority, func: HookFunction<T>) {
         hooks += func to priority
+    }
+
+    private val backingSerializer: Serializer<T> by lazy {
+        VariantSerializer.Identifiable(this)
+    }
+
+    override fun serialize(value: T): SerializeResult {
+        return backingSerializer.serialize(value)
+    }
+
+    override fun deserialize(variant: Variant): DeserializeResult<T> {
+        return backingSerializer.deserialize(variant)
     }
 
     public companion object {

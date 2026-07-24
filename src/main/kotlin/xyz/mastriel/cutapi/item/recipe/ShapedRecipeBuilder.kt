@@ -75,7 +75,7 @@ public data class CustomShapedRecipe(
         return items.trim({ null }) { it != null }.flatten()
     }
 
-    public companion object : IdentifierRegistry<CustomShapedRecipe>("Shaped Recipes") {
+    public companion object : IdentifierRegistry<CustomShapedRecipe>(id("cutapi:registry/custom_shaped_recipe")) {
         override fun register(item: CustomShapedRecipe): CustomShapedRecipe {
             val itemResult = item.result
 

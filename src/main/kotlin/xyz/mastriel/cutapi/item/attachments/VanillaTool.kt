@@ -1,4 +1,4 @@
-package xyz.mastriel.cutapi.item.behaviors
+package xyz.mastriel.cutapi.item.attachments
 
 import net.minecraft.core.*
 import net.minecraft.core.component.*
@@ -8,6 +8,8 @@ import org.bukkit.*
 import org.bukkit.craftbukkit.util.*
 import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.attachment.*
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.registry.*
@@ -21,13 +23,20 @@ public typealias ToolComponentRule = net.minecraft.world.item.component.Tool.Rul
 @TemporaryAPI
 @UsesNMS
 public class VanillaTool(
-    public vararg val tools: Tool,
+    public val tools: List<Tool>,
     public val defaultMiningSpeed: ToolSpeed = ToolSpeed.Fists,
     public val specialBreakingMultipliers: SpecialBreakingMultipliers = SpecialBreakingMultipliers(),
     public val itemDamage: Int = 1
-) : ItemBehavior(id(Plugin, "vanilla_tool_component")) {
+) : Attachment {
 
     private val rules: List<PlainToolComponentRule>
+
+    public constructor(
+        vararg tools: Tool,
+        defaultMiningSpeed: ToolSpeed = ToolSpeed.Fists,
+        specialBreakingMultipliers: SpecialBreakingMultipliers = SpecialBreakingMultipliers(),
+        itemDamage: Int = 1
+    ) : this(tools.toList(), defaultMiningSpeed, specialBreakingMultipliers, itemDamage)
 
     init {
         val materialData = mutableListOf<ToolMaterialData>()
@@ -50,7 +59,7 @@ public class VanillaTool(
         this.rules = optimize(materialData)
     }
 
-    override fun onCreate(item: CuTItemStack) {
+    public fun applyTo(item: CuTItemStack) {
         val nmsItem = item.vanilla().nms()
 
         val tool = ToolComponent(
@@ -69,6 +78,20 @@ public class VanillaTool(
 
 
         item.vanilla().itemMeta = nmsItem.bukkit().itemMeta
+    }
+
+    public companion object : Schema<VanillaTool> by schema(id(Plugin, "vanilla_tool_component"), {
+        property(VanillaTool::tools, VariantSerializer.ListOf(Tool))
+        property(VanillaTool::defaultMiningSpeed, ToolSpeedSerializer)
+        property(VanillaTool::itemDamage, VariantSerializer.Int)
+    })
+}
+
+@OptIn(UsesNMS::class)
+internal object VanillaToolSystem : ItemSystem by attachmentItemSystem(VanillaTool) {
+
+    override fun onCreate(context: ItemCreateContext) {
+        context.attachment(VanillaTool).applyTo(context.item)
     }
 }
 
@@ -151,4 +174,3 @@ internal fun stripToolData(itemStack: ItemStack): ItemStack {
     nmsItem.applyComponents(patch)
     return nmsItem.bukkit()
 }
-

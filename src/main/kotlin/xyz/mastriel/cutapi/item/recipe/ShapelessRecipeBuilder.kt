@@ -26,7 +26,8 @@ public data class CustomShapelessRecipe(
     val ingredients: List<ShapelessRecipeIngredient>,
     val result: ItemStack
 ) : Identifiable {
-    public companion object : IdentifierRegistry<CustomShapelessRecipe>("Shapeless Recipes") {
+    public companion object :
+        IdentifierRegistry<CustomShapelessRecipe>(id("cutapi:registry/custom_shapeless_recipe")) {
 
         override fun register(item: CustomShapelessRecipe): CustomShapelessRecipe {
             val itemResult = item.result

@@ -56,10 +56,17 @@ public interface SchemaBuilder<R : Any> {
     )
 }
 
-public interface Schema<T : Any> : Serializer<T> {
+public interface Schema<T : Any> : TaggedSerializer<T> {
     public val type: KClass<T>
     public val properties: List<SchemaProperty<T, *>>
     public val untagged: Boolean
+
+    public companion object : IdentifierRegistry<Schema<*>>(id("cutapi:registry/schema")) {
+        public fun registerSchema(schema: Schema<*>): Schema<*> {
+            if (has(schema.id)) return get(schema.id)
+            return register(schema)
+        }
+    }
 }
 
 internal open class SchemaBuilderImpl<R : Any>(
@@ -328,6 +335,97 @@ internal class SchemaImpl<T : Any>(
     }
 }
 
+internal class SingletonSchemaImpl<T : Any>(
+    override val type: KClass<T>,
+    override val id: Identifier,
+    override val properties: List<SchemaProperty<T, *>>,
+    override val untagged: Boolean
+) : Schema<T> {
+    private val instance: T
+        get() = type.singletonObjectInstance()
+            ?: error("Singleton schema $id requires ${type.qualifiedName} to be a Kotlin object")
+
+    init {
+        require(properties.map { it.name }.distinct().size == properties.size) {
+            "Schema for ${type.qualifiedName} has duplicate serialized property names"
+        }
+        require(properties.map { it.propertyName }.distinct().size == properties.size) {
+            "Schema for ${type.qualifiedName} has duplicate Kotlin property names"
+        }
+
+        for (property in properties) {
+            require(property.ownerType == null || type.isSubclassOf(property.ownerType)) {
+                "Property '${property.propertyName}' cannot be read from ${type.qualifiedName}"
+            }
+            require(property.isMutable) {
+                "Singleton schema property '${property.propertyName}' must be mutable"
+            }
+        }
+    }
+
+    override fun serialize(value: T): SerializeResult = try {
+        require(value === instance) {
+            "Singleton schema $id can only serialize its Kotlin object instance"
+        }
+        val encoded = linkedMapOf<Variant, Variant>()
+        if (!untagged) encoded[Variant.String(SCHEMA_TYPE_DISCRIMINATOR)] = Variant.String(id.toString())
+        for (property in properties) {
+            when (val result = property.serializeFrom(value)) {
+                is SerializeResult.Success -> encoded[Variant.String(property.name)] = result.value
+                is SerializeResult.Failure -> throw DataSerializationException(
+                    "Failed to serialize '${property.name}' from ${type.qualifiedName}",
+                    result.error
+                )
+            }
+        }
+        SerializeResult.Success(Variant.Map(encoded))
+    } catch (exception: Exception) {
+        SerializeResult.Failure(exception)
+    }
+
+    override fun deserialize(variant: Variant): DeserializeResult<T> = try {
+        val values = variant.stringValues()
+        validateType(values.remove(SCHEMA_TYPE_DISCRIMINATOR))
+
+        val propertiesByName = properties.associateBy { it.name }
+        val unknownNames = values.keys - propertiesByName.keys
+        require(unknownNames.isEmpty()) {
+            "Unknown properties for ${type.qualifiedName}: ${unknownNames.joinToString()}"
+        }
+
+        val singleton = instance
+        for (property in properties) {
+            val encoded = values[property.name]
+            require(encoded != null) { "Missing property '${property.name}' for ${type.qualifiedName}" }
+            val decoded = when (val result = property.deserializeToValue(encoded)) {
+                is DeserializeResult.Success -> result.value
+                is DeserializeResult.Failure -> throw DataSerializationException(
+                    "Failed to deserialize '${property.name}' for ${type.qualifiedName}",
+                    result.error
+                )
+            }
+            property.setOn(singleton, decoded)
+        }
+        DeserializeResult.Success(singleton)
+    } catch (exception: Exception) {
+        DeserializeResult.Failure(exception)
+    }
+
+    private fun validateType(typeValue: Variant?) {
+        if (untagged) {
+            require(typeValue == null) { "Untagged schema ${type.qualifiedName} does not accept '$SCHEMA_TYPE_DISCRIMINATOR'" }
+            return
+        }
+        val serializedId = (typeValue as? Variant.String)?.value
+            ?: throw DataSerializationException(
+                "Schema ${type.qualifiedName} requires string property '$SCHEMA_TYPE_DISCRIMINATOR'"
+            )
+        require(serializedId == id.toString()) {
+            "Schema ${type.qualifiedName} cannot deserialize type '$serializedId'; expected '$id'"
+        }
+    }
+}
+
 private class DeferredSchema<T : Any>(
     override val type: KClass<T>,
     override val id: Identifier,
@@ -343,10 +441,10 @@ private class DeferredSchema<T : Any>(
     override fun deserialize(variant: Variant): DeserializeResult<T> = resolved.deserialize(variant)
 }
 
-public fun <T : Any> schema(id: Identifier, block: SchemaBuilder<T>.() -> Unit): Schema<T> {
-    val builder = SchemaBuilderImpl<T>().apply(block)
-    return builder.build(id)
-}
+public inline fun <reified T : Any> schema(
+    id: Identifier,
+    noinline block: SchemaBuilder<T>.() -> Unit
+): Schema<T> = schema(T::class, id, block)
 
 public fun <T : Any> schema(
     type: KClass<T>,
@@ -354,7 +452,21 @@ public fun <T : Any> schema(
     block: SchemaBuilder<T>.() -> Unit
 ): Schema<T> {
     val builder = SchemaBuilderImpl(type).apply(block)
-    return builder.build(id)
+    return builder.build(id).also { Schema.registerSchema(it) }
+}
+
+public inline fun <reified T : Any> singletonSchema(
+    id: Identifier,
+    noinline block: SchemaBuilder<T>.() -> Unit = {}
+): Schema<T> = singletonSchema(T::class, id, block)
+
+public fun <T : Any> singletonSchema(
+    type: KClass<T>,
+    id: Identifier,
+    block: SchemaBuilder<T>.() -> Unit = {}
+): Schema<T> {
+    val builder = SchemaBuilderImpl(type).apply(block)
+    return builder.buildSingleton(id).also { Schema.registerSchema(it) }
 }
 
 internal fun <T : Any> SchemaBuilderImpl<T>.build(id: Identifier): Schema<T> {
@@ -385,6 +497,34 @@ internal fun <T : Any> SchemaBuilderImpl<T>.build(id: Identifier): Schema<T> {
     }
 }
 
+internal fun <T : Any> SchemaBuilderImpl<T>.buildSingleton(id: Identifier): Schema<T> {
+    val childType = targetType()
+    if (parents.isEmpty()) return SingletonSchemaImpl(childType, id, properties, untagged)
+
+    return DeferredSchema(childType, id) {
+        val parentSchemas = parents.map { it() }
+        require(parentSchemas.map { it.type }.distinct().size == parentSchemas.size) {
+            "Schema for ${childType.qualifiedName} extends the same parent type more than once"
+        }
+        for (parentSchema in parentSchemas) {
+            val parentType = parentSchema.type
+            require(childType != parentType && childType.isSubclassOf(parentType)) {
+                "Extended schema type ${childType.qualifiedName} must inherit ${parentType.qualifiedName}"
+            }
+        }
+        val inherited = parentSchemas.flatMap { parentSchema ->
+            parentSchema.properties.map { it.forSubtype<T>() }
+        }
+        val combinedProperties = inherited + properties
+        val childUntagged = if (hasExplicitUntagged) {
+            untagged
+        } else {
+            parentSchemas.all { it.untagged }
+        }
+        SingletonSchemaImpl(childType, id, combinedProperties, childUntagged)
+    }
+}
+
 internal fun Variant.stringValues(): LinkedHashMap<String, Variant> {
     val map = this as? Variant.Map ?: throw VariantTypeException("Map", this)
     val result = linkedMapOf<String, Variant>()
@@ -394,4 +534,13 @@ internal fun Variant.stringValues(): LinkedHashMap<String, Variant> {
         result[name] = value
     }
     return result
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun <T : Any> KClass<T>.singletonObjectInstance(): T? {
+    return try {
+        objectInstance
+    } catch (_: IllegalAccessException) {
+        java.getDeclaredField("INSTANCE").also { it.isAccessible = true }.get(null) as? T
+    }
 }

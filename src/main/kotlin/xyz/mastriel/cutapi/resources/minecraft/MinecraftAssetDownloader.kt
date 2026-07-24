@@ -25,7 +25,8 @@ public interface MinecraftAssetDownloader : Identifiable {
      */
     public suspend fun downloadAssets(version: String): File
 
-    public companion object : IdentifierRegistry<MinecraftAssetDownloader>("Asset Downloaders") {
+    public companion object :
+        IdentifierRegistry<MinecraftAssetDownloader>(id("cutapi:registry/minecraft_asset_downloader")) {
         public val cacheFolder: File = Plugin.dataFolder.appendPath(".cache")
 
         public val downloaderId: String by cutConfigValue("asset-downloader.id", "cutapi:github")

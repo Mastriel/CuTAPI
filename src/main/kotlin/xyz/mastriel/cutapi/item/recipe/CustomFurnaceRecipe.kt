@@ -18,7 +18,8 @@ public data class CustomFurnaceRecipe(
     val inputRequirement : Computable<AgnosticItemStack, Boolean> = computable(true)
 ) : Identifiable {
 
-    public companion object : IdentifierRegistry<CustomFurnaceRecipe>("Custom Furnace Recipes") {
+    public companion object :
+        IdentifierRegistry<CustomFurnaceRecipe>(id("cutapi:registry/custom_furnace_recipe")) {
 
         override fun register(item: CustomFurnaceRecipe): CustomFurnaceRecipe {
             with (item) {

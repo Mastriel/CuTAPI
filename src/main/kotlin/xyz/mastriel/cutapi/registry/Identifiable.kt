@@ -3,6 +3,8 @@ package xyz.mastriel.cutapi.registry
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
+import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.data.Serializable
 
 
 /**
@@ -10,6 +12,17 @@ import kotlinx.serialization.encoding.*
  */
 public interface Identifiable {
     public val id: Identifier
+
+    /**
+     * Used to provide info in the registry inspector. Defaults to the associated schema if this type is serializable.
+     */
+    public val debugSchema: Schema<*>?
+        get() {
+            if (this is Serializable<*>) {
+                if (serializer is Schema<*>) return serializer as Schema<*>?;
+            }
+            return null;
+        }
 }
 
 public sealed class SerialDefault<T : Identifiable?> {
@@ -62,7 +75,7 @@ public open class NullableIdentifiableSerializer<T : Identifiable>(
                 is SerialDefault.Some -> default.value
             }
         }
-        
+
         return when (val value = map.getOrNull(identifier)) {
             null -> when (default) {
                 is SerialDefault.None -> null

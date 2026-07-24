@@ -1,6 +1,9 @@
 package xyz.mastriel.cutapi.data
 
+import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.*
+import java.io.*
 import kotlin.test.*
 
 class SchemaTest {
@@ -22,7 +25,6 @@ class SchemaTest {
         )
         assertEquals(original, MyData.deserialize(variant).getOrThrow())
         assertFalse(MyData.untagged)
-        assertEquals(MyData.id, original.serializer.id)
         assertEquals(original, original.serializer.deserialize(variant).getOrThrow())
 
         val nameProperty = MyData.properties.single { it.name == "name" }
@@ -34,8 +36,6 @@ class SchemaTest {
         data class ManualValue(val value: String)
 
         val serializer = object : Serializer<ManualValue> {
-            override val id: Identifier = id("cutapi:manual_value")
-
             override fun serialize(value: ManualValue): SerializeResult =
                 SerializeResult.Success(Variant.String(value.value))
 
@@ -74,6 +74,8 @@ class SchemaTest {
         val mapValue = linkedMapOf<Variant, Variant>(
             Variant.String("key") to Variant.Boolean(true)
         )
+        val idValue = id("cutapi:variant_identifier")
+        val refValue = ref<Resource>(VariantTestResourceRoot, "textures/widget.png")
 
         assertEquals(Variant.Null, VariantSerializer.Null.serialize(null).getOrThrow())
         assertNull(VariantSerializer.Null.deserialize(Variant.Null).getOrThrow())
@@ -86,6 +88,10 @@ class SchemaTest {
         assertEquals(8f, VariantSerializer.Float.deserialize(Variant.Float(8f)).getOrThrow())
         assertEquals(9.0, VariantSerializer.Double.deserialize(Variant.Double(9.0)).getOrThrow())
         assertEquals('c', VariantSerializer.Char.deserialize(Variant.Char('c')).getOrThrow())
+        assertEquals(Variant.Identifier(idValue), VariantSerializer.Id.serialize(idValue).getOrThrow())
+        assertEquals(idValue, VariantSerializer.Id.deserialize(Variant.Identifier(idValue)).getOrThrow())
+        assertEquals(Variant.ResourceRef(refValue), VariantSerializer.ResourceRef.serialize(refValue).getOrThrow())
+        assertEquals(refValue, VariantSerializer.ResourceRef.deserialize(Variant.ResourceRef(refValue)).getOrThrow())
         assertEquals(Variant.List(listValue), VariantSerializer.List.serialize(listValue).getOrThrow())
         assertEquals(listValue, VariantSerializer.List.deserialize(Variant.List(listValue)).getOrThrow())
         assertEquals(Variant.Map(mapValue), VariantSerializer.Map.serialize(mapValue).getOrThrow())
@@ -123,6 +129,27 @@ class SchemaTest {
         )
         assertTrue(UntaggedData.untagged)
         assertEquals(value, UntaggedData.deserialize(variant).getOrThrow())
+    }
+
+    @Test
+    fun `reified empty schemas preserve their target type and register by id`() {
+        assertEquals(EmptySchemaData::class, EmptySchemaData.type)
+        assertEquals(EmptySchemaData::class, Schema.get(id("cutapi:empty_schema_data")).type)
+    }
+
+    @Test
+    fun `singleton schemas deserialize to their object instance and register by id`() {
+        val variant = SingletonData.serialize(SingletonData).getOrThrow()
+
+        assertEquals(
+            Variant.Map(mapOf(Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to Variant.String("cutapi:singleton_data"))),
+            variant
+        )
+        assertSame(SingletonData, SingletonData.deserialize(variant).getOrThrow())
+
+        @Suppress("UNCHECKED_CAST")
+        val registered = Schema.get(id("cutapi:singleton_data")) as Schema<SingletonData>
+        assertSame(SingletonData, registered.deserialize(variant).getOrThrow())
     }
 
     @Test
@@ -229,6 +256,19 @@ private data class UntaggedData(val value: String) {
         untagged = true
         property(UntaggedData::value, VariantSerializer.String)
     })
+}
+
+private class EmptySchemaData {
+    companion object : Schema<EmptySchemaData> by schema(id("cutapi:empty_schema_data"), {})
+}
+
+private object SingletonData : Schema<SingletonData> by singletonSchema(id("cutapi:singleton_data"))
+
+private object VariantTestResourceRoot : ResourceRoot {
+    override val cutPlugin: CuTPlugin
+        get() = error("Variant serializer tests do not use a registered plugin")
+
+    override fun getResourcesFolder(): File = File(".")
 }
 
 private class AccessorBackedData(value: Int = 0) {

@@ -20,7 +20,7 @@ public interface Uploader : Identifiable {
     public fun teardown()
 
 
-    public companion object : IdentifierRegistry<Uploader>("Uploaders") {
+    public companion object : IdentifierRegistry<Uploader>(id("cutapi:registry/uploader")) {
         public val uploaderId: String by cutConfigValue("uploader.id", "cutapi:builtin")
         public fun getActive(): Uploader? = idOrNull(uploaderId)?.let { getOrNull(it) }
     }

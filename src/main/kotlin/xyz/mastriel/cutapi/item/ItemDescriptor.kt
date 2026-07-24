@@ -3,8 +3,7 @@ package xyz.mastriel.cutapi.item
 import net.kyori.adventure.text.*
 import org.bukkit.entity.*
 import xyz.mastriel.cutapi.*
-import xyz.mastriel.cutapi.behavior.*
-import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
@@ -22,14 +21,26 @@ public annotation class ItemDescriptorDsl
  */
 public class ItemDescriptor internal constructor(
     public val display: (ItemDisplayBuilder.() -> Unit)? = null,
-
-    /**
-     * This is always actually a MutableList<ItemBehavior>, however you should
-     * not modify this unless you know what you're doing.
-     */
-    public val itemBehaviors: List<ItemBehavior> = mutableListOf(),
+    public val attachments: List<Attachment> = mutableListOf(),
     public val onRegister: EventHandlerList<ItemRegisterEvent> = EventHandlerList()
-) {
+) : AttachmentHolder {
+
+    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out Attachment>): Boolean =
+        attachments.any { it.schema().id == schema.id }
+
+    override fun <T : Attachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
+        getAttachmentOrNull(schema) ?: error("Attachment ${schema.id} does not exist on this descriptor.")
+
+    override fun <T : Attachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
+        getAttachments(schema).firstOrNull()
+
+    override fun <T : Attachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
+        attachments.filter { it.schema().id == schema.id }.map {
+            @Suppress("UNCHECKED_CAST")
+            it as T
+        }
+
+    override fun getAllAttachments(): List<Attachment> = attachments.toList()
 
     public infix fun with(block: ItemDescriptorBuilder.() -> Unit): ItemDescriptor {
         val other = ItemDescriptorBuilder().apply(block).build()
@@ -40,16 +51,17 @@ public class ItemDescriptor internal constructor(
         return itemDescriptor {
             display = other.display ?: this@ItemDescriptor.display
 
-            val itemBehaviors = this@ItemDescriptor.itemBehaviors.toMutableList()
+            val attachments = this@ItemDescriptor.attachments.toMutableList()
 
-            for (otherBehavior in other.itemBehaviors) {
-                val behaviorCollision = itemBehaviors.any { it.id == otherBehavior.id }
-                if (behaviorCollision && !otherBehavior.isRepeatable()) {
-                    itemBehaviors.removeIf { it.id == otherBehavior.id }
+            for (otherAttachment in other.attachments) {
+                val schema = otherAttachment.schema()
+                val attachmentCollision = attachments.any { it.schema().id == schema.id }
+                if (attachmentCollision && !otherAttachment.isRepeatableAttachment()) {
+                    attachments.removeIf { it.schema().id == schema.id }
                 }
-                behavior(otherBehavior)
+                attach(otherAttachment)
             }
-            behavior(itemBehaviors)
+            attach(attachments)
         }
     }
 
@@ -67,34 +79,32 @@ public data class ItemRegisterEvent(val item: CustomItem<*>)
 public class ItemDescriptorBuilder {
     public var display: (ItemDisplayBuilder.() -> Unit)? = {
         emptyLine()
-        behaviorLore(Color.Blue)
+        attachmentLore(Color.Blue)
     }
 
-    private val _itemBehaviors = mutableListOf<ItemBehavior>()
-    public val itemBehaviors: List<ItemBehavior> get() = _itemBehaviors
+    private val _attachments = mutableListOf<Attachment>()
+    public val attachments: List<Attachment> get() = _attachments
 
     public val onRegister: EventHandlerList<ItemRegisterEvent> = EventHandlerList()
 
-    public fun behavior(vararg behaviors: ItemBehavior) {
-        for (behavior in behaviors) {
-            if (this._itemBehaviors.any { it.id == behavior.id } && !behavior.isRepeatable())
-                error("${behavior.id} lacks a RepeatableBehavior annotation to be repeatable.")
-            _itemBehaviors.add(behavior)
-            with(behavior) {
-                modifyDescriptor()
-            }
+    public fun attach(vararg attachments: Attachment) {
+        for (attachment in attachments) {
+            val schema = attachment.schema()
+            if (this._attachments.any { it.schema().id == schema.id } && !attachment.isRepeatableAttachment())
+                error("${schema.id} lacks a RepeatableAttachment annotation to be repeatable.")
+            _attachments.add(attachment)
         }
     }
 
-    public fun behavior(behaviors: Collection<ItemBehavior>) {
-        behavior(*behaviors.toTypedArray())
+    public fun attach(attachments: Collection<Attachment>) {
+        attach(*attachments.toTypedArray())
     }
 
     public fun build(): ItemDescriptor {
 
         return ItemDescriptor(
             display = display,
-            itemBehaviors = _itemBehaviors,
+            attachments = _attachments,
             onRegister = onRegister
         )
     }
@@ -172,8 +182,7 @@ public fun itemModel(stringPath: String, showSwapAnimation: Boolean = true): Ite
  * applied to it.
  */
 @ItemDescriptorDsl
-public open class ItemDisplayBuilder(public val itemStack: CuTItemStack, public val viewer: Player?) :
-    BehaviorHolder<ItemBehavior> by itemBehaviorHolder(itemStack.type) {
+public open class ItemDisplayBuilder(public val itemStack: CuTItemStack, public val viewer: Player?) {
 
     public val type: CustomItem<*> get() = itemStack.type
 
@@ -203,11 +212,11 @@ public open class ItemDisplayBuilder(public val itemStack: CuTItemStack, public 
     }
 
     /**
-     * Adds any lore that any [ItemBehavior] would want to implement.
+     * Adds any lore that any [ItemLoreAttachment] would want to implement.
      */
-    public fun behaviorLore(mainColor: Color) {
-        for (component in itemStack.getAllBehaviors()) {
-            val lore = component.getLore(itemStack, viewer)
+    public fun attachmentLore(mainColor: Color) {
+        for (attachment in itemStack.getAllAttachments().filterIsInstance<ItemLoreAttachment>()) {
+            val lore = attachment.getLore(itemStack, viewer)
             if (lore != null) {
                 lines.add(lore.color(mainColor.textColor))
             }
@@ -218,10 +227,19 @@ public open class ItemDisplayBuilder(public val itemStack: CuTItemStack, public 
         return lines.toList()
     }
 
-    public inline fun <reified B : ItemBehavior> hasBehavior(): Boolean = hasBehavior(B::class)
-    public inline fun <reified B : ItemBehavior> getBehavior(): B = getBehavior(B::class)
-    public inline fun <reified B : ItemBehavior> getBehaviorOrNull(): B? = getBehaviorOrNull(B::class)
+    public fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out Attachment>): Boolean =
+        itemStack.hasAttachment(schema)
 
+    public fun <T : Attachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
+        itemStack.getAttachment(schema)
+
+    public fun <T : Attachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
+        itemStack.getAttachmentOrNull(schema)
+
+}
+
+public interface ItemLoreAttachment : Attachment {
+    public fun getLore(item: CuTItemStack, viewer: Player?): Component?
 }
 
 /**

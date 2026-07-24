@@ -18,7 +18,8 @@ public abstract class TexturePostProcessor(override val id: Identifier) : Identi
 
     public abstract fun process(texture: Texture2D, context: TexturePostProcessContext)
 
-    public companion object : IdentifierRegistry<TexturePostProcessor>("Texture Post Processors") {
+    public companion object :
+        IdentifierRegistry<TexturePostProcessor>(id("cutapi:registry/texture_post_processor")) {
 
         public fun registerBuiltins() {
             builtinPostProcessor(id(Plugin, "brightness_contrast"), ContrastFilter()) {

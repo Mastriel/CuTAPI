@@ -2,7 +2,8 @@ package xyz.mastriel.cutapi.item
 
 import net.kyori.adventure.text.*
 import org.bukkit.*
-import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.attachment.*
+import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.utils.personalized.*
 import kotlin.reflect.*
@@ -78,10 +79,10 @@ public fun customItem(
     id: Identifier,
     bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>,
-    behaviors: Collection<ItemBehavior>
+    attachments: Collection<Attachment>
 ): CustomItem<CuTItemStack> {
     return customItem(id, bukkitMaterial) {
-        behavior(behaviors)
+        attach(attachments)
 
         display {
             this.name = name.withViewer(viewer)
@@ -122,9 +123,9 @@ public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>,
-    behaviors: Collection<ItemBehavior>
+    attachments: Collection<Attachment>
 ): Deferred<CustomItem<CuTItemStack>> {
-    val customItem = customItem(id, bukkitMaterial, name, behaviors)
+    val customItem = customItem(id, bukkitMaterial, name, attachments)
     @Suppress("UNCHECKED_CAST")
     return register { customItem } as Deferred<CustomItem<CuTItemStack>>
 }

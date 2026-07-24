@@ -5,10 +5,10 @@ import org.bukkit.*
 import org.bukkit.event.*
 import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.*
-import xyz.mastriel.cutapi.behavior.*
+import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.item.ItemStackUtility.customItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
-import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.utils.*
@@ -30,12 +30,12 @@ public open class CustomItem<TStack : CuTItemStack>(
     public val type: Material,
     public val stackTypeClass: KClass<out TStack>,
     descriptor: ItemDescriptor? = null
-) : Identifiable, Listener, BehaviorHolder<ItemBehavior> {
+) : Identifiable, Listener, AttachmentHolder {
 
 
     /**
      * The descriptor that describes the custom material's default values, such
-     * as a default name, default lore, behaviors, etc.
+     * as a default name, default lore, attachments, etc.
      */
     public open val descriptor: ItemDescriptor = descriptor ?: defaultItemDescriptor()
 
@@ -46,13 +46,13 @@ public open class CustomItem<TStack : CuTItemStack>(
     }
 
     private fun addAutoDisplayAs(descriptor: ItemDescriptor) {
-        val behaviors = descriptor.itemBehaviors as? MutableList ?: return
+        val attachments = descriptor.attachments as? MutableList ?: return
         val plugin = id.plugin ?: return
 
         val autoDisplayAs = CuTAPI.getDescriptor(plugin)
             .options.autoDisplayAsForTexturedItems ?: return
 
-        behaviors.add(DisplayAs(autoDisplayAs))
+        attachments.add(DisplayAs(autoDisplayAs))
     }
 
     public fun createItemStack(quantity: Int = 1): TStack =
@@ -60,30 +60,28 @@ public open class CustomItem<TStack : CuTItemStack>(
 
     public open fun onCreate(item: CuTItemStack) {}
 
-    private val behaviorHolder by lazy { itemBehaviorHolder(this) }
+    private val attachmentHolder by lazy { CustomItemAttachmentHolder(this) }
 
-    override fun hasBehavior(behavior: KClass<out ItemBehavior>): Boolean = behaviorHolder.hasBehavior(behavior)
-    override fun <T : ItemBehavior> getBehavior(behavior: KClass<T>): T = behaviorHolder.getBehavior(behavior)
-    override fun <T : ItemBehavior> getBehaviorOrNull(behavior: KClass<T>): T? =
-        behaviorHolder.getBehaviorOrNull(behavior)
+    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out Attachment>): Boolean =
+        attachmentHolder.hasAttachment(schema)
 
-    override fun hasBehavior(behaviorId: Identifier): Boolean = behaviorHolder.hasBehavior(behaviorId)
-    override fun <T : ItemBehavior> getBehavior(behaviorId: Identifier): T = behaviorHolder.getBehavior<T>(behaviorId)
-    override fun <T : ItemBehavior> getBehaviorOrNull(behaviorId: Identifier): T? =
-        behaviorHolder.getBehaviorOrNull<T>(behaviorId)
+    override fun <T : Attachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
+        attachmentHolder.getAttachment(schema)
 
-    override fun getAllBehaviors(): Set<ItemBehavior> = behaviorHolder.getAllBehaviors()
+    override fun <T : Attachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
+        attachmentHolder.getAttachmentOrNull(schema)
 
-    public inline fun <reified B : ItemBehavior> hasBehavior(): Boolean = hasBehavior(B::class)
-    public inline fun <reified B : ItemBehavior> getBehavior(): B = getBehavior(B::class)
-    public inline fun <reified B : ItemBehavior> getBehaviorOrNull(): B? = getBehaviorOrNull(B::class)
+    override fun <T : Attachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
+        attachmentHolder.getAttachments(schema)
+
+    override fun getAllAttachments(): List<Attachment> = attachmentHolder.getAllAttachments()
 
     protected fun getData(item: CuTItemStack): TagContainer {
-        return ItemBehaviorTagContainer(item.handle, id.copy(namespace = id.namespace, key = id.key + "/data"))
+        return ItemAttachmentTagContainer(item.handle, id.copy(namespace = id.namespace, key = id.key + "/data"))
     }
 
 
-    public companion object : IdentifierRegistry<CustomItem<*>>("Custom Items") {
+    public companion object : IdentifierRegistry<CustomItem<*>>(id("cutapi:registry/custom_item")) {
         internal val DeferredRegistry = defer(RegistryPriority(Int.MAX_VALUE))
 
         public val Unknown: CustomItem<CuTItemStack> = customItem(
@@ -91,8 +89,8 @@ public open class CustomItem<TStack : CuTItemStack>(
             Material.ANVIL
         ) {
 
-            behavior(StaticLore("&cYou probably shouldn't have this...".colored))
-            behavior(DisplayAs(Material.GLISTERING_MELON_SLICE))
+            attach(StaticLore("&cYou probably shouldn't have this...".colored))
+            attach(DisplayAs(Material.GLISTERING_MELON_SLICE))
             display {
                 texture = itemTexture(Plugin, "items/unknown_item.png")
             }
@@ -102,7 +100,7 @@ public open class CustomItem<TStack : CuTItemStack>(
             id = id(Plugin, "inventory_background"),
             Material.GLISTERING_MELON_SLICE
         ) {
-            behavior(HideTooltip)
+            attach(HideTooltip)
 
             display {
                 texture = itemModel(Plugin, "ui/inventory_bg.model3d.json")

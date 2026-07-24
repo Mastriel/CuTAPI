@@ -22,7 +22,7 @@ public interface ResourceFileLoader<T : Resource> : Identifiable {
 
     public fun acceptsExtension(extension: String): Boolean = extensions == null || extension in extensions.orEmpty()
 
-    public companion object : IdentifierRegistry<ResourceFileLoader<*>>("Resource File Loaders") {
+    public companion object : IdentifierRegistry<ResourceFileLoader<*>>(id("cutapi:registry/resource_file_loader")) {
         public fun getDependencySortedLoaders(): List<ResourceFileLoader<*>> {
             val sorted = mutableListOf<ResourceFileLoader<*>>()
             val visited = mutableSetOf<ResourceFileLoader<*>>()

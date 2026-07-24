@@ -13,7 +13,8 @@ public class CustomSmithingTableRecipe(
     public val result: AgnosticItemStack
 ) : Identifiable {
 
-    public companion object : IdentifierRegistry<CustomSmithingTableRecipe>("Custom Smithing Table Recipes") {
+    public companion object :
+        IdentifierRegistry<CustomSmithingTableRecipe>(id("cutapi:registry/custom_smithing_table_recipe")) {
 
         override fun register(item: CustomSmithingTableRecipe): CustomSmithingTableRecipe {
             with(item) {

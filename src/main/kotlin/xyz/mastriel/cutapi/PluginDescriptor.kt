@@ -51,7 +51,7 @@ public class PluginOptionsBuilder {
     public var packFolder: String = "pack"
 
     /**
-     * If not null, this will automatically add the [DisplayAs][xyz.mastriel.cutapi.item.behaviors.DisplayAs]
+     * If not null, this will automatically add the [DisplayAs][xyz.mastriel.cutapi.item.attachments.DisplayAs]
      * component to any custom item with a texture specified. This will also add this Material to all textures
      * .cutmeta files.
      *

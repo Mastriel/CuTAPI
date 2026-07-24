@@ -30,7 +30,7 @@ public sealed interface CustomTile<T : CuTPlacedTile> : Identifiable {
         }
     }
 
-    public companion object : IdentifierRegistry<CustomTile<*>>("Custom Tiles") {
+    public companion object : IdentifierRegistry<CustomTile<*>>(id("cutapi:registry/custom_tile")) {
 
     }
 }
@@ -56,7 +56,7 @@ public class CustomBlock<T : CuTPlacedBlock>(
     override fun <T : BlockBehavior> getBehavior(behavior: KClass<T>): T = behaviorHolder.getBehavior(behavior)
 
 
-    public companion object : IdentifierRegistry<CustomBlock<*>>("Custom Blocks") {
+    public companion object : IdentifierRegistry<CustomBlock<*>>(id("cutapi:registry/custom_block")) {
 
         public val Unknown: CustomBlock<CuTPlacedBlock> = customBlock(
             id(Plugin, "unknown_block")
@@ -97,7 +97,7 @@ public class CustomTileEntity<T : CuTPlacedTileEntity>(
 
     override fun <T : TileEntityBehavior> getBehavior(behavior: KClass<T>): T = behaviorHolder.getBehavior(behavior)
 
-    public companion object : IdentifierRegistry<CustomTileEntity<*>>("Custom Tile Entities") {
+    public companion object : IdentifierRegistry<CustomTileEntity<*>>(id("cutapi:registry/custom_tile_entity")) {
 
         public val Unknown: CustomTileEntity<CuTPlacedTileEntity> = customTileEntity(
             id(Plugin, "unknown_tile_entity")

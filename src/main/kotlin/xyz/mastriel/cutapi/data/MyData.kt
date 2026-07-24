@@ -12,10 +12,6 @@ public data class MyData(
     })
 }
 
-public infix fun <T : Any> Schema<T>.makes(producer: () -> T) {
-
-}
-
 public abstract class MyAbstractData(
     public val name: String,
     public val age: Int,

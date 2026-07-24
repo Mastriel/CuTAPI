@@ -14,10 +14,11 @@ import xyz.mastriel.cutapi.CuTAPI.experimentalBlockSupport
 import xyz.mastriel.cutapi.block.*
 import xyz.mastriel.cutapi.commands.*
 import xyz.mastriel.cutapi.item.*
-import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.item.bukkitevents.*
 import xyz.mastriel.cutapi.item.recipe.*
 import xyz.mastriel.cutapi.nms.*
+import xyz.mastriel.cutapi.player.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
@@ -51,6 +52,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             isFromJar = false
         }
 
+        ItemSystem.registerBuiltins()
         registerCommands()
         registerEvents()
         registerPeriodics()
@@ -96,6 +98,8 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             MinecraftAssetDownloader.initialize()
             TexturePostProcessor.initialize()
             Uploader.initialize()
+            ItemSystem.initialize()
+            PlayerSystem.initialize()
 
             CustomItem.initialize()
             CustomShapedRecipe.initialize()
@@ -173,7 +177,6 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         if (experimentalBlockSupport) server.pluginManager.registerEvents(CuTAPI.blockBreakManager, this)
         server.pluginManager.registerEvents(PacketItemHandler, this)
         server.pluginManager.registerEvents(CraftingRecipeEvents(), this)
-        server.pluginManager.registerEvents(Unstackable, this)
 
         server.pluginManager.registerEvents(UploaderJoinEvents(), this)
         server.pluginManager.registerEvents(CuTAPI.playerPacketManager, this)
@@ -187,9 +190,13 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         }
         server.pluginManager.registerEvents(serverReadyHandler, this)
 
-        val itemBehaviorEvents = ItemBehaviorEvents()
-        server.pluginManager.registerEvents(itemBehaviorEvents, this)
-        CuTAPI.periodicManager.register(this, itemBehaviorEvents)
+        val itemSystemEvents = ItemSystemEvents()
+        server.pluginManager.registerEvents(itemSystemEvents, this)
+        CuTAPI.periodicManager.register(this, itemSystemEvents)
+
+        val playerSystemEvents = PlayerSystemEvents()
+        server.pluginManager.registerEvents(playerSystemEvents, this)
+        CuTAPI.periodicManager.register(this, playerSystemEvents)
     }
 
     private fun registerCommands() {

@@ -19,14 +19,14 @@ import kotlin.reflect.*
  * ```
  * In that case, Child1, Grandchild1, and Grandchild2 will be registered.
  */
-public open class SealedObjectRegistry<T : Identifiable>(name: String, sealedClass: KClass<T>) :
-    IdentifierRegistry<T>("$name (sealed)") {
+public open class SealedObjectRegistry<T : Identifiable>(id: Identifier, sealedClass: KClass<T>) :
+    IdentifierRegistry<T>(id) {
 
     private var registrationsOpen = true
 
     init {
         if (!sealedClass.isSealed) {
-            Plugin.logger.warning("${sealedClass.simpleName} is not a sealed class, and it's being used in a '${name}'!")
+            Plugin.logger.warning("${sealedClass.simpleName} is not a sealed class, and it's being used in '$id'!")
         }
         registerClass(sealedClass)
         registrationsOpen = false
@@ -39,7 +39,7 @@ public open class SealedObjectRegistry<T : Identifiable>(name: String, sealedCla
             }
         } else {
             if (!hasObjectInstance(kClass)) {
-                Plugin.logger.warning("There's no object instance for ${kClass.simpleName} in a '${name}'.")
+                Plugin.logger.warning("There's no object instance for ${kClass.simpleName} in '$id'.")
             } else {
                 register(kClass.objectInstance!!)
             }

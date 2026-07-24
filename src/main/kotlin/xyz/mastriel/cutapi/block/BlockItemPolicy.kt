@@ -1,8 +1,9 @@
 package xyz.mastriel.cutapi.block
 
 import org.bukkit.*
+import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.item.*
-import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.item.attachments.*
 
 /**
  * Defines how a block has a relationship to items.
@@ -32,7 +33,7 @@ public sealed class BlockItemPolicy {
             }
             if (descriptor != null) return customItem(customTile.id / "item", material, descriptor)
             return customItem(customTile.id / "item", material) {
-                behavior(BlockPlaceBehavior(customTile))
+                attach(BlockPlaceAttachment(customTile))
 
                 display {
                     if (viewer == null) return@display
@@ -43,15 +44,15 @@ public sealed class BlockItemPolicy {
     }
 
     /**
-     * Using this will modify the behaviors of [item] to include a BlockPlaceBehavior if it doesn't already have one.
+     * Using this will modify the attachments of [item] to include a [BlockPlaceAttachment].
      * If it does already have one, a warning will be printed. You shouldn't use this with an item that has one!
      */
     public data class Item(val item: CustomItem<*>, val consumesItem: Boolean = true) : BlockItemPolicy() {
         override fun tileCreate(tileDescriptor: TileDescriptor, customTile: CustomTile<*>): CustomItem<*> {
-            val behaviors = item.descriptor.itemBehaviors as? MutableList<ItemBehavior>
-                ?: error("${item.id} does not have its itemBehaviors as a MutableList!")
+            val attachments = item.descriptor.attachments as? MutableList<Attachment>
+                ?: error("${item.id} does not have its attachments as a MutableList!")
 
-            behaviors.add(BlockPlaceBehavior(customTile))
+            attachments.add(BlockPlaceAttachment(customTile, consumesItem))
 
             return item
         }

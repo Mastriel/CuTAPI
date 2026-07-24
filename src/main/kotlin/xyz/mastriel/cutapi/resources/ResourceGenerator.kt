@@ -1,6 +1,5 @@
 package xyz.mastriel.cutapi.resources
 
-import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.data.*
 import kotlin.reflect.*
@@ -58,7 +57,7 @@ public abstract class ResourceGenerator(
     /**
      * Companion object for managing and retrieving registered resource generators.
      */
-    public companion object : IdentifierRegistry<ResourceGenerator>("Resource Generators") {
+    public companion object : IdentifierRegistry<ResourceGenerator>(id("cutapi:registry/resource_generator")) {
 
         /**
          * Retrieves all resource generators for a specific stage.

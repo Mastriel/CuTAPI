@@ -20,7 +20,7 @@ public class IdentifiableArgumentType<T : Identifiable>(
         val id = id(reader.readIdentifier())
         return registry.getOrNull(id) ?: throw CommandSyntaxException.BUILT_IN_EXCEPTIONS
             .dispatcherParseException()
-            .create("Unknown Identifier in (${registry.name}): $id")
+            .create("Unknown Identifier in (${registry.id}): $id")
     }
 
     override fun <S : Any> listSuggestions(

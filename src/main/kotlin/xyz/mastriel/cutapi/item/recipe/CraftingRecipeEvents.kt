@@ -141,7 +141,7 @@ internal class CraftingRecipeEvents : Listener {
 
     fun itemIsNotCustomOrCraftsAsBaseMaterial(item: ItemStack): Boolean {
         if (!item.isCustom) return true
-        return item.customItem.hasBehavior<CraftsAsBaseMaterial>()
+        return item.customItem.hasAttachment<CraftsAsBaseMaterial>()
     }
 
     private fun testShapelessVanillaRecipe(recipe: ShapelessRecipe, inventory: CraftingInventory): Boolean {

@@ -1,26 +1,27 @@
-package xyz.mastriel.cutapi.item.behaviors
+package xyz.mastriel.cutapi.item.attachments
 
 import org.bukkit.*
 import org.bukkit.block.*
 import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.*
-import xyz.mastriel.cutapi.behavior.*
+import xyz.mastriel.cutapi.attachment.*
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.registry.*
 import java.util.function.*
 
 /**
  * If the vanilla material of the custom item is already a tool, it will be considered a tool here as well!
- * Don't use a vanilla tool as your vanilla material if you don't want this behavior.
+ * Don't use a vanilla tool as your vanilla material if you don't want this attachment inferred.
  *
  * This class is also used to contain info for vanilla tools. Use [Tool.from] to get the tool data
  * for any item stack, including vanilla.
  */
-@RepeatableBehavior
+@RepeatableAttachment
 public data class Tool(val category: ToolCategory, val tier: ToolTier, val toolSpeed: ToolSpeed) :
-    ItemBehavior(id(Plugin, "tool")) {
+    Attachment {
 
-    override fun ItemDescriptorBuilder.modifyDescriptor() {
+    init {
         if (!ToolCategory.has(category.id)) {
             error("Tool category ${category.id} is not registered.")
         }
@@ -29,7 +30,11 @@ public data class Tool(val category: ToolCategory, val tier: ToolTier, val toolS
         }
     }
 
-    public companion object {
+    public companion object : Schema<Tool> by schema(id(Plugin, "tool"), {
+        property(Tool::category, VariantSerializer.Identifiable(ToolCategory))
+        property(Tool::tier, VariantSerializer.Identifiable(ToolTier))
+        property(Tool::toolSpeed, ToolSpeedSerializer)
+    }) {
 
         public val Fists: Tool = Tool(ToolCategory.Fists, ToolTier.Nothing, ToolSpeed.Fists)
 
@@ -41,13 +46,13 @@ public data class Tool(val category: ToolCategory, val tier: ToolTier, val toolS
         }
 
         private fun fromCustom(itemStack: CuTItemStack): List<Tool> {
-            val behaviors = itemStack.getBehaviorsOfType<Tool>()
+            val tools = itemStack.getAttachments(Tool)
 
-            if (behaviors.isEmpty()) {
+            if (tools.isEmpty()) {
                 return listOf(fromVanilla(itemStack.vanilla()))
             }
 
-            return behaviors
+            return tools
         }
 
         private fun fromVanilla(itemStack: ItemStack): Tool {
@@ -151,7 +156,7 @@ public class ToolTier private constructor(
     public constructor(id: Identifier, breakingLevel: Float) : this(id, breakingLevel, false)
 
 
-    public companion object : IdentifierRegistry<ToolTier>("Tool Tiers") {
+    public companion object : IdentifierRegistry<ToolTier>(id("cutapi:registry/tool_tier")) {
 
         public val Nothing: ToolTier get() = get(id(Plugin, "nothing"))
         public val Wood: ToolTier get() = get(id(Plugin, "wood"))
@@ -197,7 +202,7 @@ public class ToolCategory private constructor(
     public constructor(id: Identifier, attributes: ToolCategoryAttributes) : this(id, attributes, false)
 
 
-    public companion object : IdentifierRegistry<ToolCategory>("Tool Categories") {
+    public companion object : IdentifierRegistry<ToolCategory>(id("cutapi:registry/tool_category")) {
 
         public val Pickaxe: ToolCategory = ToolCategory(
             id(Plugin, "pickaxe"),
@@ -341,3 +346,9 @@ public class SpecialBreakingMultipliers(
 
 public fun SpecialBreakingMultipliers(vararg pairs: Pair<Predicate<Material>, Float>): SpecialBreakingMultipliers =
     SpecialBreakingMultipliers(mapOf(*pairs))
+
+internal val ToolSpeedSerializer: Serializer<ToolSpeed> = VariantSerializer.mapped(
+    serializer = VariantSerializer.Float,
+    serialize = { it.speed },
+    deserialize = { ToolSpeed(it) }
+)

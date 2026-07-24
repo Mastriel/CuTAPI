@@ -23,7 +23,7 @@ import org.bukkit.event.block.*
 import org.bukkit.potion.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.item.*
-import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.utils.*
 import kotlin.math.*

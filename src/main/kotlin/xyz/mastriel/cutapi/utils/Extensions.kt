@@ -5,7 +5,7 @@ import net.kyori.adventure.text.format.*
 import net.kyori.adventure.text.serializer.legacy.*
 import org.bukkit.inventory.*
 import org.bukkit.inventory.meta.*
-import xyz.mastriel.cutapi.item.behaviors.*
+import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.nms.*
 import java.time.*
 import kotlin.math.*
