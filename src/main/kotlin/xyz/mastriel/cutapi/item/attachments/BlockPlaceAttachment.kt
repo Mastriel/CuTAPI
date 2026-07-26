@@ -10,7 +10,7 @@ import xyz.mastriel.cutapi.registry.*
 public data class BlockPlaceAttachment(
     public val tileId: Identifier,
     public val consumesItem: Boolean = true
-) : Attachment {
+) : ItemAttachment {
     public constructor(
         tile: CustomTile<*>,
         consumesItem: Boolean = true

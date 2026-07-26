@@ -6,6 +6,7 @@ import org.bukkit.event.*
 import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.attachment.*
+import xyz.mastriel.cutapi.data.requireRegistered
 import xyz.mastriel.cutapi.item.ItemStackUtility.customItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
 import xyz.mastriel.cutapi.item.attachments.*
@@ -30,7 +31,7 @@ public open class CustomItem<TStack : CuTItemStack>(
     public val type: Material,
     public val stackTypeClass: KClass<out TStack>,
     descriptor: ItemDescriptor? = null
-) : Identifiable, Listener, AttachmentHolder {
+) : Identifiable, Listener, AttachmentHolder<ItemAttachment> {
 
 
     /**
@@ -62,19 +63,19 @@ public open class CustomItem<TStack : CuTItemStack>(
 
     private val attachmentHolder by lazy { CustomItemAttachmentHolder(this) }
 
-    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out Attachment>): Boolean =
+    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out ItemAttachment>): Boolean =
         attachmentHolder.hasAttachment(schema)
 
-    override fun <T : Attachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
+    override fun <T : ItemAttachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
         attachmentHolder.getAttachment(schema)
 
-    override fun <T : Attachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
+    override fun <T : ItemAttachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
         attachmentHolder.getAttachmentOrNull(schema)
 
-    override fun <T : Attachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
+    override fun <T : ItemAttachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
         attachmentHolder.getAttachments(schema)
 
-    override fun getAllAttachments(): List<Attachment> = attachmentHolder.getAllAttachments()
+    override fun getAllAttachments(): List<ItemAttachment> = attachmentHolder.getAllAttachments()
 
     protected fun getData(item: CuTItemStack): TagContainer {
         return ItemAttachmentTagContainer(item.handle, id.copy(namespace = id.namespace, key = id.key + "/data"))
@@ -113,6 +114,9 @@ public open class CustomItem<TStack : CuTItemStack>(
         }
 
         override fun register(item: CustomItem<*>): CustomItem<*> {
+            item.descriptor.attachments.forEach { attachment ->
+                attachment.schema().requireRegistered()
+            }
             val plugin = item.id.plugin
 
             if (plugin != null) {

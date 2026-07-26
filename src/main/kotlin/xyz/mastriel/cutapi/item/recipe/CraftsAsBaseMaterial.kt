@@ -5,5 +5,5 @@ import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.registry.*
 
-public object CraftsAsBaseMaterial : Attachment,
+public object CraftsAsBaseMaterial : ItemAttachment,
     Schema<CraftsAsBaseMaterial> by singletonSchema(id(Plugin, "crafts_as_base_material"))

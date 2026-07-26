@@ -79,7 +79,7 @@ public fun customItem(
     id: Identifier,
     bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>,
-    attachments: Collection<Attachment>
+    attachments: Collection<ItemAttachment>
 ): CustomItem<CuTItemStack> {
     return customItem(id, bukkitMaterial) {
         attach(attachments)
@@ -123,7 +123,7 @@ public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
     id: Identifier,
     bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>,
-    attachments: Collection<Attachment>
+    attachments: Collection<ItemAttachment>
 ): Deferred<CustomItem<CuTItemStack>> {
     val customItem = customItem(id, bukkitMaterial, name, attachments)
     @Suppress("UNCHECKED_CAST")

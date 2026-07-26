@@ -13,6 +13,7 @@ import org.bukkit.scheduler.*
 import xyz.mastriel.cutapi.CuTAPI.experimentalBlockSupport
 import xyz.mastriel.cutapi.block.*
 import xyz.mastriel.cutapi.commands.*
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.item.bukkitevents.*
@@ -52,6 +53,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             isFromJar = false
         }
 
+        registerBuiltInSchemas()
         ItemSystem.registerBuiltins()
         registerCommands()
         registerEvents()
@@ -92,6 +94,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
 
         CuTAPI.serverReady {
+            Schema.initialize()
             ResourceValueCodec.initialize()
             ResourceFileLoader.initialize()
             ResourceGenerator.initialize()
@@ -118,6 +121,29 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         registerResourceLoaders()
 
         generateResourcePackWhenReady()
+    }
+
+    private fun registerBuiltInSchemas() {
+        Schema.modifyRegistry {
+            register(MyData)
+            register(MyAbstractData)
+            register(MyChildData)
+
+            register(BlockPlaceAttachment)
+            register(DisplayAs)
+            register(Durability)
+            register(Equipable)
+            register(HideAttributes)
+            register(HideTooltip)
+            register(ModifyAttribute)
+            register(Shiny)
+            register(StaticLore)
+            register(Tool)
+            register(ToolCategoryAttributes)
+            register(Unstackable)
+            register(VanillaTool)
+            register(CraftsAsBaseMaterial)
+        }
     }
 
     private fun getMinecraftVersion(): String {
@@ -205,6 +231,9 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             val registrar = event.registrar()
             registrar.register(CuTGiveCommand, listOf("cutgive"))
             registrar.register(CuTAPICommand)
+            registrar.register(InspectRegistryCommand)
+            registrar.register(InspectEnumCommand)
+            registrar.register(AttachmentsCommand)
         }
     }
 

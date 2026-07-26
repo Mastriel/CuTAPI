@@ -1,5 +1,4 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
-import org.gradle.api.plugins.*
 
 plugins {
     kotlin("jvm") version "2.3.0"
@@ -80,7 +79,7 @@ dependencies {
 tasks {
 
     runServer {
-        pluginJars("../CuTAPI/build/libs/CuTAPI-0.1.0a-reobf.jar")
+        pluginJars("../CuTAPI/build/libs/CuTAPI-v0.1.1.jar")
 
         minecraftVersion(minecraftVersion)
     }

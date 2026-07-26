@@ -27,7 +27,7 @@ public class VanillaTool(
     public val defaultMiningSpeed: ToolSpeed = ToolSpeed.Fists,
     public val specialBreakingMultipliers: SpecialBreakingMultipliers = SpecialBreakingMultipliers(),
     public val itemDamage: Int = 1
-) : Attachment {
+) : ItemAttachment {
 
     private val rules: List<PlainToolComponentRule>
 

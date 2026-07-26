@@ -14,15 +14,14 @@ public interface Identifiable {
     public val id: Identifier
 
     /**
-     * Used to provide info in the registry inspector. Defaults to the associated schema if this type is serializable.
+     * Used to display this value in debugging tools.
+     *
+     * Serializable values use their existing serializer automatically. Override
+     * this with [xyz.mastriel.cutapi.data.debugView] when debugging should expose
+     * only part of the value or use a different representation.
      */
-    public val debugSchema: Schema<*>?
-        get() {
-            if (this is Serializable<*>) {
-                if (serializer is Schema<*>) return serializer as Schema<*>?;
-            }
-            return null;
-        }
+    public val debugView: DebugRepresentation<*>?
+        get() = (this as? Serializable<*>)?.serializer
 }
 
 public sealed class SerialDefault<T : Identifiable?> {

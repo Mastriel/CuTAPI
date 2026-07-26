@@ -11,6 +11,11 @@ public class IdentifierRegistryTest : MockBukkitTest() {
 
         assertIs<Identifiable>(registry)
         assertEquals(registryId, registry.id)
+        assertSame(registry, IdentifierRegistry.AllRegistries.get(registryId))
+        assertSame(
+            IdentifierRegistry.AllRegistries,
+            IdentifierRegistry.AllRegistries.get(id("cutapi:registries"))
+        )
     }
 }
 

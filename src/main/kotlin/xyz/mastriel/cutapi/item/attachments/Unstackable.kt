@@ -8,7 +8,7 @@ import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
 import java.util.*
 
-public object Unstackable : Attachment, Schema<Unstackable> by singletonSchema(id(Plugin, "unstackable"))
+public object Unstackable : ItemAttachment, Schema<Unstackable> by singletonSchema(id(Plugin, "unstackable"))
 
 internal object UnstackableSystem : ItemSystem by attachmentItemSystem(Unstackable) {
     override fun onCreate(context: ItemCreateContext) {

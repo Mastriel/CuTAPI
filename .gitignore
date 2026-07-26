@@ -4,5 +4,5 @@
 /ExamplePlugin/build/
 /server/
 !/CuTAPI-Core/run/eula.txt
-/CuTAPI-Core/run/
+run/
 build

@@ -92,7 +92,7 @@ public open class CuTItemStack protected constructor(
      */
     public val handle: ItemStack
 ) : TagContainer by ItemTagContainer(handle),
-    AttachmentHolder,
+    AttachmentHolder<ItemAttachment>,
     PersonalizedWithDefault<ItemStack> {
 
     /**
@@ -133,19 +133,19 @@ public open class CuTItemStack protected constructor(
 
     private val attachmentHolder by lazy { CuTItemStackAttachmentHolder(this) }
 
-    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out Attachment>): Boolean =
+    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out ItemAttachment>): Boolean =
         attachmentHolder.hasAttachment(schema)
 
-    override fun <T : Attachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
+    override fun <T : ItemAttachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
         attachmentHolder.getAttachment(schema)
 
-    override fun <T : Attachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
+    override fun <T : ItemAttachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
         attachmentHolder.getAttachmentOrNull(schema)
 
-    override fun <T : Attachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
+    override fun <T : ItemAttachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
         attachmentHolder.getAttachments(schema)
 
-    override fun getAllAttachments(): List<Attachment> = attachmentHolder.getAllAttachments()
+    override fun getAllAttachments(): List<ItemAttachment> = attachmentHolder.getAllAttachments()
 
 
     /**

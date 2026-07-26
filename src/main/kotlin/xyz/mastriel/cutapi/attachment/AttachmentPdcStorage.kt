@@ -44,6 +44,13 @@ internal object AttachmentPdcStorage {
         attachments: List<Attachment>,
         suppressed: Set<Identifier> = emptySet()
     ) {
+        attachments.forEach { it.schema().requireRegistered() }
+        suppressed.forEach { schemaId ->
+            require(Schema.has(schemaId)) {
+                "Cannot suppress unregistered attachment schema $schemaId"
+            }
+        }
+
         if (attachments.isEmpty() && suppressed.isEmpty()) {
             container.remove(AttachmentsKey)
             return
@@ -89,7 +96,7 @@ internal object AttachmentPdcStorage {
 
     @Suppress("UNCHECKED_CAST")
     private fun serialize(attachment: Attachment): Variant {
-        val schema = attachment.schema() as Schema<Attachment>
+        val schema = attachment.schema().requireRegistered() as Schema<Attachment>
         return schema.serialize(attachment).getOrThrow()
     }
 

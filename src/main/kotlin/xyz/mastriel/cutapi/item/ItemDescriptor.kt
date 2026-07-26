@@ -21,26 +21,26 @@ public annotation class ItemDescriptorDsl
  */
 public class ItemDescriptor internal constructor(
     public val display: (ItemDisplayBuilder.() -> Unit)? = null,
-    public val attachments: List<Attachment> = mutableListOf(),
+    public val attachments: List<ItemAttachment> = mutableListOf(),
     public val onRegister: EventHandlerList<ItemRegisterEvent> = EventHandlerList()
-) : AttachmentHolder {
+) : AttachmentHolder<ItemAttachment> {
 
-    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out Attachment>): Boolean =
+    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out ItemAttachment>): Boolean =
         attachments.any { it.schema().id == schema.id }
 
-    override fun <T : Attachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
+    override fun <T : ItemAttachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
         getAttachmentOrNull(schema) ?: error("Attachment ${schema.id} does not exist on this descriptor.")
 
-    override fun <T : Attachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
+    override fun <T : ItemAttachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
         getAttachments(schema).firstOrNull()
 
-    override fun <T : Attachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
+    override fun <T : ItemAttachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
         attachments.filter { it.schema().id == schema.id }.map {
             @Suppress("UNCHECKED_CAST")
             it as T
         }
 
-    override fun getAllAttachments(): List<Attachment> = attachments.toList()
+    override fun getAllAttachments(): List<ItemAttachment> = attachments.toList()
 
     public infix fun with(block: ItemDescriptorBuilder.() -> Unit): ItemDescriptor {
         val other = ItemDescriptorBuilder().apply(block).build()
@@ -82,12 +82,12 @@ public class ItemDescriptorBuilder {
         attachmentLore(Color.Blue)
     }
 
-    private val _attachments = mutableListOf<Attachment>()
-    public val attachments: List<Attachment> get() = _attachments
+    private val _attachments = mutableListOf<ItemAttachment>()
+    public val attachments: List<ItemAttachment> get() = _attachments
 
     public val onRegister: EventHandlerList<ItemRegisterEvent> = EventHandlerList()
 
-    public fun attach(vararg attachments: Attachment) {
+    public fun attach(vararg attachments: ItemAttachment) {
         for (attachment in attachments) {
             val schema = attachment.schema()
             if (this._attachments.any { it.schema().id == schema.id } && !attachment.isRepeatableAttachment())
@@ -96,7 +96,7 @@ public class ItemDescriptorBuilder {
         }
     }
 
-    public fun attach(attachments: Collection<Attachment>) {
+    public fun attach(attachments: Collection<ItemAttachment>) {
         attach(*attachments.toTypedArray())
     }
 
@@ -227,18 +227,18 @@ public open class ItemDisplayBuilder(public val itemStack: CuTItemStack, public 
         return lines.toList()
     }
 
-    public fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out Attachment>): Boolean =
+    public fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out ItemAttachment>): Boolean =
         itemStack.hasAttachment(schema)
 
-    public fun <T : Attachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
+    public fun <T : ItemAttachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
         itemStack.getAttachment(schema)
 
-    public fun <T : Attachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
+    public fun <T : ItemAttachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
         itemStack.getAttachmentOrNull(schema)
 
 }
 
-public interface ItemLoreAttachment : Attachment {
+public interface ItemLoreAttachment : ItemAttachment {
     public fun getLore(item: CuTItemStack, viewer: Player?): Component?
 }
 

@@ -7,7 +7,7 @@ import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.registry.*
 
-public object HideAttributes : Attachment, Schema<HideAttributes> by singletonSchema(id(Plugin, "hide_attributes"))
+public object HideAttributes : ItemAttachment, Schema<HideAttributes> by singletonSchema(id(Plugin, "hide_attributes"))
 
 internal object HideAttributesSystem : ItemSystem by attachmentItemSystem(HideAttributes) {
 
@@ -15,4 +15,3 @@ internal object HideAttributesSystem : ItemSystem by attachmentItemSystem(HideAt
         context.item.handle.addItemFlags(ItemFlag.HIDE_ATTRIBUTES)
     }
 }
-

@@ -15,10 +15,10 @@ import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.system.*
 
 public open class ItemSystemContext(public val item: CuTItemStack) {
-    public fun <T : Attachment> attachment(schema: Schema<T>): T =
+    public fun <T : ItemAttachment> attachment(schema: Schema<T>): T =
         item.getAttachment(schema)
 
-    public fun data(schema: Schema<out Attachment>): TagContainer =
+    public fun data(schema: Schema<out ItemAttachment>): TagContainer =
         ItemAttachmentTagContainer(item.handle, schema.id)
 }
 
@@ -139,7 +139,7 @@ public fun generalItemSystem(
 }
 
 public fun attachmentItemSystem(
-    attachment: Schema<out Attachment>,
+    attachment: Schema<out ItemAttachment>,
     id: Identifier = attachment.id / "system",
     priority: RegistryPriority = RegistryPriority.Medium,
     block: ItemSystem.() -> Unit = {}

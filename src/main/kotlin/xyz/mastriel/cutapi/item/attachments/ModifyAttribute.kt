@@ -17,7 +17,7 @@ public data class ModifyAttribute(
     public val attribute: Attribute,
     public val amount: Double,
     public val operation: AttributeModifier.Operation = AttributeModifier.Operation.ADD_NUMBER
-) : Attachment {
+) : ItemAttachment {
     public companion object : Schema<ModifyAttribute> by schema(id(Plugin, "attribute"), {
         property(ModifyAttribute::key, VariantSerializer.Id)
         property(ModifyAttribute::slotGroup, EquipmentSlotGroupSerializer)

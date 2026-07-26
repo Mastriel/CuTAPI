@@ -23,10 +23,9 @@ public val ItemStack.chatTooltip: Component
         // fixes a problem with Adventure not processing tool components properly
         val item = stripToolData(clone())
 
-        return Component.text()
+        return Component.empty()
             .hoverEvent(item)
             .append(item.itemMeta?.displayName() ?: item.itemMeta.itemNameOrNull() ?: Component.translatable(item))
-            .build()
     }
 
 private fun ItemMeta.itemNameOrNull(): Component? {

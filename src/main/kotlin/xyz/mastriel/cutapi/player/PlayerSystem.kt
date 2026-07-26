@@ -12,10 +12,10 @@ import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.system.*
 
 public open class PlayerSystemContext(public val player: Player) {
-    public fun <T : Attachment> attachment(schema: Schema<T>): T =
+    public fun <T : PlayerAttachment> attachment(schema: Schema<T>): T =
         player.getAttachment(schema)
 
-    public fun data(schema: Schema<out Attachment>): TagContainer =
+    public fun data(schema: Schema<out PlayerAttachment>): TagContainer =
         PlayerAttachmentTagContainer(player, schema.id)
 }
 
@@ -102,7 +102,7 @@ public fun generalPlayerSystem(
 }
 
 public fun attachmentPlayerSystem(
-    attachment: Schema<out Attachment>,
+    attachment: Schema<out PlayerAttachment>,
     id: Identifier = attachment.id / "system",
     priority: RegistryPriority = RegistryPriority.Medium,
     block: PlayerSystem.() -> Unit = {}

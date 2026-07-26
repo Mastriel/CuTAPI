@@ -11,21 +11,22 @@ import xyz.mastriel.cutapi.data.*
  * Removing an intrinsic attachment clears that override; the next lookup creates a fresh value
  * with [create], so an intrinsic attachment can never be absent from a player.
  */
-public interface IntrinsicPlayerAttachmentProvider<T : Attachment> {
+public interface IntrinsicPlayerAttachmentProvider<T : PlayerAttachment> {
     public val schema: Schema<T>
 
     public fun create(player: Player): T
 
     public companion object {
-        private val providers = mutableListOf<IntrinsicPlayerAttachmentProvider<out Attachment>>()
+        private val providers = mutableListOf<IntrinsicPlayerAttachmentProvider<out PlayerAttachment>>()
 
         /**
          * Returns all registered providers.
          *
          * A provider is registered when its [provideIntrinsicPlayerAttachment] delegate is initialized.
          */
-        public fun getAll(): List<IntrinsicPlayerAttachmentProvider<out Attachment>> {
+        public fun getAll(): List<IntrinsicPlayerAttachmentProvider<out PlayerAttachment>> {
             val snapshot = synchronized(providers) { providers.toList() }
+            snapshot.forEach { it.schema.requireRegistered() }
             val duplicateIds = snapshot.groupBy { it.schema.id }
                 .filterValues { it.size > 1 }
                 .keys
@@ -36,11 +37,11 @@ public interface IntrinsicPlayerAttachmentProvider<T : Attachment> {
         }
 
         @Suppress("UNCHECKED_CAST")
-        public fun <T : Attachment> getOrNull(schema: Schema<T>): IntrinsicPlayerAttachmentProvider<T>? =
+        public fun <T : PlayerAttachment> getOrNull(schema: Schema<T>): IntrinsicPlayerAttachmentProvider<T>? =
             getAll().firstOrNull { it.schema.id == schema.id } as? IntrinsicPlayerAttachmentProvider<T>
 
         @PublishedApi
-        internal fun register(provider: IntrinsicPlayerAttachmentProvider<out Attachment>) {
+        internal fun register(provider: IntrinsicPlayerAttachmentProvider<out PlayerAttachment>) {
             synchronized(providers) {
                 providers += provider
             }
@@ -57,11 +58,16 @@ public interface IntrinsicPlayerAttachmentProvider<T : Attachment> {
  *     Schema<PlayerStats> by schema(id("example:player_stats"), { ... }),
  *     IntrinsicPlayerAttachmentProvider<PlayerStats> by
  *         provideIntrinsicPlayerAttachment({ PlayerStats() })
+ *
+ * // During plugin startup:
+ * Schema.modifyRegistry {
+ *     register(PlayerStats)
+ * }
  * ```
  *
  * The attachment schema is resolved lazily after companion initialization.
  */
-public inline fun <reified T : Attachment> provideIntrinsicPlayerAttachment(
+public inline fun <reified T : PlayerAttachment> provideIntrinsicPlayerAttachment(
     noinline factory: (Player) -> T
 ): IntrinsicPlayerAttachmentProvider<T> {
     val attachmentType = T::class

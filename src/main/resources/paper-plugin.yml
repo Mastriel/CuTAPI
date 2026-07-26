@@ -9,3 +9,5 @@ permissions:
     default: op
   cutapi.admin.test:
     default: op
+  cutapi.admin.debug:
+    default: op

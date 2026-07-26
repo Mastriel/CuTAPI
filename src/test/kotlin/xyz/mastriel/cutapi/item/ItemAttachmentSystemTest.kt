@@ -146,14 +146,14 @@ public class ItemAttachmentSystemTest : MockBukkitTest() {
     }
 }
 
-internal data class TestItemAttachment(val amount: Int = 0) : Attachment {
+internal data class TestItemAttachment(val amount: Int = 0) : ItemAttachment {
     companion object : Schema<TestItemAttachment> by schema(id("test:item_attachment"), {
         property(TestItemAttachment::amount, VariantSerializer.Int)
     })
 }
 
 @RepeatableAttachment
-internal data class TestRepeatableItemAttachment(val value: String = "") : Attachment {
+internal data class TestRepeatableItemAttachment(val value: String = "") : ItemAttachment {
     companion object : Schema<TestRepeatableItemAttachment> by schema(id("test:repeatable_item_attachment"), {
         property(TestRepeatableItemAttachment::value, VariantSerializer.String)
     })
@@ -210,6 +210,8 @@ private object ItemTestFixtures {
     fun initialize() {
         if (initialized) return
 
+        Schema.registerSchema(TestItemAttachment)
+        Schema.registerSchema(TestRepeatableItemAttachment)
         CuTItemStack.registerType(
             ItemStackUtility.DefaultItemStackTypeId,
             CuTItemStack::class,

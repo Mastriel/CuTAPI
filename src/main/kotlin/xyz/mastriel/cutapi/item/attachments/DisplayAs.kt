@@ -12,7 +12,7 @@ import xyz.mastriel.cutapi.registry.*
  * the holder is in creative mode, as creative mode enables client-sided changes like this
  * to occur without the server arguing)
  */
-public data class DisplayAs(public val material: Material) : Attachment {
+public data class DisplayAs(public val material: Material) : ItemAttachment {
     public companion object : Schema<DisplayAs> by schema(id(Plugin, "display_as"), {
         property(DisplayAs::material, VariantSerializer.Enum<Material>())
     })

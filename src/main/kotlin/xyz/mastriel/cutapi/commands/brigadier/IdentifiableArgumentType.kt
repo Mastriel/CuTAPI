@@ -13,24 +13,31 @@ import xyz.mastriel.cutapi.registry.*
 import java.util.concurrent.*
 
 public class IdentifiableArgumentType<T : Identifiable>(
-    private val registry: IdentifierRegistry<T>
+    private val registry: IdentifierRegistry<T>,
+    private val accepts: (T) -> Boolean = { true }
 ) : CustomArgumentType<T, NamespacedKey> {
         
     override fun parse(reader: StringReader): T {
         val id = id(reader.readIdentifier())
-        return registry.getOrNull(id) ?: throw CommandSyntaxException.BUILT_IN_EXCEPTIONS
-            .dispatcherParseException()
-            .create("Unknown Identifier in (${registry.id}): $id")
+        val value = registry.getOrNull(id)
+        if (value == null || !accepts(value)) {
+            throw CommandSyntaxException.BUILT_IN_EXCEPTIONS
+                .dispatcherParseException()
+                .create("Unknown Identifier in (${registry.id}): $id")
+        }
+        return value
     }
 
     override fun <S : Any> listSuggestions(
         context: CommandContext<S>,
         builder: SuggestionsBuilder
     ): CompletableFuture<Suggestions> {
-        registry.getAllIds().forEach {
-            val id = it.id.toString()
-            if (builder.remaining in id) builder.suggest(id)
-        }
+        registry.getAllValues()
+            .filter(accepts)
+            .map { it.id.toString() }
+            .filter { it.startsWith(builder.remaining, ignoreCase = true) }
+            .sorted()
+            .forEach(builder::suggest)
         return builder.buildFuture()
     }
 

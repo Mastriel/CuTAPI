@@ -167,6 +167,11 @@ private class DeferredPolySchema<T : Any>(
     }
 }
 
+/**
+ * Creates an unregistered polymorphic schema.
+ *
+ * Register the returned schema with [Schema.modifyRegistry] during plugin startup.
+ */
 public fun <T : Any> polySchema(
     id: Identifier,
     block: PolySchemaBuilder<T>.() -> Unit
@@ -174,7 +179,7 @@ public fun <T : Any> polySchema(
     val schemaBuilder = SchemaBuilderImpl<T>()
     val builder = PolySchemaBuilderImpl(schemaBuilder).apply(block)
     PolySchemaImpl(schemaBuilder.build(id), builder.includes)
-}.also { Schema.registerSchema(it) }
+}
 
 public fun <T : Any> polySchema(
     type: KClass<T>,
@@ -184,4 +189,4 @@ public fun <T : Any> polySchema(
     val schemaBuilder = SchemaBuilderImpl(type)
     val builder = PolySchemaBuilderImpl(schemaBuilder).apply(block)
     PolySchemaImpl(schemaBuilder.build(id), builder.includes)
-}.also { Schema.registerSchema(it) }
+}

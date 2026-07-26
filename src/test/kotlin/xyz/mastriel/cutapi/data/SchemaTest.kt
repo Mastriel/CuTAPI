@@ -1,6 +1,7 @@
 package xyz.mastriel.cutapi.data
 
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.testing.*
@@ -133,13 +134,13 @@ class SchemaTest : MockBukkitTest() {
     }
 
     @Test
-    fun `reified empty schemas preserve their target type and register by id`() {
+    fun `reified empty schemas preserve their target type without registering`() {
         assertEquals(EmptySchemaData::class, EmptySchemaData.type)
-        assertEquals(EmptySchemaData::class, Schema.get(id("cutapi:empty_schema_data")).type)
+        assertNull(Schema.getOrNull(EmptySchemaData.id))
     }
 
     @Test
-    fun `singleton schemas deserialize to their object instance and register by id`() {
+    fun `singleton schemas deserialize to their object instance without registering`() {
         val variant = SingletonData.serialize(SingletonData).getOrThrow()
 
         assertEquals(
@@ -147,10 +148,22 @@ class SchemaTest : MockBukkitTest() {
             variant
         )
         assertSame(SingletonData, SingletonData.deserialize(variant).getOrThrow())
+        assertNull(Schema.getOrNull(SingletonData.id))
+    }
 
-        @Suppress("UNCHECKED_CAST")
-        val registered = Schema.get(id("cutapi:singleton_data")) as Schema<SingletonData>
-        assertSame(SingletonData, registered.deserialize(variant).getOrThrow())
+    @Test
+    fun `schemas can be explicitly registered by identity`() {
+        class ExplicitSchemaData
+
+        val explicit = schema<ExplicitSchemaData>(id("test:explicit_schema"), {})
+        Schema.registerSchema(explicit)
+
+        assertSame(explicit, Schema.get(explicit.id))
+        val duplicate = schema<ExplicitSchemaData>(explicit.id, {})
+        val exception = assertFailsWith<IllegalArgumentException> {
+            Schema.registerSchema(duplicate)
+        }
+        assertContains(exception.message.orEmpty(), "different schema")
     }
 
     @Test
@@ -171,7 +184,16 @@ class SchemaTest : MockBukkitTest() {
     }
 
     @Test
+    fun `schemas can deserialize through a private primary constructor`() {
+        val original = PrivateConstructorData.create("hidden")
+        val variant = PrivateConstructorData.serialize(original).getOrThrow()
+
+        assertEquals("hidden", PrivateConstructorData.deserialize(variant).getOrThrow().value)
+    }
+
+    @Test
     fun `polymorphic schemas round trip an included subtype`() {
+        assertNull(Schema.getOrNull(PolymorphicData.id))
         val value = ExtendedData().apply {
             data = 42
             extraData = "leaf"
@@ -250,6 +272,160 @@ class SchemaTest : MockBukkitTest() {
         assertEquals(value, SecondParentData.deserialize(variant).getOrThrow())
         assertEquals(value, MultiParentData.deserialize(variant).getOrThrow())
     }
+
+    @Test
+    fun `schema JSON validates attachment values and supplies the type marker`() {
+        val value = JsonAttachment.deserializeJson(
+            """
+            {
+              "count": 4,
+              "nested": {"label": "ready"},
+              "identifier": "test:json_value"
+            }
+            """.trimIndent()
+        ).getOrThrow()
+
+        assertEquals(
+            JsonAttachment(4, JsonNested("ready"), id("test:json_value")),
+            value
+        )
+        val invalidCount = assertIs<DeserializeResult.Failure>(
+            JsonAttachment.deserializeJson(
+                """{"count":"four","nested":{"label":"ready"},"identifier":"test:json_value"}"""
+            )
+        )
+        val invalidCountError = assertIs<SchemaJsonException>(invalidCount.error)
+        assertContains(invalidCountError.errorMessage, "at 'count'")
+        assertEquals("integer", invalidCountError.expected)
+        assertEquals(""""four"""", invalidCountError.found)
+
+        val unknownProperty = assertIs<DeserializeResult.Failure>(
+            JsonAttachment.deserializeJson(
+                """{"count":4,"nested":{"label":"ready"},"identifier":"test:json_value","extra":true}"""
+            )
+        )
+        val unknownPropertyError = assertIs<SchemaJsonException>(unknownProperty.error)
+        assertContains(unknownPropertyError.errorMessage, "at 'extra'")
+        assertContains(unknownPropertyError.errorMessage, "Unknown property")
+        assertEquals("registered property name", unknownPropertyError.expected)
+        assertEquals(""""extra"""", unknownPropertyError.found)
+    }
+
+    @Test
+    fun `schema JSON errors include nested property paths and expected types`() {
+        val failure = assertIs<DeserializeResult.Failure>(
+            JsonAttachment.deserializeJson(
+                """{"count":4,"nested":{"label":false},"identifier":"test:json_value"}"""
+            )
+        )
+
+        val error = assertIs<SchemaJsonException>(failure.error)
+        assertContains(error.errorMessage, "at 'nested.label'")
+        assertEquals("string", error.expected)
+        assertEquals("false", error.found)
+    }
+
+    @Test
+    fun `schema JSON errors describe missing nested properties`() {
+        val failure = assertIs<DeserializeResult.Failure>(
+            JsonAttachment.deserializeJson(
+                """{"count":4,"nested":{},"identifier":"test:json_value"}"""
+            )
+        )
+
+        val error = assertIs<SchemaJsonException>(failure.error)
+        assertContains(error.errorMessage, "at 'nested.label'")
+        assertContains(error.errorMessage, "Missing required property")
+        assertEquals(VariantSerializer.String.id.toString(), error.expected)
+        assertEquals("<missing>", error.found)
+    }
+
+    @Test
+    fun `schema JSON errors list valid enum values`() {
+        val failure = assertIs<DeserializeResult.Failure>(
+            JsonEnumAttachment.deserializeJson("""{"mode":"THIRD"}""")
+        )
+
+        val error = assertIs<SchemaJsonException>(failure.error)
+        assertContains(error.errorMessage, "at 'mode'")
+        assertEquals("JsonMode", error.expected)
+        assertEquals(""""THIRD"""", error.found)
+        val entries = assertIs<SerializerAvailableEntries.EnumValues>(error.availableEntries)
+        assertEquals(listOf("FIRST", "SECOND"), entries.values)
+        assertContains(error.message.orEmpty(), "Available Entries: { FIRST, SECOND }")
+    }
+
+    @Test
+    fun `schema JSON errors collapse enums with more than ten entries`() {
+        val failure = assertIs<DeserializeResult.Failure>(
+            JsonLongEnumAttachment.deserializeJson("""{"mode":"MISSING"}""")
+        )
+
+        val error = assertIs<SchemaJsonException>(failure.error)
+        val entries = assertIs<SerializerAvailableEntries.EnumValues>(error.availableEntries)
+        assertEquals(11, entries.values.size)
+        assertContains(error.message.orEmpty(), "Available Entries: { ... }")
+        assertFalse(error.message.orEmpty().contains("ELEVEN"))
+    }
+
+    @Test
+    fun `schema JSON identifier errors retain their source registry`() {
+        val failure = assertIs<DeserializeResult.Failure>(
+            JsonRegistryAttachment.deserializeJson("""{"entry":"test:missing"}""")
+        )
+
+        val error = assertIs<SchemaJsonException>(failure.error)
+        assertEquals("Identifier", error.expected)
+        assertEquals(""""test:missing"""", error.found)
+        val entries = assertIs<SerializerAvailableEntries.RegistryValues>(error.availableEntries)
+        assertEquals(JsonEntryRegistry.id, entries.registryId)
+    }
+
+    @Test
+    fun `schema JSON syntax errors identify the schema and parser location`() {
+        val failure = assertIs<DeserializeResult.Failure>(
+            JsonAttachment.deserializeJson("""{"count":4,"nested":""")
+        )
+
+        val error = assertIs<SchemaJsonException>(failure.error)
+        assertContains(error.errorMessage, "Could not parse JSON for schema ${JsonAttachment.id}")
+        assertContains(error.errorMessage, "path: $")
+        assertEquals("valid JSON object", error.expected)
+        assertEquals("""{"count":4,"nested":""", error.found)
+    }
+
+    @Test
+    fun `schema JSON updates immutable properties through nested dot paths`() {
+        val original = JsonAttachment(4, JsonNested("before"), id("test:json_value"))
+
+        val updated = JsonAttachment
+            .updateJsonProperty(original, "nested.label", """"after"""")
+            .getOrThrow()
+
+        assertEquals(
+            JsonAttachment(4, JsonNested("after"), id("test:json_value")),
+            updated
+        )
+        assertIs<DeserializeResult.Failure>(
+            JsonAttachment.updateJsonProperty(original, "nested.missing", "5")
+        )
+        val invalidValue = assertIs<DeserializeResult.Failure>(
+            JsonAttachment.updateJsonProperty(original, "count", """"not a number"""")
+        )
+        val invalidValueError = assertIs<SchemaJsonException>(invalidValue.error)
+        assertContains(invalidValueError.errorMessage, "at 'count'")
+        assertEquals("integer", invalidValueError.expected)
+        assertEquals(""""not a number"""", invalidValueError.found)
+
+        val malformedValue = assertIs<DeserializeResult.Failure>(
+            JsonAttachment.updateJsonProperty(original, "nested.label", """"unfinished""")
+        )
+        val malformedValueError = assertIs<SchemaJsonException>(malformedValue.error)
+        assertContains(malformedValueError.errorMessage, "at 'nested.label'")
+        assertContains(malformedValueError.errorMessage, "unexpected", ignoreCase = true)
+        assertEquals("valid JSON value", malformedValueError.expected)
+        assertEquals(""""unfinished""", malformedValueError.found)
+    }
 }
 
 private data class UntaggedData(val value: String) {
@@ -295,6 +471,14 @@ private class AccessorBackedData(value: Int = 0) {
                 setProperty = AccessorBackedData::writeValue
             )
         })
+}
+
+private class PrivateConstructorData private constructor(val value: String) {
+    companion object : Schema<PrivateConstructorData> by schema(id("cutapi:private_constructor_data"), {
+        property(PrivateConstructorData::value, VariantSerializer.String)
+    }) {
+        fun create(value: String): PrivateConstructorData = PrivateConstructorData(value)
+    }
 }
 
 private abstract class PolymorphicData {
@@ -360,5 +544,67 @@ private data class MultiParentData(
         extends { FirstParentData }
         extends { SecondParentData }
         property(MultiParentData::ownData, VariantSerializer.Boolean)
+    })
+}
+
+private data class JsonNested(val label: String) {
+    companion object : Schema<JsonNested> by schema(id("test:json_nested"), {
+        property(JsonNested::label, VariantSerializer.String)
+    })
+}
+
+private data class JsonAttachment(
+    val count: Int,
+    val nested: JsonNested,
+    val identifier: Identifier
+) : ItemAttachment {
+    companion object : Schema<JsonAttachment> by schema(id("test:json_attachment"), {
+        property(JsonAttachment::count, VariantSerializer.Int)
+        property(JsonAttachment::nested, JsonNested)
+        property(JsonAttachment::identifier, VariantSerializer.Id)
+    })
+}
+
+private enum class JsonMode {
+    FIRST,
+    SECOND
+}
+
+private data class JsonEnumAttachment(val mode: JsonMode) {
+    companion object : Schema<JsonEnumAttachment> by schema(id("test:json_enum_attachment"), {
+        property(JsonEnumAttachment::mode, VariantSerializer.Enum<JsonMode>())
+    })
+}
+
+private enum class JsonLongMode {
+    ONE,
+    TWO,
+    THREE,
+    FOUR,
+    FIVE,
+    SIX,
+    SEVEN,
+    EIGHT,
+    NINE,
+    TEN,
+    ELEVEN
+}
+
+private data class JsonLongEnumAttachment(val mode: JsonLongMode) {
+    companion object : Schema<JsonLongEnumAttachment> by schema(id("test:json_long_enum_attachment"), {
+        property(JsonLongEnumAttachment::mode, VariantSerializer.Enum<JsonLongMode>())
+    })
+}
+
+private data class JsonRegistryEntry(
+    override val id: Identifier
+) : Identifiable
+
+private object JsonEntryRegistry :
+    IdentifierRegistry<JsonRegistryEntry>(id("test:json_entry_registry"))
+
+private data class JsonRegistryAttachment(val entry: JsonRegistryEntry) {
+    companion object : Schema<JsonRegistryAttachment> by schema(id("test:json_registry_attachment"), {
+        property(JsonRegistryAttachment::entry, VariantSerializer.Identifiable(JsonEntryRegistry))
     })
 }

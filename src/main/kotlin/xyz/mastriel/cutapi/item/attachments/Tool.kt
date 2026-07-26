@@ -19,7 +19,7 @@ import java.util.function.*
  */
 @RepeatableAttachment
 public data class Tool(val category: ToolCategory, val tier: ToolTier, val toolSpeed: ToolSpeed) :
-    Attachment {
+    ItemAttachment {
 
     init {
         if (!ToolCategory.has(category.id)) {
@@ -155,6 +155,11 @@ public class ToolTier private constructor(
 
     public constructor(id: Identifier, breakingLevel: Float) : this(id, breakingLevel, false)
 
+    override val debugView: DebugRepresentation<ToolTier> = debugView(id(Plugin, "tool_tier")) {
+        property(ToolTier::id, VariantSerializer.Id)
+        property(ToolTier::breakingLevel, VariantSerializer.Float)
+        property(ToolTier::isVanilla, VariantSerializer.Boolean)
+    }
 
     public companion object : IdentifierRegistry<ToolTier>(id("cutapi:registry/tool_tier")) {
 
@@ -197,12 +202,19 @@ public class ToolCategory private constructor(
     override val id: Identifier,
     public val attributes: ToolCategoryAttributes,
     public val isVanilla: Boolean = false
-) : Identifiable {
+) : Identifiable, Serializable<ToolCategory> by +ToolCategory {
 
-    public constructor(id: Identifier, attributes: ToolCategoryAttributes) : this(id, attributes, false)
+    public constructor(id: Identifier, attributes: ToolCategoryAttributes) : this(id, attributes, false) {}
 
+    override val debugView: DebugRepresentation<ToolCategory>
+        get() = DebugView
 
     public companion object : IdentifierRegistry<ToolCategory>(id("cutapi:registry/tool_category")) {
+        internal val DebugView: DebugRepresentation<ToolCategory> = debugView(id(Plugin, "tool_category")) {
+            property(ToolCategory::id, VariantSerializer.Id)
+            property(ToolCategory::attributes, ToolCategoryAttributes)
+            property(ToolCategory::isVanilla, VariantSerializer.Boolean)
+        }
 
         public val Pickaxe: ToolCategory = ToolCategory(
             id(Plugin, "pickaxe"),
@@ -306,7 +318,7 @@ public open class ToolCategoryAttributes(
     public val breakBlockItemDamage: Int,
     public val attackEntityItemDamage: Int,
     public val specialBreakingMultipliers: SpecialBreakingMultipliers = SpecialBreakingMultipliers()
-) {
+) : Serializable<ToolCategoryAttributes> by +ToolCategoryAttributes {
 
     /**
      * Gets the breaking speed multiplier from the special breaking multipliers.
@@ -314,6 +326,11 @@ public open class ToolCategoryAttributes(
     public fun getBreakingSpeedMultiplier(material: Material): Float? {
         return specialBreakingMultipliers.getBreakingSpeedMultiplier(material)
     }
+
+    public companion object : Schema<ToolCategoryAttributes> by schema(id(Plugin, "tool_category_attributes"), {
+        property(ToolCategoryAttributes::breakBlockItemDamage, VariantSerializer.Int)
+        property(ToolCategoryAttributes::attackEntityItemDamage, VariantSerializer.Int)
+    })
 }
 
 public class SpecialBreakingMultipliers(
@@ -349,6 +366,7 @@ public fun SpecialBreakingMultipliers(vararg pairs: Pair<Predicate<Material>, Fl
 
 internal val ToolSpeedSerializer: Serializer<ToolSpeed> = VariantSerializer.mapped(
     serializer = VariantSerializer.Float,
+    id = id(Plugin, "tool_speed"),
     serialize = { it.speed },
     deserialize = { ToolSpeed(it) }
 )

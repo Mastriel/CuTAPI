@@ -49,7 +49,7 @@ public sealed class BlockItemPolicy {
      */
     public data class Item(val item: CustomItem<*>, val consumesItem: Boolean = true) : BlockItemPolicy() {
         override fun tileCreate(tileDescriptor: TileDescriptor, customTile: CustomTile<*>): CustomItem<*> {
-            val attachments = item.descriptor.attachments as? MutableList<Attachment>
+            val attachments = item.descriptor.attachments as? MutableList<ItemAttachment>
                 ?: error("${item.id} does not have its attachments as a MutableList!")
 
             attachments.add(BlockPlaceAttachment(customTile, consumesItem))

@@ -7,18 +7,18 @@ import xyz.mastriel.cutapi.item.*
 
 
 public abstract class CustomItemEvent(public open val item: CuTItemStack) : Event(),
-    AttachmentHolder by item {
+    AttachmentHolder<ItemAttachment> by item {
 
-    public val attachments: List<Attachment> get() = item.getAllAttachments()
+    public val attachments: List<ItemAttachment> get() = item.getAllAttachments()
 
-    override fun hasAttachment(schema: Schema<out Attachment>): Boolean = item.hasAttachment(schema)
-    override fun <T : Attachment> getAttachment(schema: Schema<T>): T = item.getAttachment(schema)
-    override fun <T : Attachment> getAttachmentOrNull(schema: Schema<T>): T? = item.getAttachmentOrNull(schema)
-    override fun <T : Attachment> getAttachments(schema: Schema<T>): List<T> = item.getAttachments(schema)
+    override fun hasAttachment(schema: Schema<out ItemAttachment>): Boolean = item.hasAttachment(schema)
+    override fun <T : ItemAttachment> getAttachment(schema: Schema<T>): T = item.getAttachment(schema)
+    override fun <T : ItemAttachment> getAttachmentOrNull(schema: Schema<T>): T? = item.getAttachmentOrNull(schema)
+    override fun <T : ItemAttachment> getAttachments(schema: Schema<T>): List<T> = item.getAttachments(schema)
 
-    public inline fun <reified T : Attachment> getAttachment(): T = item.getAttachment<T>()
-    public inline fun <reified T : Attachment> getAttachmentOrNull(): T? = item.getAttachmentOrNull<T>()
-    public inline fun <reified T : Attachment> hasAttachment(): Boolean = item.hasAttachment<T>()
+    public inline fun <reified T : ItemAttachment> getAttachment(): T = item.getAttachment<T>()
+    public inline fun <reified T : ItemAttachment> getAttachmentOrNull(): T? = item.getAttachmentOrNull<T>()
+    public inline fun <reified T : ItemAttachment> hasAttachment(): Boolean = item.hasAttachment<T>()
 
 
     override fun getHandlers(): HandlerList {

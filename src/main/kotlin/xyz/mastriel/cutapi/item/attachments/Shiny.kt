@@ -9,7 +9,7 @@ import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.registry.*
 
-public object Shiny : Attachment, Schema<Shiny> by singletonSchema(id(Plugin, "shiny"))
+public object Shiny : ItemAttachment, Schema<Shiny> by singletonSchema(id(Plugin, "shiny"))
 
 internal object ShinySystem : ItemSystem by attachmentItemSystem(Shiny) {
 

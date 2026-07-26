@@ -35,17 +35,15 @@ public open class DataSerializationException(
 ) : IllegalArgumentException(message, cause)
 
 public class VariantTypeException(
-    expected: String,
-    actual: Variant
+    public val expected: String,
+    public val actual: Variant
 ) : DataSerializationException("Expected $expected, but found ${actual::class.simpleName}")
 
 /**
  * Converts one application type to and from the storage-independent [Variant] tree.
  * Implementations may be written directly or produced with [schema].
  */
-public interface Serializer<T> {
-    public fun serialize(value: T): SerializeResult
-
+public interface Serializer<T> : DebugRepresentation<T> {
     public fun deserialize(variant: Variant): DeserializeResult<T>
 
     public operator fun unaryPlus(): Serializable<T> = object : Serializable<T> {
@@ -71,6 +69,89 @@ public interface TaggedSerializer<T> : Serializer<T>, Identifiable {
 /** Supplies the serializer used by an application value. */
 public interface Serializable<T> {
     public val serializer: Serializer<T>
+}
+
+internal sealed interface SerializerAvailableEntries {
+    data class LiteralValues(
+        val values: List<String>
+    ) : SerializerAvailableEntries
+
+    data class EnumValues(
+        val key: String,
+        val displayName: String,
+        val values: List<String>
+    ) : SerializerAvailableEntries
+
+    data class RegistryValues(
+        val registryId: Identifier
+    ) : SerializerAvailableEntries
+}
+
+internal interface SerializerJsonMetadata {
+    val expectedType: String
+    val availableEntries: SerializerAvailableEntries?
+}
+
+internal object EnumEntryCatalog {
+    private val entriesByKey: MutableMap<String, SerializerAvailableEntries.EnumValues> =
+        linkedMapOf()
+
+    fun register(
+        type: KClass<*>,
+        values: List<String>
+    ): SerializerAvailableEntries.EnumValues {
+        val displayName = type.simpleName ?: "Enum"
+        val key = type.qualifiedName ?: "$displayName-${values.hashCode()}"
+        return synchronized(entriesByKey) {
+            val existing = entriesByKey[key]
+            if (existing != null) {
+                require(existing.values == values) {
+                    "Enum option key '$key' is already registered with different values"
+                }
+                existing
+            } else {
+                SerializerAvailableEntries.EnumValues(key, displayName, values)
+                    .also { entriesByKey[key] = it }
+            }
+        }
+    }
+
+    fun get(key: String): SerializerAvailableEntries.EnumValues? =
+        synchronized(entriesByKey) { entriesByKey[key] }
+
+    fun keys(): Set<String> =
+        synchronized(entriesByKey) { entriesByKey.keys.toSet() }
+}
+
+private fun <T> describedSerializer(
+    serializer: Serializer<T>,
+    expectedType: String,
+    availableEntries: SerializerAvailableEntries? = null
+): Serializer<T> = object : Serializer<T> by serializer, SerializerJsonMetadata {
+    override val expectedType: String = expectedType
+    override val availableEntries: SerializerAvailableEntries? = availableEntries
+}
+
+@PublishedApi
+internal fun <E : Enum<E>> enumSerializer(
+    type: KClass<E>,
+    values: Array<E>
+): Serializer<E> {
+    val entries = EnumEntryCatalog.register(type, values.map { it.name })
+    val delegate = serializer<E>(
+        serialize = { Variant.String(it.name) },
+        deserialize = { variant ->
+            val name = (variant as? Variant.String)?.value
+                ?: throw VariantTypeException(entries.displayName, variant)
+            values.firstOrNull { it.name == name }
+                ?: throw VariantTypeException(entries.displayName, variant)
+        }
+    )
+    return describedSerializer(
+        serializer = delegate,
+        expectedType = entries.displayName,
+        availableEntries = entries
+    )
 }
 
 public interface VariantSerializer<T> : TaggedSerializer<T> {
@@ -111,18 +192,30 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
             deserialize = { variant -> deserialize(serializer.deserialize(variant).getOrThrow()) }
         )
 
-        public inline fun <reified E : Enum<E>> Enum(): Serializer<E> = serializer(
-            serialize = { Variant.String(it.name) },
-            deserialize = { variant ->
-                enumValueOf<E>((variant as? Variant.String)?.value ?: throw VariantTypeException("String", variant))
-            }
+        public fun <T, R> mapped(
+            serializer: Serializer<R>,
+            id: Identifier,
+            serialize: (T) -> R,
+            deserialize: (R) -> T
+        ): TaggedSerializer<T> = tagged(
+            id = id,
+            serialize = { serializer.serialize(serialize(it)).getOrThrow() },
+            deserialize = { variant -> deserialize(serializer.deserialize(variant).getOrThrow()) }
         )
 
-        public fun <T : Identifiable> Identifiable(registry: IdentifierRegistry<T>): Serializer<T> = mapped(
-            serializer = Id,
-            serialize = { it.id },
-            deserialize = { registry.get(it) }
-        )
+        public inline fun <reified E : Enum<E>> Enum(): Serializer<E> =
+            enumSerializer(E::class, enumValues<E>())
+
+        public fun <T : Identifiable> Identifiable(registry: IdentifierRegistry<T>): Serializer<T> =
+            describedSerializer(
+                serializer = mapped(
+                    serializer = Id,
+                    serialize = { it.id },
+                    deserialize = { registry.get(it) }
+                ),
+                expectedType = "Identifier",
+                availableEntries = SerializerAvailableEntries.RegistryValues(registry.id)
+            )
 
         public fun <T> ListOf(serializer: Serializer<T>): Serializer<List<T>> = serializer(
             serialize = { values -> Variant.List(values.map { serializer.serialize(it).getOrThrow() }) },

@@ -5,6 +5,7 @@ package xyz.mastriel.cutapi.commands.brigadier
 import com.github.shynixn.mccoroutine.bukkit.*
 import com.mojang.brigadier.*
 import com.mojang.brigadier.arguments.*
+import com.mojang.brigadier.builder.*
 import com.mojang.brigadier.tree.*
 import io.papermc.paper.command.brigadier.*
 import xyz.mastriel.cutapi.*
@@ -22,6 +23,15 @@ public class BrigadierCommandArgumentBuilder internal constructor(
     override fun build(): ArgumentCommandNode<CommandSourceStack, *> {
         val command = Commands.argument(name, argumentType)
         arguments.forEach { command.then(it) }
+        for (subcommand in subcommands) {
+            command.then(
+                LiteralArgumentBuilder
+                    .literal<CommandSourceStack>(subcommand.name)
+                    .executes(subcommand.command)
+                    .also { it.requires(subcommand.getRequirement()) }
+                    .also { subcommand.children.forEach { child -> it.then(child) } }
+            )
+        }
         requirements.forEach { command.requires(it) }
         if (suggests != null) {
             command.suggests { context, builder ->

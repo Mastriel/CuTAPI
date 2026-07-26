@@ -9,6 +9,13 @@ import xyz.mastriel.cutapi.testing.*
 import kotlin.test.*
 
 public class PlayerSystemTest : MockBukkitTest() {
+    @BeforeTest
+    public fun registerPlayerAttachmentSchemas() {
+        Schema.registerSchema(TestPlayerAttachment)
+        Schema.registerSchema(TestRepeatablePlayerAttachment)
+        Schema.registerSchema(TestIntrinsicPlayerAttachment)
+    }
+
     @Test
     public fun `player attachments persist and retain their schema type`() {
         val player = server.addPlayer()
@@ -99,14 +106,14 @@ public class PlayerSystemTest : MockBukkitTest() {
     }
 }
 
-internal data class TestPlayerAttachment(var amount: Int = 0) : Attachment {
+internal data class TestPlayerAttachment(var amount: Int = 0) : PlayerAttachment {
     companion object : Schema<TestPlayerAttachment> by schema(id("test:player_attachment"), {
         property(TestPlayerAttachment::amount, VariantSerializer.Int)
     })
 }
 
 @RepeatableAttachment
-internal data class TestRepeatablePlayerAttachment(var value: String = "") : Attachment {
+internal data class TestRepeatablePlayerAttachment(var value: String = "") : PlayerAttachment {
     companion object : Schema<TestRepeatablePlayerAttachment> by schema(id("test:repeatable_player_attachment"), {
         property(TestRepeatablePlayerAttachment::value, VariantSerializer.String)
     })
@@ -114,7 +121,7 @@ internal data class TestRepeatablePlayerAttachment(var value: String = "") : Att
 
 internal var intrinsicPlayerAttachmentCreations: Int = 0
 
-internal data class TestIntrinsicPlayerAttachment(var amount: Int = 0) : Attachment {
+internal data class TestIntrinsicPlayerAttachment(var amount: Int = 0) : PlayerAttachment {
     companion object :
         Schema<TestIntrinsicPlayerAttachment> by schema(id("test:intrinsic_player_attachment"), {
             property(TestIntrinsicPlayerAttachment::amount, VariantSerializer.Int)

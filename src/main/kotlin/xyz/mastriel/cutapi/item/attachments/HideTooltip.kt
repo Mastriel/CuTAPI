@@ -6,7 +6,7 @@ import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.registry.*
 
-public object HideTooltip : Attachment, Schema<HideTooltip> by singletonSchema(id(Plugin, "blank_name"))
+public object HideTooltip : ItemAttachment, Schema<HideTooltip> by singletonSchema(id(Plugin, "blank_name"))
 
 internal object HideTooltipSystem : ItemSystem by attachmentItemSystem(HideTooltip) {
 

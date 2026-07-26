@@ -48,9 +48,15 @@ public value class RegistryPriority(public val value: Int) : Comparable<Registry
  *
  * @param T The identifiable that is being tracked.
  */
-public open class IdentifierRegistry<T : Identifiable>(
-    final override val id: Identifier
+public open class IdentifierRegistry<T : Identifiable> private constructor(
+    override val id: Identifier,
+    registerGlobally: Boolean
 ) : Serializer<T>, Identifiable {
+    public constructor(id: Identifier) : this(id, registerGlobally = true)
+
+    init {
+        if (registerGlobally) AllRegistries.registerRegistry(this)
+    }
 
     protected data class Handler<T : Identifiable>(
         public val priority: RegistryPriority,
@@ -270,6 +276,27 @@ public open class IdentifierRegistry<T : Identifiable>(
         // uses weak references, although registries should probably not be
         // garbage collected at any point and should always have a strong reference
         private val usedRegistries = mutableListOf<WeakReference<IdentifierRegistry<*>>>()
+
+        /**
+         * Contains every [IdentifierRegistry], indexed by the registry's own [Identifier].
+         *
+         * The registry includes itself as `cutapi:registries`.
+         */
+        public val AllRegistries: IdentifierRegistry<IdentifierRegistry<*>> =
+            IdentifierRegistry<IdentifierRegistry<*>>(id("cutapi:registries"), registerGlobally = false)
+                .also { it.registerRegistry(it) }
+
+        private fun IdentifierRegistry<IdentifierRegistry<*>>.registerRegistry(
+            registry: IdentifierRegistry<*>
+        ) {
+            if (has(registry.id)) {
+                require(get(registry.id) === registry) {
+                    "Two IdentifierRegistries cannot have the same ID: ${registry.id}"
+                }
+                return
+            }
+            register(registry)
+        }
 
         internal fun unregisterPluginGlobally(plugin: CuTPlugin) {
             usedRegistries.mapNotNull { it.get() }.forEach { registry ->

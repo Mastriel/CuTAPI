@@ -83,6 +83,7 @@ public val Model3DResourceLoader: ResourceFileLoader<Model3D> = resourceLoader(
     }
 }
 
+@Serializable
 public enum class Model3DDisplayType {
     @SerialName("thirdperson_righthand")
     ThirdPersonRightHand,

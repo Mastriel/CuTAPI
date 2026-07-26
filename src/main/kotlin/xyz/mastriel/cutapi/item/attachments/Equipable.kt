@@ -15,7 +15,7 @@ public data class Equipable(
     public val isSwappable: Boolean = true,
     public val model: ResourceRef<Model3D>? = null,
     public var damageItemWhenHurt: Boolean = false
-) : Attachment {
+) : ItemAttachment {
 
     public class Builder internal constructor(public val slot: EquipmentSlot) {
         public var isSwappable: Boolean = true
