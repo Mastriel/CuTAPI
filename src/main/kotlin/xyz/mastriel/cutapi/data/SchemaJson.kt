@@ -9,7 +9,7 @@ internal class SchemaJsonException(
     val errorMessage: String,
     val expected: String,
     val found: String,
-    val availableEntries: SerializerAvailableEntries? = null,
+    val availableEntries: SerializerValueDomain? = null,
     cause: Throwable? = null
 ) : DataSerializationException(
     buildString {
@@ -21,17 +21,17 @@ internal class SchemaJsonException(
             append("Available Entries: ")
             append(
                 when (availableEntries) {
-                    is SerializerAvailableEntries.LiteralValues ->
+                    is SerializerValueDomain.Literal ->
                         availableEntries.values.joinToString(prefix = "{ ", postfix = " }")
 
-                    is SerializerAvailableEntries.EnumValues ->
+                    is SerializerValueDomain.Enum ->
                         if (availableEntries.values.size > MAX_INLINE_AVAILABLE_ENTRIES) {
                             "{ ... }"
                         } else {
                             availableEntries.values.joinToString(prefix = "{ ", postfix = " }")
                         }
 
-                    is SerializerAvailableEntries.RegistryValues -> "{ ... }"
+                    is SerializerValueDomain.Registry -> "{ ... }"
                 }
             )
         }
@@ -174,12 +174,33 @@ private fun JsonObject.toVariant(
     rootSchema: Schema<*>,
     path: List<String> = emptyList()
 ): Variant.Map {
+    if (schema is PolySchema<*>) {
+        return toVariant(schema.descriptor, rootSchema, path) as Variant.Map
+    }
+
     val properties = schema.properties.associateBy { it.name }
     val values = linkedMapOf<Variant, Variant>()
-
     for ((name, element) in this) {
         if (name == SCHEMA_TYPE_DISCRIMINATOR) {
-            values[Variant.String(name)] = Variant.String(element.jsonPrimitive.content)
+            val serializedId = (element as? JsonPrimitive)
+                ?.takeIf { it.isString }
+                ?.content
+                ?: throw invalidJsonValue(
+                    rootSchema,
+                    path + name,
+                    VariantKind.IDENTIFIER.displayName,
+                    element
+                )
+            if (serializedId != schema.id.toString()) {
+                throw invalidJsonValue(
+                    rootSchema,
+                    path + name,
+                    schema.id.toString(),
+                    element,
+                    SerializerValueDomain.Literal(listOf(schema.id.toString()))
+                )
+            }
+            values[Variant.String(name)] = Variant.String(serializedId)
             continue
         }
 
@@ -189,9 +210,7 @@ private fun JsonObject.toVariant(
                     "'${(path + name).renderPath()}'.",
                 expected = "registered property name",
                 found = JsonPrimitive(name).toString(),
-                availableEntries = SerializerAvailableEntries.LiteralValues(
-                    properties.keys.sorted()
-                )
+                availableEntries = SerializerValueDomain.Literal(properties.keys.sorted())
             )
         values[Variant.String(name)] = property.serializer.deserializeJsonValue(
             element = element,
@@ -215,7 +234,7 @@ private fun Schema<*>.updateJsonProperty(
 ): Variant.Map {
     val segment = path.first()
     val currentPath = traversedPath + segment
-    val property = properties.firstOrNull { it.name == segment || it.propertyName == segment }
+    val property = properties.firstOrNull { it.name == segment || it.sourceName == segment }
         ?: throw DataSerializationException(
             "Invalid JSON property '${currentPath.renderPath()}' for schema ${rootSchema.id}: " +
                 "unknown property"
@@ -256,85 +275,321 @@ private fun Serializer<*>.deserializeJsonValue(
     rootSchema: Schema<*>,
     path: List<String>
 ): Variant {
-    if (this is Schema<*>) {
-        val map = element as? JsonObject
+    val serializer = this as Serializer<Any?>
+    val candidate = if (this is Schema<*>) {
+        val jsonObject = element as? JsonObject
             ?: throw invalidJsonValue(
+                rootSchema,
+                path,
+                descriptor.displayName,
+                element
+            )
+        jsonObject.toVariant(this, rootSchema, path)
+    } else {
+        element.toVariant(descriptor, rootSchema, path)
+    }
+    when (val result = serializer.deserialize(candidate)) {
+        is DeserializeResult.Success -> return serializer.serialize(result.value).getOrThrow()
+        is DeserializeResult.Failure -> {
+            if (this is Schema<*>) {
+                throw result.error.asSchemaJsonError(
+                    schema = this,
+                    rootSchema = rootSchema,
+                    path = path
+                )
+            }
+            throw invalidJsonValue(
                 schema = rootSchema,
                 path = path,
-                expected = "${type.simpleName ?: id} object",
-                actual = element
-            )
-        val result = (this as Schema<Any>).deserialize(map.toVariant(this, rootSchema, path))
-        val decoded = when (result) {
-            is DeserializeResult.Success -> result.value
-            is DeserializeResult.Failure -> throw result.error.asSchemaJsonError(
-                schema = this,
-                rootSchema = rootSchema,
-                path = path
+                expected = descriptor.displayName,
+                actual = element,
+                availableEntries = descriptor.valueDomain,
+                cause = result.error
             )
         }
-        return serialize(decoded).getOrThrow()
+    }
+}
+
+private fun JsonElement.toVariant(
+    descriptor: SerializerDescriptor,
+    rootSchema: Schema<*>,
+    path: List<String>
+): Variant = when (descriptor) {
+    is SerializerDescriptor.Nullable -> if (this === JsonNull) {
+        Variant.Null
+    } else {
+        toVariant(descriptor.value, rootSchema, path)
     }
 
-    val serializer = this as Serializer<Any?>
-    var firstError: Exception? = null
-    for (candidate in element.variantCandidates()) {
-        when (val result = serializer.deserialize(candidate)) {
-            is DeserializeResult.Success -> return serializer.serialize(result.value).getOrThrow()
-            is DeserializeResult.Failure -> if (firstError == null) firstError = result.error
+    is SerializerDescriptor.Mapped ->
+        toVariant(descriptor.encoded, rootSchema, path)
+
+    is SerializerDescriptor.Primitive ->
+        toPrimitiveVariant(descriptor, rootSchema, path)
+
+    is SerializerDescriptor.List -> {
+        val array = this as? JsonArray
+            ?: throw invalidJsonValue(
+                rootSchema,
+                path,
+                descriptor.displayName,
+                this,
+                descriptor.valueDomain
+            )
+        Variant.List(
+            array.mapIndexed { index, element ->
+                element.toVariant(descriptor.element, rootSchema, path + index.toString())
+            }
+        )
+    }
+
+    is SerializerDescriptor.Map -> {
+        val jsonObject = this as? JsonObject
+            ?: throw invalidJsonValue(
+                rootSchema,
+                path,
+                descriptor.displayName,
+                this,
+                descriptor.valueDomain
+            )
+        Variant.Map(
+            jsonObject.map { (key, element) ->
+                key.toVariantMapKey(descriptor.key, rootSchema, path) to
+                    element.toVariant(descriptor.value, rootSchema, path + key)
+            }.toMap()
+        )
+    }
+
+    is SerializerDescriptor.Object ->
+        toObjectVariant(descriptor, rootSchema, path)
+
+    is SerializerDescriptor.Polymorphic -> {
+        val jsonObject = this as? JsonObject
+            ?: throw invalidJsonValue(
+                rootSchema,
+                path,
+                descriptor.displayName,
+                this
+            )
+        val typeElement = jsonObject[SCHEMA_TYPE_DISCRIMINATOR]
+        val objectDescriptor = if (typeElement == null) {
+            descriptor.base
+        } else {
+            val serializedId = (typeElement as? JsonPrimitive)
+                ?.takeIf { it.isString }
+                ?.content
+                ?: throw invalidJsonValue(
+                    rootSchema,
+                    path + SCHEMA_TYPE_DISCRIMINATOR,
+                    VariantKind.IDENTIFIER.displayName,
+                    typeElement
+                )
+            (listOf(descriptor.base) + descriptor.included)
+                .singleOrNull { it.id.toString() == serializedId }
+                ?: throw invalidJsonValue(
+                    rootSchema,
+                    path + SCHEMA_TYPE_DISCRIMINATOR,
+                    descriptor.displayName,
+                    typeElement,
+                    SerializerValueDomain.Literal(
+                        (listOf(descriptor.base) + descriptor.included)
+                            .map { it.id.toString() }
+                    )
+                )
         }
+        jsonObject.toObjectVariant(objectDescriptor, rootSchema, path)
     }
 
-    throw invalidJsonValue(
+    is SerializerDescriptor.Opaque -> toVariant()
+}
+
+private fun JsonElement.toObjectVariant(
+    descriptor: SerializerDescriptor.Object,
+    rootSchema: Schema<*>,
+    path: List<String>
+): Variant.Map {
+    val jsonObject = this as? JsonObject
+        ?: throw invalidJsonValue(
+            rootSchema,
+            path,
+            descriptor.displayName,
+            this
+        )
+    val properties = descriptor.properties.associateBy { it.name }
+    val values = linkedMapOf<Variant, Variant>()
+    for ((name, element) in jsonObject) {
+        if (name == SCHEMA_TYPE_DISCRIMINATOR) {
+            val serializedId = (element as? JsonPrimitive)
+                ?.takeIf { it.isString }
+                ?.content
+                ?: throw invalidJsonValue(
+                    rootSchema,
+                    path + name,
+                    VariantKind.IDENTIFIER.displayName,
+                    element
+                )
+            if (serializedId != descriptor.id.toString()) {
+                throw invalidJsonValue(
+                    rootSchema,
+                    path + name,
+                    descriptor.id.toString(),
+                    element,
+                    SerializerValueDomain.Literal(listOf(descriptor.id.toString()))
+                )
+            }
+            values[Variant.String(name)] = Variant.String(serializedId)
+            continue
+        }
+
+        val property = properties[name]
+            ?: throw SchemaJsonException(
+                errorMessage = "Unknown property for schema ${rootSchema.id} at " +
+                    "'${(path + name).renderPath()}'.",
+                expected = "registered property name",
+                found = JsonPrimitive(name).toString(),
+                availableEntries = SerializerValueDomain.Literal(properties.keys.sorted())
+            )
+        values[Variant.String(name)] = element.toVariant(
+            property.serializerDescriptor,
+            rootSchema,
+            path + name
+        )
+    }
+    if (descriptor.tagged && SCHEMA_TYPE_DISCRIMINATOR !in jsonObject) {
+        values[Variant.String(SCHEMA_TYPE_DISCRIMINATOR)] =
+            Variant.String(descriptor.id.toString())
+    }
+    return Variant.Map(values)
+}
+
+private fun JsonElement.toPrimitiveVariant(
+    descriptor: SerializerDescriptor.Primitive,
+    rootSchema: Schema<*>,
+    path: List<String>
+): Variant {
+    fun invalid(cause: Throwable? = null): Nothing = throw invalidJsonValue(
         schema = rootSchema,
         path = path,
-        expected = expectedJsonValue(firstError),
-        actual = element,
-        availableEntries = availableJsonEntries(),
-        cause = firstError
+        expected = descriptor.displayName,
+        actual = this,
+        availableEntries = descriptor.valueDomain,
+        cause = cause
     )
-}
 
-private fun Serializer<*>.expectedJsonValue(error: Exception?): String {
-    if (this is IdentifierRegistry<*>) return "Identifier"
-
-    val metadata = this as? SerializerJsonMetadata
-    if (metadata != null) return metadata.expectedType
-
-    val variantType = error.causeSequence()
-        .filterIsInstance<VariantTypeException>()
-        .firstOrNull()
-    if (variantType != null) return variantType.expected.toJsonTypeName()
-
-    if (this is TaggedSerializer<*>) {
-        return id.toString()
+    if (descriptor.kind == VariantKind.ANY) return toVariant()
+    if (descriptor.kind == VariantKind.NULL) {
+        return if (this === JsonNull) Variant.Null else invalid()
     }
-
-    return "<unknown>"
+    val primitive = this as? JsonPrimitive ?: invalid()
+    return try {
+        when (descriptor.kind) {
+            VariantKind.ANY -> toVariant()
+            VariantKind.NULL -> Variant.Null
+            VariantKind.STRING -> {
+                if (!primitive.isString) invalid()
+                descriptor.valueDomain.requireContains(primitive.content, ::invalid)
+                Variant.String(primitive.content)
+            }
+            VariantKind.BOOLEAN ->
+                if (!primitive.isString && primitive.booleanOrNull != null) {
+                    Variant.Boolean(primitive.boolean)
+                } else {
+                    invalid()
+                }
+            VariantKind.BYTE ->
+                if (!primitive.isString) Variant.Byte(primitive.content.toByte()) else invalid()
+            VariantKind.SHORT ->
+                if (!primitive.isString) Variant.Short(primitive.content.toShort()) else invalid()
+            VariantKind.INT ->
+                if (!primitive.isString) Variant.Int(primitive.content.toInt()) else invalid()
+            VariantKind.LONG ->
+                if (!primitive.isString) Variant.Long(primitive.content.toLong()) else invalid()
+            VariantKind.FLOAT ->
+                if (!primitive.isString) Variant.Float(primitive.content.toFloat()) else invalid()
+            VariantKind.DOUBLE ->
+                if (!primitive.isString) Variant.Double(primitive.content.toDouble()) else invalid()
+            VariantKind.CHAR ->
+                if (primitive.isString && primitive.content.length == 1) {
+                    Variant.Char(primitive.content.single())
+                } else {
+                    invalid()
+                }
+            VariantKind.IDENTIFIER -> {
+                if (!primitive.isString) invalid()
+                val identifier = idOrNull(primitive.content) ?: invalid()
+                descriptor.valueDomain.requireContains(identifier.toString(), ::invalid)
+                Variant.Identifier(identifier)
+            }
+            VariantKind.RESOURCE_REF -> {
+                if (!primitive.isString) invalid()
+                Variant.ResourceRef(ref<Resource>(primitive.content))
+            }
+        }
+    } catch (exception: SchemaJsonException) {
+        throw exception
+    } catch (exception: Exception) {
+        invalid(exception)
+    }
 }
 
-private fun Serializer<*>.availableJsonEntries(): SerializerAvailableEntries? = when (this) {
-    is IdentifierRegistry<*> -> SerializerAvailableEntries.RegistryValues(id)
-    is SerializerJsonMetadata -> availableEntries
-    else -> null
+private fun SerializerValueDomain?.requireContains(
+    value: String,
+    invalid: (Throwable?) -> Nothing
+) {
+    when (this) {
+        is SerializerValueDomain.Literal -> if (value !in values) invalid(null)
+        is SerializerValueDomain.Enum -> if (value !in values) invalid(null)
+        is SerializerValueDomain.Registry -> {
+            val registry = IdentifierRegistry.AllRegistries.getOrNull(registryId)
+            if (registry != null) {
+                val identifier = idOrNull(value) ?: invalid(null)
+                if (!registry.has(identifier)) invalid(null)
+            }
+        }
+        null -> Unit
+    }
 }
 
-private fun String.toJsonTypeName(): String = when (lowercase()) {
-    "null" -> "null"
-    "string" -> "string"
-    "boolean" -> "boolean"
-    "byte" -> "byte-sized integer"
-    "short" -> "short integer"
-    "int" -> "integer"
-    "long" -> "long integer"
-    "float" -> "floating-point number"
-    "double" -> "number"
-    "char" -> "single-character string"
-    "identifier" -> "identifier string"
-    "resourceref" -> "resource reference string"
-    "list" -> "array"
-    "map" -> "object"
-    else -> this
+private fun String.toVariantMapKey(
+    descriptor: SerializerDescriptor,
+    rootSchema: Schema<*>,
+    path: List<String>
+): Variant = when (descriptor) {
+    is SerializerDescriptor.Nullable -> toVariantMapKey(descriptor.value, rootSchema, path)
+    is SerializerDescriptor.Mapped -> toVariantMapKey(descriptor.encoded, rootSchema, path)
+    is SerializerDescriptor.Primitive -> try {
+        when (descriptor.kind) {
+            VariantKind.ANY, VariantKind.STRING -> Variant.String(this)
+            VariantKind.BOOLEAN -> Variant.Boolean(toBooleanStrict())
+            VariantKind.BYTE -> Variant.Byte(toByte())
+            VariantKind.SHORT -> Variant.Short(toShort())
+            VariantKind.INT -> Variant.Int(toInt())
+            VariantKind.LONG -> Variant.Long(toLong())
+            VariantKind.FLOAT -> Variant.Float(toFloat())
+            VariantKind.DOUBLE -> Variant.Double(toDouble())
+            VariantKind.CHAR -> Variant.Char(single())
+            VariantKind.IDENTIFIER -> Variant.Identifier(id(this))
+            VariantKind.RESOURCE_REF -> Variant.ResourceRef(ref<Resource>(this))
+            VariantKind.NULL -> throw IllegalArgumentException("JSON object keys cannot be null")
+        }
+    } catch (exception: Exception) {
+        throw invalidJsonValue(
+            rootSchema,
+            path + this,
+            descriptor.displayName,
+            JsonPrimitive(this),
+            descriptor.valueDomain,
+            exception
+        )
+    }
+    is SerializerDescriptor.Opaque -> Variant.String(this)
+    else -> throw invalidJsonValue(
+        rootSchema,
+        path + this,
+        descriptor.displayName,
+        JsonPrimitive(this),
+        descriptor.valueDomain
+    )
 }
 
 private fun invalidJsonValue(
@@ -342,7 +597,7 @@ private fun invalidJsonValue(
     path: List<String>,
     expected: String,
     actual: JsonElement,
-    availableEntries: SerializerAvailableEntries? = null,
+    availableEntries: SerializerValueDomain? = null,
     cause: Throwable? = null
 ): SchemaJsonException {
     val location = if (path.isEmpty()) "root" else "'${path.renderPath()}'"
@@ -371,13 +626,13 @@ private fun Exception.asSchemaJsonError(
     val missingName = MISSING_PROPERTY_PATTERN.find(message.orEmpty())?.groupValues?.get(1)
     if (missingName != null) {
         val property = schema.properties.firstOrNull { it.name == missingName }
-        val expected = property?.serializer?.expectedJsonValue(null) ?: "value"
+        val expected = property?.serializerDescriptor?.displayName ?: "value"
         return SchemaJsonException(
             errorMessage = "Missing required property for schema ${rootSchema.id} at " +
                 "'${(path + missingName).renderPath()}'.",
             expected = expected,
             found = "<missing>",
-            availableEntries = property?.serializer?.availableJsonEntries(),
+            availableEntries = property?.serializerDescriptor?.valueDomain,
             cause = this
         )
     }
@@ -390,7 +645,7 @@ private fun Exception.asSchemaJsonError(
 }
 
 private val MISSING_PROPERTY_PATTERN: Regex =
-    Regex("""Missing property '([^']+)'""")
+    Regex("""Missing (?:required )?property '([^']+)'""")
 
 private fun Exception.parserMessage(): String =
     message
@@ -399,60 +654,4 @@ private fun Exception.parserMessage(): String =
         ?.takeIf(String::isNotEmpty)
         ?: "malformed JSON"
 
-private fun JsonElement.variantCandidates(): List<Variant> = when (this) {
-    JsonNull -> listOf(Variant.Null)
-    is JsonPrimitive -> primitiveCandidates()
-    is JsonArray -> cartesian(map { it.variantCandidates() })
-        .map { Variant.List(it) }
-        .ifEmpty { listOf(Variant.List(emptyList())) }
-
-    is JsonObject -> {
-        val entries = entries.toList()
-        val combinations = cartesian(entries.map { (_, value) -> value.variantCandidates() })
-        combinations.map { values ->
-            Variant.Map(
-                entries.indices.associate { index ->
-                    Variant.String(entries[index].key) to values[index]
-                }
-            )
-        }.ifEmpty { listOf(Variant.Map(emptyMap())) }
-    }
-}
-
-private fun JsonPrimitive.primitiveCandidates(): List<Variant> {
-    if (isString) {
-        val values = mutableListOf<Variant>(Variant.String(content))
-        if (content.length == 1) values += Variant.Char(content.single())
-        idOrNull(content)?.let { values += Variant.Identifier(it) }
-        try {
-            values += Variant.ResourceRef(ref<Resource>(content))
-        } catch (_: Exception) {
-            // A plain JSON string is still a valid candidate.
-        }
-        return values
-    }
-
-    booleanOrNull?.let { return listOf(Variant.Boolean(it)) }
-
-    val values = mutableListOf<Variant>()
-    content.toIntOrNull()?.let { values += Variant.Int(it) }
-    content.toLongOrNull()?.let { values += Variant.Long(it) }
-    content.toShortOrNull()?.let { values += Variant.Short(it) }
-    content.toByteOrNull()?.let { values += Variant.Byte(it) }
-    content.toDoubleOrNull()?.let { values += Variant.Double(it) }
-    content.toFloatOrNull()?.let { values += Variant.Float(it) }
-    return values.ifEmpty { listOf(Variant.String(content)) }
-}
-
-private fun cartesian(options: List<List<Variant>>): List<List<Variant>> {
-    var combinations = listOf(emptyList<Variant>())
-    for (values in options) {
-        combinations = combinations
-            .flatMap { existing -> values.map { existing + it } }
-            .take(MAX_JSON_VARIANT_CANDIDATES)
-    }
-    return combinations
-}
-
-private const val MAX_JSON_VARIANT_CANDIDATES: Int = 256
 internal const val MAX_INLINE_AVAILABLE_ENTRIES: Int = 10

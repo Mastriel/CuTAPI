@@ -54,6 +54,12 @@ public open class IdentifierRegistry<T : Identifiable> private constructor(
 ) : Serializer<T>, Identifiable {
     public constructor(id: Identifier) : this(id, registerGlobally = true)
 
+    override val descriptor: SerializerDescriptor =
+        SerializerDescriptor.Primitive(
+            kind = VariantKind.IDENTIFIER,
+            valueDomain = SerializerValueDomain.Registry(id)
+        )
+
     override val debugView: EncodeOnlySerializer<*>? = IdentifierRegistry.provideDebugView();
 
     init {

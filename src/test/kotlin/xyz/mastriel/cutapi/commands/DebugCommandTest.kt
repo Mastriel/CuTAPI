@@ -282,7 +282,7 @@ public class DebugCommandTest : MockBukkitTest() {
             errorMessage = "Invalid attachment value.",
             expected = "integer",
             found = """"four"""",
-            availableEntries = SerializerAvailableEntries.LiteralValues(listOf("one", "two"))
+            availableEntries = SerializerValueDomain.Literal(listOf("one", "two"))
         ).attachmentErrorComponent()
         val segments = component.textSegments()
 
@@ -325,7 +325,7 @@ public class DebugCommandTest : MockBukkitTest() {
             errorMessage = "Invalid attachment value.",
             expected = "Identifier",
             found = """"test:missing"""",
-            availableEntries = SerializerAvailableEntries.RegistryValues(registryId)
+            availableEntries = SerializerValueDomain.Registry(registryId)
         ).attachmentErrorComponent()
         val clickable = component.allComponents()
             .first { it.clickEvent()?.action() == ClickEvent.Action.RUN_COMMAND }

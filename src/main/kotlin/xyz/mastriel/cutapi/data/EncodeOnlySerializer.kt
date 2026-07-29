@@ -13,6 +13,8 @@ import kotlin.reflect.full.*
  * type needs a partial or otherwise different representation for debugging.
  */
 public interface EncodeOnlySerializer<in T> {
+    public val descriptor: SerializerDescriptor
+
     public fun serialize(value: T): SerializeResult
 }
 
@@ -199,6 +201,19 @@ private class EncodeOnlySerializerBuilderImpl<R : Any>(
         return object : DebugView<R>, StructuredRepresentationMetadata {
             override val type: KClass<R> = builtType
             override val id: Identifier = id
+            override val descriptor: SerializerDescriptor.Object
+                get() = SerializerDescriptor.Object(
+                    id = id,
+                    type = builtType,
+                    tagged = true,
+                    properties = buildList {
+                        parents.flatMapTo(this) { parent ->
+                            parent.view.descriptor.objectProperties()
+                                .filterNot { it.name in parent.representation.excludedNames }
+                        }
+                        addAll(properties)
+                    }
+                )
 
             override fun serializedName(key: StructuredPropertyKey): String? {
                 val names = buildList {
@@ -247,6 +262,9 @@ private class DeferredDebugView<T : Any>(
 ) : DebugView<T>, StructuredRepresentationMetadata {
     private val resolved: DebugView<T> by lazy(LazyThreadSafetyMode.SYNCHRONIZED, resolve)
 
+    override val descriptor: SerializerDescriptor
+        get() = resolved.descriptor
+
     override fun serializedName(key: StructuredPropertyKey): String? =
         (resolved as? StructuredRepresentationMetadata)?.serializedName(key)
 
@@ -258,6 +276,12 @@ private class DeferredDebugView<T : Any>(
     } catch (exception: Exception) {
         SerializeResult.Failure(exception)
     }
+}
+
+private fun SerializerDescriptor.objectProperties(): List<SerializedPropertyDescriptor> = when (this) {
+    is SerializerDescriptor.Object -> properties
+    is SerializerDescriptor.Polymorphic -> base.properties
+    else -> emptyList()
 }
 
 private fun DebugView<*>.hasStructuredMetadata(): Boolean =

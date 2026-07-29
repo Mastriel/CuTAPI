@@ -9,19 +9,37 @@ public const val SCHEMA_TYPE_DISCRIMINATOR: String = $$"$type"
 
 public class SchemaProperty<R : Any, T> internal constructor(
     public val getProperty: (R) -> T,
-    public val setProperty: (R, T) -> Unit,
+    public val setProperty: ((R, T) -> Unit)?,
     public val serializer: Serializer<T>,
-    public val name: String,
-    internal val propertyName: String,
+    override val name: String,
+    override val sourceName: String?,
+    override val constructorParameterName: String?,
     internal val ownerType: KClass<*>?,
-    internal val isMutable: Boolean
-) {
+    constructorParameter: KParameter? = null,
+    internal val origin: Any = Any()
+) : SchemaPropertyDescriptor {
+    private var constructorParameterValue: KParameter? = constructorParameter
+
+    override val constructorParameter: KParameter?
+        get() = constructorParameterValue
+    override val serializerDescriptor: SerializerDescriptor
+        get() = serializer.descriptor
+
+    override var presence: SchemaPropertyPresence<T> = SchemaPropertyPresence.Required
+        private set
+
+    override val writable: Boolean
+        get() = setProperty != null
+
+    private var presenceConfigured: Boolean = false
+
     internal val structuredProperty: StructuredProperty<R, T> = StructuredProperty(
         name = name,
-        sourceName = propertyName,
+        sourceName = sourceName ?: name,
         ownerType = ownerType,
         serializer = serializer,
-        getProperty = getProperty
+        getProperty = getProperty,
+        shouldSerialize = { value -> shouldSerialize(getProperty(value)) }
     )
 
     internal fun deserializeToValue(variant: Variant): DeserializeResult<Any?> =
@@ -32,12 +50,96 @@ public class SchemaProperty<R : Any, T> internal constructor(
 
     @Suppress("UNCHECKED_CAST")
     internal fun setOn(instance: R, value: Any?) {
-        setProperty(instance, value as T)
+        val setter = setProperty
+            ?: error("Schema property '$name' cannot be assigned after construction")
+        setter(instance, value as T)
     }
 
     @Suppress("UNCHECKED_CAST")
-    internal fun <S : Any> forSubtype(): SchemaProperty<S, *> =
-        this as SchemaProperty<S, *>
+    internal fun <S : Any> forSubtype(): SchemaProperty<S, *> {
+        val copied = SchemaProperty(
+            getProperty = { instance -> getProperty(instance as R) },
+            setProperty = setProperty?.let { setter ->
+                { instance: S, value: T -> setter(instance as R, value) }
+            },
+            serializer = serializer,
+            name = name,
+            sourceName = sourceName,
+            constructorParameterName = constructorParameterName,
+            ownerType = ownerType,
+            origin = origin
+        )
+        copied.presence = presence
+        copied.presenceConfigured = presenceConfigured
+        structuredProperty.copyDebugFormatterTo(copied.structuredProperty)
+        return copied
+    }
+
+    internal fun bindConstructor(type: KClass<R>): SchemaProperty<R, T> {
+        val parameter = constructorParameterName?.let { parameterName ->
+            type.primaryConstructor
+                ?.parameters
+                ?.singleOrNull { it.kind == KParameter.Kind.VALUE && it.name == parameterName }
+        }
+        if (constructorParameterValue == null) {
+            constructorParameterValue = parameter
+        }
+        val copied = SchemaProperty(
+            getProperty = getProperty,
+            setProperty = setProperty,
+            serializer = serializer,
+            name = name,
+            sourceName = sourceName,
+            constructorParameterName = constructorParameterName,
+            ownerType = ownerType,
+            constructorParameter = parameter,
+            origin = origin
+        )
+        copied.presence = presence
+        copied.presenceConfigured = presenceConfigured
+        structuredProperty.copyDebugFormatterTo(copied.structuredProperty)
+        return copied
+    }
+
+    internal fun configure(block: SchemaPropertyBuilder<R, T>.() -> Unit) {
+        object : SchemaPropertyBuilder<R, T> {
+            override fun required() {
+                configurePresence(SchemaPropertyPresence.Required)
+            }
+
+            override fun optional() {
+                configurePresence(SchemaPropertyPresence.Optional(false, null))
+            }
+
+            override fun optional(default: T, omitDefaults: Boolean) {
+                configurePresence(SchemaPropertyPresence.Optional(omitDefaults) { default })
+            }
+
+            override fun optional(omitDefaults: Boolean, default: () -> T) {
+                configurePresence(SchemaPropertyPresence.Optional(omitDefaults, default))
+            }
+
+            override fun debugFormatter(
+                formatter: DebugFormatterContext<T>.() -> net.kyori.adventure.text.Component
+            ) {
+                structuredProperty.setDebugFormatter(formatter)
+            }
+
+            private fun configurePresence(value: SchemaPropertyPresence<T>) {
+                require(!presenceConfigured) {
+                    "Presence for schema property '$name' is already configured"
+                }
+                presenceConfigured = true
+                presence = value
+            }
+        }.apply(block)
+    }
+
+    private fun shouldSerialize(value: T): Boolean {
+        val optional = presence as? SchemaPropertyPresence.Optional<T> ?: return true
+        if (!optional.omitDefaults || !optional.hasDefault) return true
+        return value != optional.defaultValue()
+    }
 }
 
 public interface SchemaBuilder<R : Any> {
@@ -49,29 +151,34 @@ public interface SchemaBuilder<R : Any> {
         parent: () -> Schema<P>
     ): RepresentationExtension<P>
 
+    /**
+     * Overrides inferred primary-constructor construction.
+     *
+     * Values read through [SchemaConstructionContext.value] are consumed by the
+     * factory. Remaining decoded values are applied through property setters.
+     */
+    public fun constructs(
+        factory: SchemaConstructionContext<R>.() -> R
+    )
+
+    /** Registers a Kotlin property and returns its typed schema handle. */
     public fun <T> property(
         reference: KProperty1<R, T>,
         serializer: Serializer<T>,
         name: String = reference.name,
-        block: DebugPropertyBuilder<T>.() -> Unit = {}
-    )
+        constructorParameterName: String? = reference.name,
+        block: SchemaPropertyBuilder<R, T>.() -> Unit = {}
+    ): SchemaProperty<R, T>
 
+    /** Registers an accessor-backed property and returns its typed schema handle. */
     public fun <T> property(
         name: String,
         serializer: Serializer<T>,
         getProperty: (R) -> T,
-        setProperty: (R, T) -> Unit,
-        propertyName: String = name
-    )
-
-    public fun <T> property(
-        name: String,
-        serializer: Serializer<T>,
-        getProperty: (R) -> T,
-        setProperty: (R, T) -> Unit,
-        propertyName: String = name,
-        block: DebugPropertyBuilder<T>.() -> Unit
-    )
+        setProperty: ((R, T) -> Unit)? = null,
+        constructorParameterName: String? = name,
+        block: SchemaPropertyBuilder<R, T>.() -> Unit = {}
+    ): SchemaProperty<R, T>
 }
 
 internal class SchemaExtension<P : Any>(
@@ -85,6 +192,14 @@ public interface Schema<T : Any> : TaggedSerializer<T>, DebugView<T> {
     override val type: KClass<T>
     public val properties: List<SchemaProperty<T, *>>
     public val untagged: Boolean
+
+    override val descriptor: SerializerDescriptor
+        get() = SerializerDescriptor.Object(
+            id = id,
+            type = type,
+            tagged = !untagged,
+            properties = properties
+        )
 
     override val debugView: EncodeOnlySerializer<Schema<*>>
         get() = Companion.provideDebugView()
@@ -118,8 +233,7 @@ public interface Schema<T : Any> : TaggedSerializer<T>, DebugView<T> {
 
 private fun Serializer<*>.debugTypeName(): String = when (this) {
     is Identifiable -> id.toString()
-    is SerializerJsonMetadata -> expectedType
-    else -> "<untagged>"
+    else -> descriptor.displayName
 }
 
 internal fun <T : Any> Schema<T>.requireRegistered(): Schema<T> {
@@ -148,6 +262,7 @@ internal open class SchemaBuilderImpl<R : Any>(
 
     private var untaggedValue: Boolean = initialUntagged
     private val parentExtensions: MutableList<SchemaExtension<*>> = mutableListOf()
+    private var constructionFactoryValue: (SchemaConstructionContext<R>.() -> R)? = null
     internal var hasExplicitUntagged: Boolean = false
         private set
 
@@ -160,10 +275,19 @@ internal open class SchemaBuilderImpl<R : Any>(
 
     val properties: List<SchemaProperty<R, *>> get() = mutableProperties.toList()
     val parents: List<SchemaExtension<*>> get() = parentExtensions.toList()
+    val constructionFactory: (SchemaConstructionContext<R>.() -> R)?
+        get() = constructionFactoryValue
 
     init {
-        require(mutableProperties.map { it.propertyName }.distinct().size == mutableProperties.size) {
-            "Inherited schema properties must have unique Kotlin property names"
+        require(
+            mutableProperties
+                .mapNotNull { property ->
+                    property.sourceName?.let { StructuredPropertyKey(property.ownerType ?: return@let null, it) }
+                }
+                .distinct()
+                .size == mutableProperties.count { it.sourceName != null && it.ownerType != null }
+        ) {
+            "Inherited schema properties must have unique Kotlin property references"
         }
     }
 
@@ -175,76 +299,67 @@ internal open class SchemaBuilderImpl<R : Any>(
         return configuration
     }
 
+    final override fun constructs(factory: SchemaConstructionContext<R>.() -> R) {
+        require(constructionFactoryValue == null) {
+            "Schema construction can only be configured once"
+        }
+        constructionFactoryValue = factory
+    }
+
     final override fun <T> property(
         reference: KProperty1<R, T>,
         serializer: Serializer<T>,
         name: String,
-        block: DebugPropertyBuilder<T>.() -> Unit
-    ) {
+        constructorParameterName: String?,
+        block: SchemaPropertyBuilder<R, T>.() -> Unit
+    ): SchemaProperty<R, T> =
         addProperty(
             name = name,
-            propertyName = reference.name,
+            sourceName = reference.name,
+            constructorParameterName = constructorParameterName,
             ownerType = reference.accessibleOwnerType("schema property"),
-            isMutable = reference is KMutableProperty1<*, *>,
             serializer = serializer,
             getProperty = reference::get,
-            setProperty = { instance, value ->
-                val mutableReference = reference as? KMutableProperty1<R, T>
-                    ?: error("Schema property '${reference.name}' is not mutable")
-                mutableReference.set(instance, value)
+            setProperty = (reference as? KMutableProperty1<R, T>)?.let { mutableReference ->
+                { instance, value -> mutableReference.set(instance, value) }
             }
-        ).structuredProperty.configureDebug(block)
-    }
+        ).also { it.configure(block) }
 
     final override fun <T> property(
         name: String,
         serializer: Serializer<T>,
         getProperty: (R) -> T,
-        setProperty: (R, T) -> Unit,
-        propertyName: String
-    ) {
+        setProperty: ((R, T) -> Unit)?,
+        constructorParameterName: String?,
+        block: SchemaPropertyBuilder<R, T>.() -> Unit
+    ): SchemaProperty<R, T> =
         addProperty(
             name = name,
-            propertyName = propertyName,
+            sourceName = null,
+            constructorParameterName = constructorParameterName,
             ownerType = null,
-            isMutable = true,
             serializer = serializer,
             getProperty = getProperty,
             setProperty = setProperty
-        )
-    }
-
-    final override fun <T> property(
-        name: String,
-        serializer: Serializer<T>,
-        getProperty: (R) -> T,
-        setProperty: (R, T) -> Unit,
-        propertyName: String,
-        block: DebugPropertyBuilder<T>.() -> Unit
-    ) {
-        addProperty(
-            name = name,
-            propertyName = propertyName,
-            ownerType = null,
-            isMutable = true,
-            serializer = serializer,
-            getProperty = getProperty,
-            setProperty = setProperty
-        ).structuredProperty.configureDebug(block)
-    }
+        ).also { it.configure(block) }
 
     private fun <T> addProperty(
         name: String,
-        propertyName: String,
+        sourceName: String?,
+        constructorParameterName: String?,
         ownerType: KClass<*>?,
-        isMutable: Boolean,
         serializer: Serializer<T>,
         getProperty: (R) -> T,
-        setProperty: (R, T) -> Unit
+        setProperty: ((R, T) -> Unit)?
     ): SchemaProperty<R, T> {
-        require(propertyName.isNotBlank()) { "Schema property Kotlin names cannot be blank" }
-        require(mutableProperties.none { it.propertyName == propertyName }) {
-            "Schema property '$propertyName' is already registered"
+        require(sourceName == null || sourceName.isNotBlank()) {
+            "Schema property Kotlin names cannot be blank"
+        }
+        require(
+            sourceName == null ||
+                mutableProperties.none { it.sourceName == sourceName && it.ownerType == ownerType }
+        ) {
+            "Schema property '$sourceName' is already registered"
         }
 
         val property = SchemaProperty(
@@ -252,9 +367,10 @@ internal open class SchemaBuilderImpl<R : Any>(
             setProperty = setProperty,
             serializer = serializer,
             name = name,
-            propertyName = propertyName,
+            sourceName = sourceName,
+            constructorParameterName = constructorParameterName,
             ownerType = ownerType,
-            isMutable = isMutable
+            constructorParameter = null
         )
         state.addProperty(property.structuredProperty)
         mutableProperties += property
@@ -276,12 +392,9 @@ internal abstract class BaseSchema<T : Any>(
         require(properties.map { it.name }.distinct().size == properties.size) {
             "Schema for ${type.qualifiedName} has duplicate serialized property names"
         }
-        require(properties.map { it.propertyName }.distinct().size == properties.size) {
-            "Schema for ${type.qualifiedName} has duplicate Kotlin property names"
-        }
         for (property in properties) {
             require(property.ownerType == null || type.isSubclassOf(property.ownerType)) {
-                "Property '${property.propertyName}' cannot be read from ${type.qualifiedName}"
+                "Property '${property.sourceName ?: property.name}' cannot be read from ${type.qualifiedName}"
             }
         }
     }
@@ -335,23 +448,71 @@ internal abstract class BaseSchema<T : Any>(
             result.error
         )
     }
+
+    protected data class DecodedProperty(
+        val value: Any?,
+        val wasProvided: Boolean
+    )
+
+    protected fun decodeProperties(
+        variant: Variant
+    ): Map<SchemaProperty<T, *>, DecodedProperty> {
+        val values = valuesForDeserialization(variant)
+        val decoded = linkedMapOf<SchemaProperty<T, *>, DecodedProperty>()
+        for (property in properties) {
+            val encoded = values[property.name]
+            if (encoded != null) {
+                decoded[property] = DecodedProperty(
+                    value = deserializeProperty(property, encoded),
+                    wasProvided = true
+                )
+                continue
+            }
+
+            when (val presence = property.presence) {
+                SchemaPropertyPresence.Required -> throw DataSerializationException(
+                    "Missing required property '${property.name}' for ${type.qualifiedName}"
+                )
+
+                is SchemaPropertyPresence.Optional<*> -> if (presence.hasDefault) {
+                    decoded[property] = DecodedProperty(
+                        value = presence.defaultValue(),
+                        wasProvided = false
+                    )
+                }
+            }
+        }
+        return decoded
+    }
 }
 
 internal class SchemaImpl<T : Any>(
     type: KClass<T>,
     id: Identifier,
-    properties: List<SchemaProperty<T, *>>,
-    untagged: Boolean
-) : BaseSchema<T>(type, id, properties, untagged) {
+    declaredProperties: List<SchemaProperty<T, *>>,
+    untagged: Boolean,
+    private val constructionFactory: (SchemaConstructionContext<T>.() -> T)?,
+    allowMissingConstructor: Boolean
+) : BaseSchema<T>(
+    type,
+    id,
+    declaredProperties.map { it.bindConstructor(type) },
+    untagged
+) {
     private data class Binding<R : Any>(
         val property: SchemaProperty<R, *>,
         val parameter: KParameter?
     )
 
-    private val constructor: KFunction<T>? = type.primaryConstructor
+    private val constructor: KFunction<T>? =
+        if (constructionFactory == null) type.primaryConstructor else null
     private val bindings: List<Binding<T>>
 
     init {
+        require(constructionFactory != null || constructor != null || allowMissingConstructor) {
+            "Schema type ${type.qualifiedName} has no primary constructor; configure constructs { ... }"
+        }
+
         val concreteConstructor = constructor
         bindings = if (concreteConstructor == null) {
             emptyList()
@@ -361,11 +522,32 @@ internal class SchemaImpl<T : Any>(
                 .filter { it.kind == KParameter.Kind.VALUE }
                 .associateBy { it.name }
             val boundBindings = properties.map { property ->
-                val parameter = parameters[property.propertyName]
-                require(parameter != null || property.isMutable) {
-                    "Property '${property.propertyName}' must be a constructor parameter or a mutable property"
+                val parameter = property.constructorParameter
+                require(parameter != null || property.writable) {
+                    "Schema property '${property.name}' must bind to a constructor parameter or define a setter"
+                }
+                val optional = property.presence as? SchemaPropertyPresence.Optional<*>
+                require(
+                    parameter == null ||
+                        parameter.isOptional ||
+                        optional == null ||
+                        optional.hasDefault
+                ) {
+                    "Optional schema property '${property.name}' has no default, but constructor parameter " +
+                        "'${parameter?.name}' does not have a Kotlin default"
                 }
                 Binding(property, parameter)
+            }
+
+            val duplicateParameters = boundBindings
+                .mapNotNull { it.parameter }
+                .groupingBy { it }
+                .eachCount()
+                .filterValues { it > 1 }
+                .keys
+            require(duplicateParameters.isEmpty()) {
+                "Schema for ${type.qualifiedName} binds multiple properties to constructor parameters: " +
+                    duplicateParameters.joinToString { it.name ?: "<unnamed>" }
             }
 
             val boundParameters = boundBindings.mapNotNull { it.parameter }.toSet()
@@ -379,55 +561,130 @@ internal class SchemaImpl<T : Any>(
     }
 
     override fun deserialize(variant: Variant): DeserializeResult<T> = try {
-        val concreteConstructor = constructor
-            ?: throw DataSerializationException(
-                "Schema type ${type.qualifiedName} cannot be deserialized because it has no primary constructor"
-            )
-        val values = valuesForDeserialization(variant)
-
-        val arguments = mutableMapOf<KParameter, Any?>()
-        val valuesForSetters = mutableListOf<Pair<SchemaProperty<T, *>, Any?>>()
-        for (binding in bindings) {
-            val property = binding.property
-            val encoded = values[property.name]
-            if (encoded == null) {
-                require(binding.parameter?.isOptional == true || binding.parameter == null) {
-                    "Missing property '${property.name}' for ${type.qualifiedName}"
-                }
-                continue
-            }
-
-            val decoded = deserializeProperty(property, encoded)
-            if (binding.parameter != null) {
-                arguments[binding.parameter] = decoded
-            } else {
-                valuesForSetters += property to decoded
-            }
-        }
-
-        val instance = concreteConstructor.callBy(arguments)
-        for ((property, value) in valuesForSetters) property.setOn(instance, value)
+        val decoded = decodeProperties(variant)
+        val instance = constructionFactory?.let { factory ->
+            constructWithFactory(factory, decoded)
+        } ?: constructWithPrimaryConstructor(decoded)
         DeserializeResult.Success(instance)
     } catch (exception: Exception) {
         DeserializeResult.Failure(exception)
     }
 
+    private fun constructWithPrimaryConstructor(
+        decoded: Map<SchemaProperty<T, *>, DecodedProperty>
+    ): T {
+        val concreteConstructor = constructor
+            ?: throw DataSerializationException(
+                "Schema type ${type.qualifiedName} cannot deserialize its base type because it has no constructor"
+            )
+        val arguments = linkedMapOf<KParameter, Any?>()
+        for (binding in bindings) {
+            val parameter = binding.parameter ?: continue
+            decoded[binding.property]?.let { arguments[parameter] = it.value }
+        }
+
+        val instance = concreteConstructor.callBy(arguments)
+        for (binding in bindings) {
+            if (binding.parameter != null) continue
+            val value = decoded[binding.property] ?: continue
+            binding.property.setOn(instance, value.value)
+        }
+        return instance
+    }
+
+    private fun constructWithFactory(
+        factory: SchemaConstructionContext<T>.() -> T,
+        decoded: Map<SchemaProperty<T, *>, DecodedProperty>
+    ): T {
+        val context = ConstructionContext(decoded)
+        val instance = factory(context)
+        for ((property, value) in decoded) {
+            if (property in context.consumedProperties) continue
+            property.setOn(instance, value.value)
+        }
+        return instance
+    }
+
+    private inner class ConstructionContext(
+        private val decoded: Map<SchemaProperty<T, *>, DecodedProperty>
+    ) : SchemaConstructionContext<T> {
+        val consumedProperties: MutableSet<SchemaProperty<T, *>> = linkedSetOf()
+
+        override fun <V> value(property: KProperty1<*, V>): V =
+            value(resolveProperty(property))
+
+        override fun <V> value(property: SchemaProperty<*, V>): V {
+            val resolved = resolveProperty(property)
+            val decodedValue = decoded[resolved]
+                ?: throw DataSerializationException(
+                    "Optional property '${resolved.name}' was not provided and has no schema default"
+                )
+            consumedProperties += resolved
+            @Suppress("UNCHECKED_CAST")
+            return decodedValue.value as V
+        }
+
+        override fun wasProvided(property: KProperty1<*, *>): Boolean =
+            decoded[resolvePropertyUntyped(property)]?.wasProvided == true
+
+        override fun wasProvided(property: SchemaProperty<*, *>): Boolean =
+            decoded[resolvePropertyUntyped(property)]?.wasProvided == true
+
+        private fun <V> resolveProperty(property: KProperty1<*, V>): SchemaProperty<T, V> {
+            val key = property.structuredPropertyKey("construction property")
+            val resolved = properties.singleOrNull { it.structuredProperty.key == key }
+                ?: throw DataSerializationException(
+                    "Property ${key.ownerType.qualifiedName}.${key.propertyName} is not part of schema $id"
+                )
+            @Suppress("UNCHECKED_CAST")
+            return resolved as SchemaProperty<T, V>
+        }
+
+        private fun <V> resolveProperty(property: SchemaProperty<*, V>): SchemaProperty<T, V> {
+            val resolved = resolvePropertyUntyped(property)
+            @Suppress("UNCHECKED_CAST")
+            return resolved as SchemaProperty<T, V>
+        }
+
+        private fun resolvePropertyUntyped(
+            property: KProperty1<*, *>
+        ): SchemaProperty<T, *> {
+            val key = property.structuredPropertyKey("construction property")
+            return properties.singleOrNull { it.structuredProperty.key == key }
+                ?: throw DataSerializationException(
+                    "Property ${key.ownerType.qualifiedName}.${key.propertyName} is not part of schema $id"
+                )
+        }
+
+        private fun resolvePropertyUntyped(
+            property: SchemaProperty<*, *>
+        ): SchemaProperty<T, *> =
+            properties.singleOrNull { it.origin === property.origin }
+                ?: throw DataSerializationException(
+                    "Schema property '${property.name}' does not belong to schema $id"
+                )
+    }
 }
 
 internal class SingletonSchemaImpl<T : Any>(
     type: KClass<T>,
     id: Identifier,
-    properties: List<SchemaProperty<T, *>>,
+    declaredProperties: List<SchemaProperty<T, *>>,
     untagged: Boolean
-) : BaseSchema<T>(type, id, properties, untagged) {
+) : BaseSchema<T>(
+    type,
+    id,
+    declaredProperties.map { it.bindConstructor(type) },
+    untagged
+) {
     private val instance: T
         get() = type.singletonObjectInstance()
             ?: error("Singleton schema $id requires ${type.qualifiedName} to be a Kotlin object")
 
     init {
         for (property in properties) {
-            require(property.isMutable) {
-                "Singleton schema property '${property.propertyName}' must be mutable"
+            require(property.writable) {
+                "Singleton schema property '${property.name}' must define a setter"
             }
         }
     }
@@ -439,14 +696,9 @@ internal class SingletonSchemaImpl<T : Any>(
     }
 
     override fun deserialize(variant: Variant): DeserializeResult<T> = try {
-        val values = valuesForDeserialization(variant)
-
         val singleton = instance
-        for (property in properties) {
-            val encoded = values[property.name]
-            require(encoded != null) { "Missing property '${property.name}' for ${type.qualifiedName}" }
-            val decoded = deserializeProperty(property, encoded)
-            property.setOn(singleton, decoded)
+        for ((property, decoded) in decodeProperties(variant)) {
+            property.setOn(singleton, decoded.value)
         }
         DeserializeResult.Success(singleton)
     } catch (exception: Exception) {
@@ -513,13 +765,26 @@ public fun <T : Any> singletonSchema(
     return builder.buildSingleton(id)
 }
 
-internal fun <T : Any> SchemaBuilderImpl<T>.build(id: Identifier): Schema<T> {
+internal fun <T : Any> SchemaBuilderImpl<T>.build(
+    id: Identifier,
+    allowMissingConstructor: Boolean = false
+): Schema<T> {
     return buildSchema(id) { type, schemaId, schemaProperties, schemaUntagged ->
-        SchemaImpl(type, schemaId, schemaProperties, schemaUntagged)
+        SchemaImpl(
+            type,
+            schemaId,
+            schemaProperties,
+            schemaUntagged,
+            constructionFactory,
+            allowMissingConstructor
+        )
     }
 }
 
 internal fun <T : Any> SchemaBuilderImpl<T>.buildSingleton(id: Identifier): Schema<T> {
+    require(constructionFactory == null) {
+        "Singleton schema $id uses its Kotlin object instance and cannot configure constructs { ... }"
+    }
     return buildSchema(id) { type, schemaId, schemaProperties, schemaUntagged ->
         SingletonSchemaImpl(type, schemaId, schemaProperties, schemaUntagged)
     }

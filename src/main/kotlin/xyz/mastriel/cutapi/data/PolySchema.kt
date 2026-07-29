@@ -12,6 +12,8 @@ public interface PolySchemaBuilder<R : Any> : SchemaBuilder<R> {
 public interface PolySchema<T : Any> : Schema<T> {
     public val includedTypes: Set<KClass<out T>>
 
+    override val descriptor: SerializerDescriptor.Polymorphic
+
     /** Includes an already-created subtype schema after this polymorphic schema has been built. */
     public fun <S : T> include(schema: Schema<S>)
 }
@@ -47,6 +49,18 @@ private class PolySchemaImpl<T : Any>(
 
     override val includedTypes: Set<KClass<out T>>
         get() = includes.mapTo(linkedSetOf()) { it.type }
+
+    override val descriptor: SerializerDescriptor.Polymorphic
+        get() = SerializerDescriptor.Polymorphic(
+            base = base.descriptor as SerializerDescriptor.Object,
+            included = includes.map { schema ->
+                when (val descriptor = schema.descriptor) {
+                    is SerializerDescriptor.Object -> descriptor
+                    is SerializerDescriptor.Polymorphic -> descriptor.base
+                    else -> error("Schema ${schema.id} must have an object descriptor")
+                }
+            }
+        )
 
     override fun <S : T> include(schema: Schema<S>) {
         add(schema)
@@ -157,6 +171,7 @@ private class DeferredPolySchema<T : Any>(
     override val properties: List<SchemaProperty<T, *>> get() = resolved.properties
     override val untagged: Boolean get() = resolved.untagged
     override val includedTypes: Set<KClass<out T>> get() = resolved.includedTypes
+    override val descriptor: SerializerDescriptor.Polymorphic get() = resolved.descriptor
 
     override fun serialize(value: T): SerializeResult = resolved.serialize(value)
 
@@ -178,7 +193,7 @@ public fun <T : Any> polySchema(
 ): PolySchema<T> = DeferredPolySchema(id) {
     val schemaBuilder = SchemaBuilderImpl<T>()
     val builder = PolySchemaBuilderImpl(schemaBuilder).apply(block)
-    PolySchemaImpl(schemaBuilder.build(id), builder.includes)
+    PolySchemaImpl(schemaBuilder.build(id, allowMissingConstructor = true), builder.includes)
 }
 
 public fun <T : Any> polySchema(
@@ -188,5 +203,5 @@ public fun <T : Any> polySchema(
 ): PolySchema<T> = DeferredPolySchema(id, type) {
     val schemaBuilder = SchemaBuilderImpl(type)
     val builder = PolySchemaBuilderImpl(schemaBuilder).apply(block)
-    PolySchemaImpl(schemaBuilder.build(id), builder.includes)
+    PolySchemaImpl(schemaBuilder.build(id, allowMissingConstructor = true), builder.includes)
 }

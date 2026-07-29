@@ -226,18 +226,18 @@ internal fun SchemaJsonException.attachmentErrorComponent(): Component {
     return joinedLines(lines)
 }
 
-private fun SerializerAvailableEntries.availableEntriesComponent(): Component = when (this) {
-    is SerializerAvailableEntries.LiteralValues ->
+private fun SerializerValueDomain.availableEntriesComponent(): Component = when (this) {
+    is SerializerValueDomain.Literal ->
         values.joinToString(prefix = "{ ", postfix = " }").literal(NamedTextColor.YELLOW)
 
-    is SerializerAvailableEntries.EnumValues ->
+    is SerializerValueDomain.Enum ->
         if (values.size <= MAX_INLINE_AVAILABLE_ENTRIES) {
             values.joinToString(prefix = "{ ", postfix = " }").literal(NamedTextColor.YELLOW)
         } else {
             clickableEntries("/inspectenum $key")
         }
 
-    is SerializerAvailableEntries.RegistryValues ->
+    is SerializerValueDomain.Registry ->
         clickableEntries("/inspectregistry $registryId")
 }
 
@@ -340,50 +340,79 @@ private fun Schema<*>.asAttachmentSchema(
     return this as Schema<Attachment>
 }
 
-private fun Schema<*>.jsonTemplate(): String {
-    val fields = properties.associate { property ->
-        property.name to property.serializer.jsonPlaceholder()
-    }
-    return fields.entries.joinToString(
-        prefix = "{",
-        postfix = "}",
-        separator = ","
-    ) { (name, value) -> "\"$name\":$value" }
-}
+private fun Schema<*>.jsonTemplate(): String = descriptor.jsonPlaceholder()
 
 private fun Schema<*>.propertyPaths(prefix: String = ""): List<String> =
-    properties.flatMap { property ->
+    descriptor.objectProperties().flatMap { property ->
         val path = if (prefix.isEmpty()) property.name else "$prefix.${property.name}"
-        val nested = property.serializer as? Schema<*>
-        if (nested == null) listOf(path) else listOf(path) + nested.propertyPaths(path)
+        listOf(path) + property.serializerDescriptor.propertyPaths(path)
     }
 
 private fun Schema<*>.jsonPlaceholderAt(path: String): String? {
     val segments = path.split('.').filter(String::isNotBlank)
     if (segments.isEmpty()) return null
-    var schema: Schema<*> = this
+    var current: SerializerDescriptor = descriptor
     for ((index, segment) in segments.withIndex()) {
-        val property = schema.properties.firstOrNull {
-            it.name == segment || it.propertyName == segment
-        } ?: return null
-        if (index == segments.lastIndex) return property.serializer.jsonPlaceholder()
-        schema = property.serializer as? Schema<*> ?: return null
+        val property = current.objectProperties().firstOrNull { it.name == segment }
+            ?: return null
+        if (index == segments.lastIndex) {
+            return property.serializerDescriptor.jsonPlaceholder()
+        }
+        current = property.serializerDescriptor
     }
     return null
 }
 
-private fun Serializer<*>.jsonPlaceholder(): String = when (this) {
-    is Schema<*> -> jsonTemplate()
-    VariantSerializer.Boolean -> "false"
-    VariantSerializer.Byte,
-    VariantSerializer.Short,
-    VariantSerializer.Int,
-    VariantSerializer.Long,
-    VariantSerializer.Float,
-    VariantSerializer.Double -> "0"
+private fun SerializerDescriptor.jsonPlaceholder(): String = when (this) {
+    is SerializerDescriptor.Nullable -> "null"
+    is SerializerDescriptor.Mapped -> encoded.jsonPlaceholder()
+    is SerializerDescriptor.List -> "[]"
+    is SerializerDescriptor.Map -> "{}"
+    is SerializerDescriptor.Object -> objectJsonPlaceholder()
+    is SerializerDescriptor.Polymorphic -> base.objectJsonPlaceholder()
+    is SerializerDescriptor.Opaque -> "\"\""
+    is SerializerDescriptor.Primitive -> when (kind) {
+        VariantKind.NULL -> "null"
+        VariantKind.BOOLEAN -> "false"
+        VariantKind.BYTE,
+        VariantKind.SHORT,
+        VariantKind.INT,
+        VariantKind.LONG,
+        VariantKind.FLOAT,
+        VariantKind.DOUBLE -> "0"
 
-    VariantSerializer.List -> "[]"
-    VariantSerializer.Map -> "{}"
-    VariantSerializer.Null -> "null"
-    else -> "\"\""
+        VariantKind.ANY,
+        VariantKind.STRING,
+        VariantKind.CHAR,
+        VariantKind.IDENTIFIER,
+        VariantKind.RESOURCE_REF -> valueDomain.firstValueOrNull()?.let(::jsonString) ?: "\"\""
+    }
 }
+
+private fun SerializerDescriptor.Object.objectJsonPlaceholder(): String =
+    properties.joinToString(prefix = "{", postfix = "}", separator = ",") { property ->
+        "${jsonString(property.name)}:${property.serializerDescriptor.jsonPlaceholder()}"
+    }
+
+private fun SerializerDescriptor.objectProperties(): List<SerializedPropertyDescriptor> = when (this) {
+    is SerializerDescriptor.Nullable -> value.objectProperties()
+    is SerializerDescriptor.Mapped -> encoded.objectProperties()
+    is SerializerDescriptor.Object -> properties
+    is SerializerDescriptor.Polymorphic -> base.properties
+    else -> emptyList()
+}
+
+private fun SerializerDescriptor.propertyPaths(prefix: String): List<String> =
+    objectProperties().flatMap { property ->
+        val path = "$prefix.${property.name}"
+        listOf(path) + property.serializerDescriptor.propertyPaths(path)
+    }
+
+private fun SerializerValueDomain?.firstValueOrNull(): String? = when (this) {
+    is SerializerValueDomain.Literal -> values.firstOrNull()
+    is SerializerValueDomain.Enum -> values.firstOrNull()
+    is SerializerValueDomain.Registry, null -> null
+}
+
+private fun jsonString(value: String): String =
+    kotlinx.serialization.json.JsonPrimitive(value).toString()

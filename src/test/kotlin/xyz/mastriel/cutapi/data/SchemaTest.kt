@@ -38,6 +38,9 @@ class SchemaTest : MockBukkitTest() {
         data class ManualValue(val value: String)
 
         val serializer = object : Serializer<ManualValue> {
+            override val descriptor: SerializerDescriptor =
+                SerializerDescriptor.Opaque(id("test:manual_value"))
+
             override fun serialize(value: ManualValue): SerializeResult =
                 SerializeResult.Success(Variant.String(value.value))
 
@@ -392,7 +395,7 @@ class SchemaTest : MockBukkitTest() {
         val error = assertIs<SchemaJsonException>(failure.error)
         assertContains(error.errorMessage, "at 'nested.label'")
         assertContains(error.errorMessage, "Missing required property")
-        assertEquals(VariantSerializer.String.id.toString(), error.expected)
+        assertEquals("string", error.expected)
         assertEquals("<missing>", error.found)
     }
 
@@ -406,7 +409,7 @@ class SchemaTest : MockBukkitTest() {
         assertContains(error.errorMessage, "at 'mode'")
         assertEquals("JsonMode", error.expected)
         assertEquals(""""THIRD"""", error.found)
-        val entries = assertIs<SerializerAvailableEntries.EnumValues>(error.availableEntries)
+        val entries = assertIs<SerializerValueDomain.Enum>(error.availableEntries)
         assertEquals(listOf("FIRST", "SECOND"), entries.values)
         assertContains(error.message.orEmpty(), "Available Entries: { FIRST, SECOND }")
     }
@@ -418,7 +421,7 @@ class SchemaTest : MockBukkitTest() {
         )
 
         val error = assertIs<SchemaJsonException>(failure.error)
-        val entries = assertIs<SerializerAvailableEntries.EnumValues>(error.availableEntries)
+        val entries = assertIs<SerializerValueDomain.Enum>(error.availableEntries)
         assertEquals(11, entries.values.size)
         assertContains(error.message.orEmpty(), "Available Entries: { ... }")
         assertFalse(error.message.orEmpty().contains("ELEVEN"))
@@ -431,9 +434,9 @@ class SchemaTest : MockBukkitTest() {
         )
 
         val error = assertIs<SchemaJsonException>(failure.error)
-        assertEquals("Identifier", error.expected)
+        assertEquals("identifier string", error.expected)
         assertEquals(""""test:missing"""", error.found)
-        val entries = assertIs<SerializerAvailableEntries.RegistryValues>(error.availableEntries)
+        val entries = assertIs<SerializerValueDomain.Registry>(error.availableEntries)
         assertEquals(JsonEntryRegistry.id, entries.registryId)
     }
 
@@ -616,7 +619,7 @@ private abstract class ExcludedSchemaParent(
 private interface RetainedSchemaParent {
     val retainedData: Boolean
 
-    companion object : Schema<RetainedSchemaParent> by schema(id("cutapi:retained_schema_parent"), {
+    companion object : Schema<RetainedSchemaParent> by polySchema(id("cutapi:retained_schema_parent"), {
         property(RetainedSchemaParent::retainedData, VariantSerializer.Boolean)
     })
 }

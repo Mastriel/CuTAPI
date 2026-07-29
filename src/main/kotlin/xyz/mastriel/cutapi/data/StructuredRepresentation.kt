@@ -54,12 +54,16 @@ internal class RepresentationExtensionImpl<P : Any> : RepresentationExtension<P>
 }
 
 internal class StructuredProperty<R : Any, T>(
-    val name: String,
+    override val name: String,
     val sourceName: String,
     val ownerType: KClass<*>?,
     val serializer: EncodeOnlySerializer<T>,
-    private val getProperty: (R) -> T
-) {
+    private val getProperty: (R) -> T,
+    private val shouldSerialize: (R) -> Boolean = { true }
+) : SerializedPropertyDescriptor {
+    override val serializerDescriptor: SerializerDescriptor
+        get() = serializer.descriptor
+
     var debugFormatter: DebugFormatter<T>? = null
         private set
 
@@ -68,6 +72,8 @@ internal class StructuredProperty<R : Any, T>(
 
     fun serializeFrom(value: R): SerializeResult =
         serializer.serialize(getProperty(value))
+
+    fun shouldSerialize(value: R): Boolean = shouldSerialize.invoke(value)
 
     @Suppress("UNCHECKED_CAST")
     fun valueFrom(instance: Any): T = getProperty(instance as R)
@@ -97,6 +103,17 @@ internal class StructuredProperty<R : Any, T>(
                 this@StructuredProperty.debugFormatter = formatter.asDebugFormatter()
             }
         }.apply(block)
+    }
+
+    fun setDebugFormatter(formatter: DebugFormatterContext<T>.() -> Component) {
+        require(debugFormatter == null) {
+            "Debug formatter for property '$name' is already configured"
+        }
+        debugFormatter = formatter.asDebugFormatter()
+    }
+
+    fun <S : Any> copyDebugFormatterTo(property: StructuredProperty<S, T>) {
+        property.debugFormatter = debugFormatter
     }
 }
 
@@ -266,6 +283,7 @@ private fun <R : Any> encodeStructuredRepresentation(
     }
 
     for (property in properties) {
+        if (!property.shouldSerialize(value)) continue
         val propertyValue = when (val result = property.serializeFrom(value)) {
             is SerializeResult.Success -> result.value
             is SerializeResult.Failure -> throw DataSerializationException(
