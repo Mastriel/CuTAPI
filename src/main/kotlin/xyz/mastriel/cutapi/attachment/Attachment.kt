@@ -1,6 +1,7 @@
 package xyz.mastriel.cutapi.attachment
 
 import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.utils.*
 import kotlin.reflect.*
 import kotlin.reflect.full.*
 
@@ -75,14 +76,4 @@ public interface AttachmentHolder<A : Attachment> {
     public fun <T : A> getAttachments(schema: Schema<T>): List<T>
 
     public fun getAllAttachments(): List<A>
-}
-
-private fun KClass<*>.accessibleCompanionObjectInstance(): Any? = try {
-    companionObjectInstance
-} catch (_: IllegalAccessException) {
-    val companionType = companionObject ?: return null
-    java.declaredFields
-        .firstOrNull { it.type.kotlin == companionType }
-        ?.also { it.isAccessible = true }
-        ?.get(null)
 }

@@ -16,6 +16,7 @@ import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.testing.*
+import xyz.mastriel.cutapi.utils.colored
 import kotlin.test.*
 
 public class DebugCommandTest : MockBukkitTest() {
@@ -108,18 +109,18 @@ public class DebugCommandTest : MockBukkitTest() {
     }
 
     @Test
-    public fun `debug JSON uses the resource inspector key and value colors`() {
+    public fun `debug YAML uses the resource inspector key and value colors`() {
         val component = buildJsonObject {
             put("name", "value")
             putJsonObject("nested") {
                 put("count", 3)
             }
-        }.debugJsonComponent()
+        }.debugYamlComponent()
         val segments = component.textSegments()
 
         assertTrue(
             segments.any {
-                it.text == """"name"""" &&
+                it.text == "name" &&
                     it.color == ResourceInspector.PropertyKey.textColor
             }
         )
@@ -131,7 +132,7 @@ public class DebugCommandTest : MockBukkitTest() {
         )
         assertTrue(
             segments.any {
-                it.text == """"count"""" &&
+                it.text == "count" &&
                     it.color == ResourceInspector.PropertyKey.textColor
             }
         )
@@ -141,10 +142,11 @@ public class DebugCommandTest : MockBukkitTest() {
                     it.color == ResourceInspector.PropertyValue.textColor
             }
         )
+        assertContains(component.plainText(), "name: \"value\"\nnested:\n  count: 3")
     }
 
     @Test
-    public fun `debug JSON displays schema types before their objects`() {
+    public fun `debug YAML displays schema types as tags`() {
         val component = buildJsonObject {
             put(SCHEMA_TYPE_DISCRIMINATOR, "cutapi:outer")
             put("name", "value")
@@ -152,20 +154,92 @@ public class DebugCommandTest : MockBukkitTest() {
                 put(SCHEMA_TYPE_DISCRIMINATOR, "cutapi:inner")
                 put("count", 3)
             }
-        }.debugJsonComponent()
+        }.debugYamlComponent()
         val segments = component.textSegments()
 
         assertTrue(
             segments.any {
-                it.text == "<cutapi:outer> " && it.color == NamedTextColor.AQUA
+                it.text == "cutapi:outer" &&
+                    it.color == ResourceInspector.ObjectType.textColor
             }
         )
         assertTrue(
             segments.any {
-                it.text == "<cutapi:inner> " && it.color == NamedTextColor.AQUA
+                it.text == "cutapi:inner" &&
+                    it.color == ResourceInspector.ObjectType.textColor
             }
         )
-        assertFalse(segments.any { it.text == """"$SCHEMA_TYPE_DISCRIMINATOR"""" })
+        assertFalse(component.plainText().contains(SCHEMA_TYPE_DISCRIMINATOR))
+        assertContains(
+            component.plainText(),
+            "!<cutapi:outer>\nname: \"value\"\nnested: !<cutapi:inner>\n  count: 3"
+        )
+    }
+
+    @Test
+    public fun `debug YAML renders nested lists and typed objects`() {
+        val component = buildJsonObject {
+            putJsonArray("entries") {
+                add("first")
+                addJsonObject {
+                    put(SCHEMA_TYPE_DISCRIMINATOR, "cutapi:entry")
+                    put("enabled", true)
+                }
+            }
+        }.debugYamlComponent()
+
+        assertContains(
+            component.plainText(),
+            "entries:\n  - \"first\"\n  - !<cutapi:entry>\n    enabled: true"
+        )
+    }
+
+    @Test
+    public fun `schema registry entries use schema metadata in their hover`() {
+        val entry = CommandData.debugEntryComponent()
+        val hover = assertNotNull(entry.hoverEvent())
+        val text = assertIs<Component>(hover.value()).plainText()
+
+        assertContains(text, "!<cutapi:schema>")
+        assertContains(text, "id: \"${CommandData.id}\"")
+        assertContains(text, "type: \"${CommandData.type.qualifiedName}\"")
+        assertContains(
+            text,
+            "properties:\n" +
+                "  value: \"cutapi:variant/string\"\n" +
+                "  count: \"cutapi:variant/int\""
+        )
+    }
+
+    @Test
+    public fun `property debug formatters override registered serializer formatters`() {
+        DebugFormatter.registerFormatter(
+            CommandFormattedIntSerializer.debugFormatter {
+                "&6${this.value.amount}".colored
+            }
+        )
+        val value = CommandFormattedData(
+            global = CommandFormattedInt(4),
+            local = CommandFormattedInt(5)
+        )
+        val entry = debugEntryComponent(
+            id = CommandFormattedData.id,
+            debugView = CommandFormattedData,
+            value = value
+        )
+        val hover = assertIs<Component>(assertNotNull(entry.hoverEvent()).value())
+        val segments = hover.textSegments()
+
+        assertTrue(
+            segments.any {
+                it.text == "4" && it.color == NamedTextColor.GOLD
+            }
+        )
+        assertTrue(
+            segments.any {
+                it.text == "5" && it.color == NamedTextColor.AQUA
+            }
+        )
     }
 
     @Test
@@ -284,6 +358,9 @@ private fun Component.textSegments(): List<TextSegment> = buildList {
 private fun Component.allComponents(): List<Component> =
     listOf(this) + children().flatMap { it.allComponents() }
 
+private fun Component.plainText(): String =
+    textSegments().joinToString(separator = "") { it.text }
+
 private enum class CommandLongEnum {
     ONE,
     TWO,
@@ -316,8 +393,38 @@ private data class CommandSharedAttachment(val value: String) : ItemAttachment, 
     })
 }
 
-private data class CommandData(val value: String) {
+private data class CommandData(
+    val value: String,
+    val count: Int
+) {
     companion object : Schema<CommandData> by schema(id("test:command_data"), {
         property(CommandData::value, VariantSerializer.String)
+        property(CommandData::count, VariantSerializer.Int)
+    })
+}
+
+private data class CommandFormattedInt(
+    val amount: Int
+)
+
+private val CommandFormattedIntSerializer: TaggedSerializer<CommandFormattedInt> =
+    VariantSerializer.mapped(
+        serializer = VariantSerializer.Int,
+        id = id("test:formatted_int"),
+        serialize = CommandFormattedInt::amount,
+        deserialize = ::CommandFormattedInt
+    )
+
+private data class CommandFormattedData(
+    val global: CommandFormattedInt,
+    val local: CommandFormattedInt
+) {
+    companion object : Schema<CommandFormattedData> by schema(id("test:command_formatted_data"), {
+        property(CommandFormattedData::global, CommandFormattedIntSerializer)
+        property(CommandFormattedData::local, CommandFormattedIntSerializer) {
+            debugFormatter {
+                "&b${this.value.amount}".colored
+            }
+        }
     })
 }

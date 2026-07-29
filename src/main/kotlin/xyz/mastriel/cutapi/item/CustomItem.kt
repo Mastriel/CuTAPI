@@ -1,12 +1,11 @@
 package xyz.mastriel.cutapi.item
 
-import kotlinx.serialization.*
 import org.bukkit.*
 import org.bukkit.event.*
 import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.attachment.*
-import xyz.mastriel.cutapi.data.requireRegistered
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.ItemStackUtility.customItem
 import xyz.mastriel.cutapi.item.ItemStackUtility.isCustom
 import xyz.mastriel.cutapi.item.attachments.*
@@ -15,6 +14,7 @@ import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.utils.*
 import kotlin.reflect.*
 
+private typealias KSerializable = kotlinx.serialization.Serializable
 
 public object CustomItemSerializer : IdentifiableSerializer<CustomItem<*>>("customMaterial", CustomItem)
 
@@ -25,7 +25,7 @@ public object CustomItemSerializer : IdentifiableSerializer<CustomItem<*>>("cust
  */
 public typealias AnyCustomItem = CustomItem<*>
 
-@Serializable(with = CustomItemSerializer::class)
+@KSerializable(with = CustomItemSerializer::class)
 public open class CustomItem<TStack : CuTItemStack>(
     override val id: Identifier,
     public val type: Material,
@@ -63,16 +63,16 @@ public open class CustomItem<TStack : CuTItemStack>(
 
     private val attachmentHolder by lazy { CustomItemAttachmentHolder(this) }
 
-    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out ItemAttachment>): Boolean =
+    override fun hasAttachment(schema: Schema<out ItemAttachment>): Boolean =
         attachmentHolder.hasAttachment(schema)
 
-    override fun <T : ItemAttachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
+    override fun <T : ItemAttachment> getAttachment(schema: Schema<T>): T =
         attachmentHolder.getAttachment(schema)
 
-    override fun <T : ItemAttachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
+    override fun <T : ItemAttachment> getAttachmentOrNull(schema: Schema<T>): T? =
         attachmentHolder.getAttachmentOrNull(schema)
 
-    override fun <T : ItemAttachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
+    override fun <T : ItemAttachment> getAttachments(schema: Schema<T>): List<T> =
         attachmentHolder.getAttachments(schema)
 
     override fun getAllAttachments(): List<ItemAttachment> = attachmentHolder.getAllAttachments()
@@ -82,7 +82,18 @@ public open class CustomItem<TStack : CuTItemStack>(
     }
 
 
-    public companion object : IdentifierRegistry<CustomItem<*>>(id("cutapi:registry/custom_item")) {
+    public companion object :
+        IdentifierRegistry<CustomItem<*>>(id("cutapi:registry/custom_item")),
+        DebugViewProvider<CustomItem<*>> by debugView<CustomItem<*>>(
+            id("cutapi:custom_item"),
+            {
+                extends { Identifiable }
+                property("type", VariantSerializer.String) { it.type.key.toString() }
+                property("stackTypeClass", VariantSerializer.String) {
+                    it.stackTypeClass.qualifiedName ?: "<anonymous class>"
+                }
+            }
+        ) {
         internal val DeferredRegistry = defer(RegistryPriority(Int.MAX_VALUE))
 
         public val Unknown: CustomItem<CuTItemStack> by lazy {

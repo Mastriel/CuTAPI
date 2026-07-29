@@ -54,6 +54,8 @@ public open class IdentifierRegistry<T : Identifiable> private constructor(
 ) : Serializer<T>, Identifiable {
     public constructor(id: Identifier) : this(id, registerGlobally = true)
 
+    override val debugView: EncodeOnlySerializer<*>? = IdentifierRegistry.provideDebugView();
+
     init {
         if (registerGlobally) AllRegistries.registerRegistry(this)
     }
@@ -272,7 +274,12 @@ public open class IdentifierRegistry<T : Identifiable> private constructor(
         return backingSerializer.deserialize(variant)
     }
 
-    public companion object {
+    public companion object :
+        DebugViewProvider<IdentifierRegistry<*>> by debugView(id("cutapi:identifier_registry"), {
+            extends { Identifiable }
+            property("size", VariantSerializer.Int) { it.values.size }
+            property(IdentifierRegistry<*>::isOpen, VariantSerializer.Boolean)
+        }) {
         // uses weak references, although registries should probably not be
         // garbage collected at any point and should always have a strong reference
         private val usedRegistries = mutableListOf<WeakReference<IdentifierRegistry<*>>>()

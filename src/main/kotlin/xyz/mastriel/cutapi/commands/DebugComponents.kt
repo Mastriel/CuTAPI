@@ -12,7 +12,7 @@ internal fun Identifiable.debugEntryComponent(): Component =
 
 internal fun debugEntryComponent(
     id: Identifier,
-    debugView: DebugRepresentation<*>?,
+    debugView: EncodeOnlySerializer<*>?,
     value: Any?,
     intrinsic: Boolean = false,
     suppressed: Boolean = false
@@ -24,13 +24,13 @@ internal fun debugEntryComponent(
     }
 
     if (debugView == null || value == null) return entry
-    return entry.hoverEvent(debugRepresentationHover(id, debugView, value, intrinsic, suppressed))
+    return entry.hoverEvent(debugViewHover(id, debugView, value, intrinsic, suppressed))
 }
 
 @Suppress("UNCHECKED_CAST")
-private fun debugRepresentationHover(
+private fun debugViewHover(
     id: Identifier,
-    debugView: DebugRepresentation<*>,
+    debugView: EncodeOnlySerializer<*>,
     value: Any,
     intrinsic: Boolean = false,
     suppressed: Boolean = false
@@ -48,65 +48,179 @@ private fun debugRepresentationHover(
     val title =
         "&${ResourceInspector.InspectorTitle}${marker}${id}${hint}".colored
     val body = try {
-        val variant = (debugView as DebugRepresentation<Any>).serialize(value).getOrThrow()
-        variant.toJsonElement().debugJsonComponent()
+        val variant = (debugView as EncodeOnlySerializer<Any>).serialize(value).getOrThrow()
+        variant.debugYamlComponent(debugView, DebugSource(value))
     } catch (exception: Exception) {
         "&c${exception.message ?: "Unable to serialize debug properties"}".colored
     }
     return title.appendNewline().append(body)
 }
 
-internal fun JsonElement.debugJsonComponent(indent: Int = 0): Component = when (this) {
-    is JsonObject -> objectDebugComponent(indent)
-    is JsonArray -> arrayDebugComponent(indent)
-    else -> "&${ResourceInspector.PropertyValue}${toString()}".colored
-}
+internal fun JsonElement.debugYamlComponent(): Component =
+    toVariant().debugYamlComponent()
 
-private fun JsonObject.objectDebugComponent(indent: Int): Component {
-    val typeId = (this[SCHEMA_TYPE_DISCRIMINATOR] as? JsonPrimitive)
-        ?.takeIf { it.isString }
-        ?.content
-    val displayedEntries = entries.filter { it.key != SCHEMA_TYPE_DISCRIMINATOR || typeId == null }
-    val opening = if (typeId == null) {
-        "&7{".colored
-    } else {
-        "&b<$typeId> &7{".colored
+internal fun Variant.debugYamlComponent(
+    serializer: EncodeOnlySerializer<*>? = null,
+    source: DebugSource? = null
+): Component = joinedLines(yamlLines(serializer = serializer, source = source))
+
+private fun Variant.yamlLines(
+    indent: Int = 0,
+    header: Component? = null,
+    serializer: EncodeOnlySerializer<*>? = null,
+    property: StructuredProperty<*, *>? = null,
+    source: DebugSource? = null,
+    useFormatter: Boolean = true
+): List<Component> {
+    val defaultFormatter = { defaultDebugComponent(serializer, source) }
+    val formatted = if (useFormatter) {
+        if (property != null && source != null) {
+            property.formatDebugValue(source.value, this, defaultFormatter)
+        } else {
+            null
+        } ?: DebugFormatter.format(
+            serializer = serializer,
+            variant = this,
+            sourceValue = source?.value,
+            hasSourceValue = source != null,
+            defaultFormatter = defaultFormatter
+        )
+    } else null
+    if (formatted != null) {
+        return listOf(
+            (header ?: yamlIndent(indent))
+                .append(if (header != null) " ".colored else Component.empty())
+                .append(formatted)
+        )
     }
 
-    if (displayedEntries.isEmpty()) return opening.append("&7}".colored)
+    return when (this) {
+        is Variant.Map -> yamlLines(indent, header, serializer, source)
+        is Variant.List -> yamlLines(indent, header, source)
+        else -> listOf(
+            (header ?: yamlIndent(indent))
+                .append(if (header != null) " ".colored else Component.empty())
+                .append(yamlScalarComponent())
+        )
+    }
+}
 
-    var result: Component = opening
-    displayedEntries.forEachIndexed { index, (key, value) ->
-        result = result.appendNewline()
-            .append(" ".repeat(indent + JSON_INDENT).colored)
-            .append("&${ResourceInspector.PropertyKey}${JsonPrimitive(key)}".colored)
-            .append("&7: ".colored)
-            .append(value.debugJsonComponent(indent + JSON_INDENT))
-        if (index < displayedEntries.size - 1) {
-            result = result.append("&7,".colored)
+private fun Variant.Map.yamlLines(
+    indent: Int,
+    header: Component?,
+    serializer: EncodeOnlySerializer<*>?,
+    source: DebugSource?
+): List<Component> {
+    val entries = stringEntries()
+    val typeId = (get(SCHEMA_TYPE_DISCRIMINATOR) as? Variant.String)?.value
+    val displayedEntries = entries.filter { it.first != SCHEMA_TYPE_DISCRIMINATOR || typeId == null }
+    val typeTag = typeId?.let { "&7!<&${ResourceInspector.ObjectType}$it&7>".colored }
+
+    if (displayedEntries.isEmpty()) {
+        return listOf(
+            buildHeader(header, typeTag)
+                .append(if (header != null || typeTag != null) " ".colored else Component.empty())
+                .append("&7{}".colored)
+        )
+    }
+
+    return buildList {
+        if (header != null || typeTag != null) {
+            add(buildHeader(header, typeTag))
+        }
+        for ((key, value) in displayedEntries) {
+            val property = serializer?.structuredProperty(key)
+            val propertySource = if (property != null && source?.value != null) {
+                DebugSource(property.valueFrom(source.value))
+            } else {
+                null
+            }
+            val keyHeader = yamlIndent(indent)
+                .append(yamlKeyComponent(key))
+                .append("&7:".colored)
+            addAll(
+                value.yamlLines(
+                    indent = indent + YAML_INDENT,
+                    header = keyHeader,
+                    serializer = property?.serializer,
+                    property = property,
+                    source = propertySource
+                )
+            )
         }
     }
-    return result.appendNewline()
-        .append(" ".repeat(indent).colored)
-        .append("&7}".colored)
 }
 
-private fun JsonArray.arrayDebugComponent(indent: Int): Component {
-    if (isEmpty()) return "&7[]".colored
+private fun Variant.List.yamlLines(
+    indent: Int,
+    header: Component?,
+    source: DebugSource?
+): List<Component> {
+    if (isEmpty()) {
+        return listOf(
+            (header ?: yamlIndent(indent))
+                .append(if (header != null) " ".colored else Component.empty())
+                .append("&7[]".colored)
+        )
+    }
 
-    var result: Component = "&7[".colored
-    forEachIndexed { index, value ->
-        result = result.appendNewline()
-            .append(" ".repeat(indent + JSON_INDENT).colored)
-            .append(value.debugJsonComponent(indent + JSON_INDENT))
-        if (index < size - 1) {
-            result = result.append("&7,".colored)
+    return buildList {
+        if (header != null) add(header)
+        val sourceValues = (source?.value as? List<*>)
+        for ((index, value) in this@yamlLines.withIndex()) {
+            val itemHeader = yamlIndent(indent).append("&7-".colored)
+            val itemSource = sourceValues
+                ?.takeIf { index in it.indices }
+                ?.let { DebugSource(it[index]) }
+            addAll(value.yamlLines(indent + YAML_INDENT, itemHeader, source = itemSource))
         }
     }
-    return result.appendNewline()
-        .append(" ".repeat(indent).colored)
-        .append("&7]".colored)
 }
+
+private fun Variant.Map.stringEntries(): List<Pair<String, Variant>> = map { (key, value) ->
+    val name = when (key) {
+        is Variant.String -> key.value
+        is Variant.Identifier -> key.value.toString()
+        else -> key.value.toString()
+    }
+    name to value
+}
+
+private fun buildHeader(
+    header: Component?,
+    typeTag: Component?
+): Component {
+    var result = header ?: Component.empty()
+    if (typeTag != null) {
+        if (header != null) result = result.append(" ".colored)
+        result = result.append(typeTag)
+    }
+    return result
+}
+
+private fun yamlIndent(indent: Int): Component = " ".repeat(indent).colored
+
+private fun yamlKeyComponent(key: String): Component {
+    val rendered = if (YAML_PLAIN_KEY.matches(key)) key else JsonPrimitive(key).toString()
+    return "&${ResourceInspector.PropertyKey}$rendered".colored
+}
+
+private fun Variant.defaultDebugComponent(
+    serializer: EncodeOnlySerializer<*>?,
+    source: DebugSource?
+): Component = when (this) {
+    is Variant.Map, is Variant.List ->
+        joinedLines(yamlLines(serializer = serializer, source = source, useFormatter = false))
+
+    else -> yamlScalarComponent()
+}
+
+private fun Variant.yamlScalarComponent(): Component =
+    "&${ResourceInspector.PropertyValue}${toJsonElement()}".colored
+
+internal class DebugSource(
+    val value: Any?
+)
 
 internal fun joinedLines(lines: Collection<Component>): Component {
     var result: Component = Component.empty()
@@ -117,4 +231,5 @@ internal fun joinedLines(lines: Collection<Component>): Component {
     return result
 }
 
-private const val JSON_INDENT: Int = 2
+private val YAML_PLAIN_KEY: Regex = Regex("[A-Za-z_][A-Za-z0-9_.-]*")
+private const val YAML_INDENT: Int = 2

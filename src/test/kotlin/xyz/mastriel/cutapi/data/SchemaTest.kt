@@ -192,6 +192,14 @@ class SchemaTest : MockBukkitTest() {
     }
 
     @Test
+    fun `tagged serializers can be discovered from private companion objects`() {
+        assertSame(
+            PrivateConstructorData,
+            TaggedSerializer.fromCompanion<PrivateConstructorData>()
+        )
+    }
+
+    @Test
     fun `polymorphic schemas round trip an included subtype`() {
         assertNull(Schema.getOrNull(PolymorphicData.id))
         val value = ExtendedData().apply {
@@ -271,6 +279,54 @@ class SchemaTest : MockBukkitTest() {
         assertEquals(value, FirstParentData.deserialize(variant).getOrThrow())
         assertEquals(value, SecondParentData.deserialize(variant).getOrThrow())
         assertEquals(value, MultiParentData.deserialize(variant).getOrThrow())
+    }
+
+    @Test
+    fun `schema extensions can exclude parent constructor properties`() {
+        val value = ExcludedSchemaChild(
+            ownData = "child",
+            retainedData = true
+        )
+
+        val variant = ExcludedSchemaChild.serialize(value).getOrThrow()
+        assertEquals(
+            Variant.Map(
+                linkedMapOf(
+                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to
+                        Variant.String("cutapi:excluded_schema_child"),
+                    Variant.String("retainedData") to Variant.Boolean(true),
+                    Variant.String("ownData") to Variant.String("child")
+                )
+            ),
+            variant
+        )
+
+        val decoded = ExcludedSchemaChild.deserialize(variant).getOrThrow()
+        assertEquals(value, decoded)
+        assertEquals("fixed", decoded.name)
+        assertEquals(21, decoded.age)
+    }
+
+    @Test
+    fun `excluded sample parent properties use child constructor constants`() {
+        val value = MyChildData(isAwesome = true)
+        val variant = MyChildData.serialize(value).getOrThrow()
+
+        assertEquals(
+            Variant.Map(
+                linkedMapOf(
+                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to
+                        Variant.String("cutapi:my_child_data"),
+                    Variant.String("isAwesome") to Variant.Boolean(true)
+                )
+            ),
+            variant
+        )
+
+        val decoded = MyChildData.deserialize(variant).getOrThrow()
+        assertEquals(value, decoded)
+        assertEquals("John", decoded.name)
+        assertEquals(67, decoded.age)
     }
 
     @Test
@@ -544,6 +600,37 @@ private data class MultiParentData(
         extends { FirstParentData }
         extends { SecondParentData }
         property(MultiParentData::ownData, VariantSerializer.Boolean)
+    })
+}
+
+private abstract class ExcludedSchemaParent(
+    val name: String,
+    val age: Int
+) {
+    companion object : Schema<ExcludedSchemaParent> by schema(id("cutapi:excluded_schema_parent"), {
+        property(ExcludedSchemaParent::name, VariantSerializer.String, name = "display_name")
+        property(ExcludedSchemaParent::age, VariantSerializer.Int)
+    })
+}
+
+private interface RetainedSchemaParent {
+    val retainedData: Boolean
+
+    companion object : Schema<RetainedSchemaParent> by schema(id("cutapi:retained_schema_parent"), {
+        property(RetainedSchemaParent::retainedData, VariantSerializer.Boolean)
+    })
+}
+
+private data class ExcludedSchemaChild(
+    val ownData: String,
+    override val retainedData: Boolean
+) : ExcludedSchemaParent("fixed", 21), RetainedSchemaParent {
+    companion object : Schema<ExcludedSchemaChild> by schema(id("cutapi:excluded_schema_child"), {
+        extends { ExcludedSchemaParent }
+            .exclude { ExcludedSchemaParent::name }
+            .exclude { ExcludedSchemaParent::age }
+        extends { RetainedSchemaParent }
+        property(ExcludedSchemaChild::ownData, VariantSerializer.String)
     })
 }
 

@@ -3,7 +3,6 @@ package xyz.mastriel.cutapi.item
 import net.kyori.adventure.text.*
 import org.bukkit.*
 import xyz.mastriel.cutapi.attachment.*
-import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.utils.personalized.*
 import kotlin.reflect.*
@@ -60,7 +59,7 @@ public inline fun <reified T : CuTItemStack> DeferredRegistry<CustomItem<*>>.reg
     noinline block: (ItemDescriptorBuilder.() -> Unit)?
 ): Deferred<CustomItem<T>> {
     @Suppress("UNCHECKED_CAST")
-    return register { customItem<T>(id, bukkitMaterial, block) } as Deferred<CustomItem<T>>
+    return register { customItem<T>(id, bukkitMaterial, block) }
 }
 
 public fun customItem(
@@ -95,9 +94,7 @@ public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
     bukkitMaterial: Material,
     block: ItemDescriptorBuilder.() -> Unit
 ): Deferred<CustomItem<CuTItemStack>> {
-
-    @Suppress("UNCHECKED_CAST")
-    return register { customItem(id, bukkitMaterial, block) } as Deferred<CustomItem<CuTItemStack>>
+    return register { customItem(id, bukkitMaterial, block) }
 }
 
 public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
@@ -105,8 +102,7 @@ public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
     bukkitMaterial: Material,
     descriptor: ItemDescriptor
 ): Deferred<CustomItem<CuTItemStack>> {
-    @Suppress("UNCHECKED_CAST")
-    return register { customItem(id, bukkitMaterial, descriptor) } as Deferred<CustomItem<CuTItemStack>>
+    return register { customItem(id, bukkitMaterial, descriptor) }
 }
 
 public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
@@ -114,8 +110,7 @@ public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
     bukkitMaterial: Material,
     name: PersonalizedWithDefault<Component>
 ): Deferred<CustomItem<CuTItemStack>> {
-    @Suppress("UNCHECKED_CAST")
-    return register { customItem(id, bukkitMaterial, name) } as Deferred<CustomItem<CuTItemStack>>
+    return register { customItem(id, bukkitMaterial, name) }
 }
 
 
@@ -126,6 +121,5 @@ public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
     attachments: Collection<ItemAttachment>
 ): Deferred<CustomItem<CuTItemStack>> {
     val customItem = customItem(id, bukkitMaterial, name, attachments)
-    @Suppress("UNCHECKED_CAST")
-    return register { customItem } as Deferred<CustomItem<CuTItemStack>>
+    return register { customItem }
 }

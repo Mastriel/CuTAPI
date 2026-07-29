@@ -1,9 +1,10 @@
 package xyz.mastriel.cutapi.data
 
+import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.utils.*
 import kotlin.reflect.*
-import kotlin.reflect.full.*
 
 public sealed interface DataResult
 
@@ -43,7 +44,7 @@ public class VariantTypeException(
  * Converts one application type to and from the storage-independent [Variant] tree.
  * Implementations may be written directly or produced with [schema].
  */
-public interface Serializer<T> : DebugRepresentation<T> {
+public interface Serializer<T> : EncodeOnlySerializer<T> {
     public fun deserialize(variant: Variant): DeserializeResult<T>
 
     public operator fun unaryPlus(): Serializable<T> = object : Serializable<T> {
@@ -54,7 +55,7 @@ public interface Serializer<T> : DebugRepresentation<T> {
 public interface TaggedSerializer<T> : Serializer<T>, Identifiable {
     public companion object : IdentifierRegistry<TaggedSerializer<*>>(id("cutapi:registry/tagged_serializer")) {
         public fun <T : Any> fromCompanion(type: KClass<T>): TaggedSerializer<T> {
-            val instance = type.companionObjectInstance
+            val instance = type.accessibleCompanionObjectInstance()
             require(instance is TaggedSerializer<*>) {
                 "Companion object of ${type.qualifiedName} must implement ${TaggedSerializer::class.qualifiedName}"
             }
@@ -225,7 +226,17 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
             }
         )
 
-        public fun <T : Resource> ResourceRef(): Serializer<ResourceRef<T>> = serializer(
+        public fun <T> ListOf(serializer: TaggedSerializer<T>): TaggedSerializer<List<T>> = tagged(
+            id = id(serializer.id.namespace + ":list") / serializer.id.key,
+            serialize = { values -> Variant.List(values.map { serializer.serialize(it).getOrThrow() }) },
+            deserialize = { variant ->
+                val values = (variant as? Variant.List)?.value ?: throw VariantTypeException("List", variant)
+                values.map { serializer.deserialize(it).getOrThrow() }
+            }
+        )
+
+        public fun <T : Resource> ResourceRef(): TaggedSerializer<ResourceRef<T>> = tagged(
+            id = id(Plugin, "variant/resource_ref"),
             serialize = { Variant.ResourceRef(it) },
             deserialize = { variant ->
                 ((variant as? Variant.ResourceRef)?.value ?: throw VariantTypeException("ResourceRef", variant)).cast()

@@ -16,11 +16,12 @@ public class SchemaProperty<R : Any, T> internal constructor(
     internal val ownerType: KClass<*>?,
     internal val isMutable: Boolean
 ) {
-    internal val structuredProperty: StructuredProperty<R> = StructuredProperty(
+    internal val structuredProperty: StructuredProperty<R, T> = StructuredProperty(
         name = name,
         sourceName = propertyName,
         ownerType = ownerType,
-        serializeFrom = { value -> serializer.serialize(getProperty(value)) }
+        serializer = serializer,
+        getProperty = getProperty
     )
 
     internal fun deserializeToValue(variant: Variant): DeserializeResult<Any?> =
@@ -44,12 +45,15 @@ public interface SchemaBuilder<R : Any> {
     public var untagged: Boolean
 
     /** Inherits properties from a parent schema. May be called more than once. */
-    public fun <P : Any> extends(parent: () -> Schema<P>)
+    public fun <P : Any> extends(
+        parent: () -> Schema<P>
+    ): RepresentationExtension<P>
 
     public fun <T> property(
         reference: KProperty1<R, T>,
         serializer: Serializer<T>,
-        name: String = reference.name
+        name: String = reference.name,
+        block: DebugPropertyBuilder<T>.() -> Unit = {}
     )
 
     public fun <T> property(
@@ -59,14 +63,49 @@ public interface SchemaBuilder<R : Any> {
         setProperty: (R, T) -> Unit,
         propertyName: String = name
     )
+
+    public fun <T> property(
+        name: String,
+        serializer: Serializer<T>,
+        getProperty: (R) -> T,
+        setProperty: (R, T) -> Unit,
+        propertyName: String = name,
+        block: DebugPropertyBuilder<T>.() -> Unit
+    )
 }
 
-public interface Schema<T : Any> : TaggedSerializer<T> {
-    public val type: KClass<T>
+internal class SchemaExtension<P : Any>(
+    private val provider: () -> Schema<P>,
+    val configuration: RepresentationExtensionImpl<P>
+) {
+    fun resolve(): Schema<*> = provider()
+}
+
+public interface Schema<T : Any> : TaggedSerializer<T>, DebugView<T> {
+    override val type: KClass<T>
     public val properties: List<SchemaProperty<T, *>>
     public val untagged: Boolean
 
-    public companion object : IdentifierRegistry<Schema<*>>(id("cutapi:registry/schema")) {
+    override val debugView: EncodeOnlySerializer<Schema<*>>
+        get() = Companion.provideDebugView()
+
+    override fun provideDebugView(): DebugView<T> = this
+
+    public companion object :
+        IdentifierRegistry<Schema<*>>(id("cutapi:registry/schema")),
+        DebugViewProvider<Schema<*>> by debugView<Schema<*>>(id("cutapi:schema"), {
+            extends { Identifiable }
+            property("type", VariantSerializer.String) {
+                it.type.qualifiedName ?: "<anonymous class>"
+            }
+            property(Schema<*>::untagged, VariantSerializer.Boolean)
+            property("properties", VariantSerializer.Map) { schema ->
+                schema.properties.associate { property ->
+                    Variant.String(property.name) to
+                        Variant.String(property.serializer.debugTypeName())
+                }
+            }
+        }) {
         internal fun registerSchema(schema: Schema<*>): Schema<*> {
             val registered = getOrNull(schema.id)
             require(registered == null || registered === schema) {
@@ -75,6 +114,12 @@ public interface Schema<T : Any> : TaggedSerializer<T> {
             return registered ?: register(schema)
         }
     }
+}
+
+private fun Serializer<*>.debugTypeName(): String = when (this) {
+    is Identifiable -> id.toString()
+    is SerializerJsonMetadata -> expectedType
+    else -> "<untagged>"
 }
 
 internal fun <T : Any> Schema<T>.requireRegistered(): Schema<T> {
@@ -102,7 +147,7 @@ internal open class SchemaBuilderImpl<R : Any>(
     )
 
     private var untaggedValue: Boolean = initialUntagged
-    private val parentProviders: MutableList<() -> Schema<*>> = mutableListOf()
+    private val parentExtensions: MutableList<SchemaExtension<*>> = mutableListOf()
     internal var hasExplicitUntagged: Boolean = false
         private set
 
@@ -114,7 +159,7 @@ internal open class SchemaBuilderImpl<R : Any>(
         }
 
     val properties: List<SchemaProperty<R, *>> get() = mutableProperties.toList()
-    val parents: List<() -> Schema<*>> get() = parentProviders.toList()
+    val parents: List<SchemaExtension<*>> get() = parentExtensions.toList()
 
     init {
         require(mutableProperties.map { it.propertyName }.distinct().size == mutableProperties.size) {
@@ -122,14 +167,19 @@ internal open class SchemaBuilderImpl<R : Any>(
         }
     }
 
-    final override fun <P : Any> extends(parent: () -> Schema<P>) {
-        parentProviders += parent
+    final override fun <P : Any> extends(
+        parent: () -> Schema<P>
+    ): RepresentationExtension<P> {
+        val configuration = RepresentationExtensionImpl<P>()
+        parentExtensions += SchemaExtension(parent, configuration)
+        return configuration
     }
 
     final override fun <T> property(
         reference: KProperty1<R, T>,
         serializer: Serializer<T>,
-        name: String
+        name: String,
+        block: DebugPropertyBuilder<T>.() -> Unit
     ) {
         addProperty(
             name = name,
@@ -143,7 +193,7 @@ internal open class SchemaBuilderImpl<R : Any>(
                     ?: error("Schema property '${reference.name}' is not mutable")
                 mutableReference.set(instance, value)
             }
-        )
+        ).structuredProperty.configureDebug(block)
     }
 
     final override fun <T> property(
@@ -164,6 +214,25 @@ internal open class SchemaBuilderImpl<R : Any>(
         )
     }
 
+    final override fun <T> property(
+        name: String,
+        serializer: Serializer<T>,
+        getProperty: (R) -> T,
+        setProperty: (R, T) -> Unit,
+        propertyName: String,
+        block: DebugPropertyBuilder<T>.() -> Unit
+    ) {
+        addProperty(
+            name = name,
+            propertyName = propertyName,
+            ownerType = null,
+            isMutable = true,
+            serializer = serializer,
+            getProperty = getProperty,
+            setProperty = setProperty
+        ).structuredProperty.configureDebug(block)
+    }
+
     private fun <T> addProperty(
         name: String,
         propertyName: String,
@@ -172,7 +241,7 @@ internal open class SchemaBuilderImpl<R : Any>(
         serializer: Serializer<T>,
         getProperty: (R) -> T,
         setProperty: (R, T) -> Unit
-    ) {
+    ): SchemaProperty<R, T> {
         require(propertyName.isNotBlank()) { "Schema property Kotlin names cannot be blank" }
         require(mutableProperties.none { it.propertyName == propertyName }) {
             "Schema property '$propertyName' is already registered"
@@ -189,6 +258,7 @@ internal open class SchemaBuilderImpl<R : Any>(
         )
         state.addProperty(property.structuredProperty)
         mutableProperties += property
+        return property
     }
 
     fun targetType(): KClass<R> = state.targetType()
@@ -218,20 +288,15 @@ internal abstract class BaseSchema<T : Any>(
 
     protected open fun validateSerializableValue(value: T) {}
 
-    final override fun serialize(value: T): SerializeResult = try {
-        validateSerializableValue(value)
-        SerializeResult.Success(
-            encodeStructuredRepresentation(
-                value = value,
-                type = type,
-                id = id,
-                tagged = !untagged,
-                properties = structuredProperties
-            )
+    final override fun serialize(value: T): SerializeResult =
+        serializeStructuredRepresentation(
+            value = value,
+            type = type,
+            id = id,
+            tagged = !untagged,
+            properties = structuredProperties,
+            validate = ::validateSerializableValue
         )
-    } catch (exception: Exception) {
-        SerializeResult.Failure(exception)
-    }
 
     protected fun validateType(typeValue: Variant?) {
         if (untagged) {
@@ -247,6 +312,28 @@ internal abstract class BaseSchema<T : Any>(
         require(serializedId == id.toString()) {
             "Schema ${type.qualifiedName} cannot deserialize type '$serializedId'; expected '$id'"
         }
+    }
+
+    protected fun valuesForDeserialization(variant: Variant): LinkedHashMap<String, Variant> {
+        val values = variant.stringValues()
+        validateType(values.remove(SCHEMA_TYPE_DISCRIMINATOR))
+
+        val unknownNames = values.keys - properties.mapTo(mutableSetOf()) { it.name }
+        require(unknownNames.isEmpty()) {
+            "Unknown properties for ${type.qualifiedName}: ${unknownNames.joinToString()}"
+        }
+        return values
+    }
+
+    protected fun deserializeProperty(
+        property: SchemaProperty<T, *>,
+        variant: Variant
+    ): Any? = when (val result = property.deserializeToValue(variant)) {
+        is DeserializeResult.Success -> result.value
+        is DeserializeResult.Failure -> throw DataSerializationException(
+            "Failed to deserialize '${property.name}' for ${type.qualifiedName}",
+            result.error
+        )
     }
 }
 
@@ -296,14 +383,7 @@ internal class SchemaImpl<T : Any>(
             ?: throw DataSerializationException(
                 "Schema type ${type.qualifiedName} cannot be deserialized because it has no primary constructor"
             )
-        val values = variant.stringValues()
-        validateType(values.remove(SCHEMA_TYPE_DISCRIMINATOR))
-
-        val propertiesByName = properties.associateBy { it.name }
-        val unknownNames = values.keys - propertiesByName.keys
-        require(unknownNames.isEmpty()) {
-            "Unknown properties for ${type.qualifiedName}: ${unknownNames.joinToString()}"
-        }
+        val values = valuesForDeserialization(variant)
 
         val arguments = mutableMapOf<KParameter, Any?>()
         val valuesForSetters = mutableListOf<Pair<SchemaProperty<T, *>, Any?>>()
@@ -317,13 +397,7 @@ internal class SchemaImpl<T : Any>(
                 continue
             }
 
-            val decoded = when (val result = property.deserializeToValue(encoded)) {
-                is DeserializeResult.Success -> result.value
-                is DeserializeResult.Failure -> throw DataSerializationException(
-                    "Failed to deserialize '${property.name}' for ${type.qualifiedName}",
-                    result.error
-                )
-            }
+            val decoded = deserializeProperty(property, encoded)
             if (binding.parameter != null) {
                 arguments[binding.parameter] = decoded
             } else {
@@ -365,26 +439,13 @@ internal class SingletonSchemaImpl<T : Any>(
     }
 
     override fun deserialize(variant: Variant): DeserializeResult<T> = try {
-        val values = variant.stringValues()
-        validateType(values.remove(SCHEMA_TYPE_DISCRIMINATOR))
-
-        val propertiesByName = properties.associateBy { it.name }
-        val unknownNames = values.keys - propertiesByName.keys
-        require(unknownNames.isEmpty()) {
-            "Unknown properties for ${type.qualifiedName}: ${unknownNames.joinToString()}"
-        }
+        val values = valuesForDeserialization(variant)
 
         val singleton = instance
         for (property in properties) {
             val encoded = values[property.name]
             require(encoded != null) { "Missing property '${property.name}' for ${type.qualifiedName}" }
-            val decoded = when (val result = property.deserializeToValue(encoded)) {
-                is DeserializeResult.Success -> result.value
-                is DeserializeResult.Failure -> throw DataSerializationException(
-                    "Failed to deserialize '${property.name}' for ${type.qualifiedName}",
-                    result.error
-                )
-            }
+            val decoded = deserializeProperty(property, encoded)
             property.setOn(singleton, decoded)
         }
         DeserializeResult.Success(singleton)
@@ -472,18 +533,29 @@ private fun <T : Any> SchemaBuilderImpl<T>.buildSchema(
     if (parents.isEmpty()) return create(childType, id, properties, untagged)
 
     return DeferredSchema(childType, id) {
-        val parentSchemas = parents.map { it() }
-        require(parentSchemas.map { it.type }.distinct().size == parentSchemas.size) {
-            "Schema for ${childType.qualifiedName} extends the same parent type more than once"
-        }
-        for (parentSchema in parentSchemas) {
-            val parentType = parentSchema.type
-            require(childType != parentType && childType.isSubclassOf(parentType)) {
-                "Extended schema type ${childType.qualifiedName} must inherit ${parentType.qualifiedName}"
+        val parentSchemas = resolveStructuredParents(
+            type = childType,
+            description = "Schema",
+            providers = parents.map { extension ->
+                { extension.resolve() }
+            },
+            parentType = { it.type }
+        )
+        val inherited = parentSchemas.zip(parents).flatMap { (parentSchema, extension) ->
+            val excludedKeys = extension.configuration.excludedPropertyKeys()
+            for (key in excludedKeys) {
+                require(parentSchema.type.isSubclassOf(key.ownerType)) {
+                    "Cannot exclude ${key.ownerType.qualifiedName}.${key.propertyName} " +
+                        "from schema ${parentSchema.id}"
+                }
+                require(parentSchema.properties.any { it.structuredProperty.key == key }) {
+                    "Schema ${parentSchema.id} does not declare property " +
+                        "${key.ownerType.qualifiedName}.${key.propertyName}"
+                }
             }
-        }
-        val inherited = parentSchemas.flatMap { parentSchema ->
-            parentSchema.properties.map { it.forSubtype<T>() }
+            parentSchema.properties
+                .filterNot { it.structuredProperty.key in excludedKeys }
+                .map { it.forSubtype<T>() }
         }
         val combinedProperties = inherited + properties
         val childUntagged = if (hasExplicitUntagged) {

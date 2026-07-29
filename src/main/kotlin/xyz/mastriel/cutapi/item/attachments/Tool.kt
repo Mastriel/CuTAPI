@@ -155,13 +155,16 @@ public class ToolTier private constructor(
 
     public constructor(id: Identifier, breakingLevel: Float) : this(id, breakingLevel, false)
 
-    override val debugView: DebugRepresentation<ToolTier> = debugView(id(Plugin, "tool_tier")) {
-        property(ToolTier::id, VariantSerializer.Id)
-        property(ToolTier::breakingLevel, VariantSerializer.Float)
-        property(ToolTier::isVanilla, VariantSerializer.Boolean)
-    }
-
-    public companion object : IdentifierRegistry<ToolTier>(id("cutapi:registry/tool_tier")) {
+    public companion object :
+        IdentifierRegistry<ToolTier>(id("cutapi:registry/tool_tier")),
+        DebugViewProvider<ToolTier> by debugView(
+            id("cutapi:tool_tier"),
+            {
+                extends { Identifiable }
+                property(ToolTier::breakingLevel, VariantSerializer.Float)
+                property(ToolTier::isVanilla, VariantSerializer.Boolean)
+            }
+        ) {
 
         public val Nothing: ToolTier get() = get(id(Plugin, "nothing"))
         public val Wood: ToolTier get() = get(id(Plugin, "wood"))
@@ -206,16 +209,16 @@ public class ToolCategory private constructor(
 
     public constructor(id: Identifier, attributes: ToolCategoryAttributes) : this(id, attributes, false) {}
 
-    override val debugView: DebugRepresentation<ToolCategory>
-        get() = DebugView
-
-    public companion object : IdentifierRegistry<ToolCategory>(id("cutapi:registry/tool_category")) {
-        internal val DebugView: DebugRepresentation<ToolCategory> = debugView(id(Plugin, "tool_category")) {
-            property(ToolCategory::id, VariantSerializer.Id)
-            property(ToolCategory::attributes, ToolCategoryAttributes)
-            property(ToolCategory::isVanilla, VariantSerializer.Boolean)
-        }
-
+    public companion object :
+        IdentifierRegistry<ToolCategory>(id("cutapi:registry/tool_category")),
+        DebugViewProvider<ToolCategory> by debugView(
+            id("cutapi:tool_category"),
+            {
+                extends { Identifiable }
+                property(ToolCategory::attributes, ToolCategoryAttributes)
+                property(ToolCategory::isVanilla, VariantSerializer.Boolean)
+            }
+        ) {
         public val Pickaxe: ToolCategory = ToolCategory(
             id(Plugin, "pickaxe"),
             ToolCategoryAttributes(

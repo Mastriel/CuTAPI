@@ -5,6 +5,7 @@ import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.data.Serializable
+import xyz.mastriel.cutapi.utils.*
 
 
 /**
@@ -20,8 +21,17 @@ public interface Identifiable {
      * this with [xyz.mastriel.cutapi.data.debugView] when debugging should expose
      * only part of the value or use a different representation.
      */
-    public val debugView: DebugRepresentation<*>?
-        get() = (this as? Serializable<*>)?.serializer
+    public val debugView: EncodeOnlySerializer<*>?
+        get() {
+            val companionProvider =
+                this::class.accessibleCompanionObjectInstance() as? DebugViewProvider<*>
+            return companionProvider?.provideDebugView()
+                ?: (this as? Serializable<*>)?.serializer
+        }
+
+    public companion object : DebugViewProvider<Identifiable> by debugView(id("cutapi:identifiable"), {
+        property(Identifiable::id, VariantSerializer.Id)
+    })
 }
 
 public sealed class SerialDefault<T : Identifiable?> {

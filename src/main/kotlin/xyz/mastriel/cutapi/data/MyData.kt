@@ -19,6 +19,7 @@ public abstract class MyAbstractData(
 
     public companion object : PolySchema<MyAbstractData> by polySchema(id("cutapi:my_abstract_data"), {
         property(MyAbstractData::name, VariantSerializer.String)
+        property(MyAbstractData::age, VariantSerializer.Int)
         include(MyChildData)
     })
 }
@@ -30,6 +31,8 @@ public data class MyChildData(
 
     public companion object : Schema<MyChildData> by schema(id("cutapi:my_child_data"), {
         extends { MyAbstractData }
-        property(MyChildData::isAwesome, VariantSerializer.Boolean)
+            .exclude { MyAbstractData::name }
+            .exclude { MyAbstractData::age }
+        property(MyChildData::isAwesome, VariantSerializer.Boolean);
     }) {}
 }

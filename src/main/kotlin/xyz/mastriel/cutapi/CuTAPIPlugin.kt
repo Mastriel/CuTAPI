@@ -27,6 +27,7 @@ import xyz.mastriel.cutapi.resources.data.*
 import xyz.mastriel.cutapi.resources.minecraft.*
 import xyz.mastriel.cutapi.resources.process.*
 import xyz.mastriel.cutapi.resources.uploader.*
+import xyz.mastriel.cutapi.utils.*
 import java.io.*
 
 
@@ -95,6 +96,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
         CuTAPI.serverReady {
             Schema.initialize()
+            DebugFormatter.initialize()
             ResourceValueCodec.initialize()
             ResourceFileLoader.initialize()
             ResourceGenerator.initialize()
@@ -143,6 +145,34 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             register(Unstackable)
             register(VanillaTool)
             register(CraftsAsBaseMaterial)
+        }
+
+        DebugFormatter.modifyRegistry {
+            fun <T : Number> VariantSerializer<T>.formatter() = debugFormatter {
+                "&${DebugFormatter.NumberColor}${this.value}".colored
+            }
+
+            register(VariantSerializer.Id.debugFormatter {
+                "&${DebugFormatter.IdentifierColor}${value}".colored
+            })
+            register(VariantSerializer.Int.formatter())
+            register(VariantSerializer.Long.formatter())
+            register(VariantSerializer.Short.formatter())
+            register(VariantSerializer.Float.formatter())
+            register(VariantSerializer.Byte.debugFormatter {
+                "&${DebugFormatter.NumberColor}${value} &8(0x${value.toHexString(HexFormat.UpperCase)})".colored
+            })
+
+            register(VariantSerializer.Boolean.debugFormatter {
+                if (value) {
+                    "&${DebugFormatter.TrueColor}${value}".colored
+                } else {
+                    "&${DebugFormatter.FalseColor}${value}".colored
+                }
+            })
+            register(VariantSerializer.ResourceRef.debugFormatter {
+                "&${DebugFormatter.ResourceRefColor}${value}".colored
+            })
         }
     }
 

@@ -87,6 +87,8 @@ public class ResourceInspector {
          * The color used for property values in inspections.
          */
         public val PropertyValue: Color = Color.of(0xf5ff97)
+
+        public val ObjectType: Color = Color.of(0xffd176)
     }
 }
 

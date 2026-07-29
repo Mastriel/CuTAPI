@@ -3,6 +3,7 @@ package xyz.mastriel.cutapi.utils
 import kotlin.contracts.*
 import kotlin.reflect.*
 import kotlin.reflect.full.*
+import kotlin.reflect.jvm.*
 
 
 /**
@@ -16,4 +17,16 @@ public infix fun KClass<*>?.isAtleast(other: KClass<*>?): Boolean {
     if (this == null) return false
 
     return this.allSuperclasses.contains(other) || this == other
+}
+
+internal fun KClass<*>.accessibleCompanionObjectInstance(): Any? {
+    val companionType = companionObject ?: return null
+    return try {
+        companionObjectInstance
+    } catch (_: IllegalAccessException) {
+        java.declaredFields
+            .firstOrNull { it.type.kotlin == companionType }
+            ?.also { it.isAccessible = true }
+            ?.get(null)
+    }
 }
