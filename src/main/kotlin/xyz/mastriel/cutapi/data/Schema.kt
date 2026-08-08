@@ -22,7 +22,7 @@ public class SchemaProperty<R : Any, T> internal constructor(
 
     override val constructorParameter: KParameter?
         get() = constructorParameterValue
-    override val serializerDescriptor: SerializerDescriptor
+    override val serializerDescriptor: SerializerDescriptor<*>
         get() = serializer.descriptor
 
     override var presence: SchemaPropertyPresence<T> = SchemaPropertyPresence.Required
@@ -111,10 +111,6 @@ public class SchemaProperty<R : Any, T> internal constructor(
                 configurePresence(SchemaPropertyPresence.Optional(false, null))
             }
 
-            override fun optional(default: T, omitDefaults: Boolean) {
-                configurePresence(SchemaPropertyPresence.Optional(omitDefaults) { default })
-            }
-
             override fun optional(omitDefaults: Boolean, default: () -> T) {
                 configurePresence(SchemaPropertyPresence.Optional(omitDefaults, default))
             }
@@ -193,8 +189,8 @@ public interface Schema<T : Any> : TaggedSerializer<T>, DebugView<T> {
     public val properties: List<SchemaProperty<T, *>>
     public val untagged: Boolean
 
-    override val descriptor: SerializerDescriptor
-        get() = SerializerDescriptor.Object(
+    override val descriptor: SerializerDescriptor<SerializerShape.ObjectLike>
+        get() = SerializerDescriptor.`object`(
             id = id,
             type = type,
             tagged = !untagged,
@@ -217,11 +213,17 @@ public interface Schema<T : Any> : TaggedSerializer<T>, DebugView<T> {
             property("properties", VariantSerializer.Map) { schema ->
                 schema.properties.associate { property ->
                     Variant.String(property.name) to
-                        Variant.String(property.serializer.debugTypeName())
+                        Variant.String(property.serializer.descriptor.id.toString())
                 }
             }
         }) {
+        protected override fun register(item: Schema<*>): Schema<*> {
+            item.requireDescriptorIdentity()
+            return super.register(item)
+        }
+
         internal fun registerSchema(schema: Schema<*>): Schema<*> {
+            schema.requireDescriptorIdentity()
             val registered = getOrNull(schema.id)
             require(registered == null || registered === schema) {
                 "A different schema is already registered as ${schema.id}"
@@ -229,11 +231,6 @@ public interface Schema<T : Any> : TaggedSerializer<T>, DebugView<T> {
             return registered ?: register(schema)
         }
     }
-}
-
-private fun Serializer<*>.debugTypeName(): String = when (this) {
-    is Identifiable -> id.toString()
-    else -> descriptor.displayName
 }
 
 internal fun <T : Any> Schema<T>.requireRegistered(): Schema<T> {

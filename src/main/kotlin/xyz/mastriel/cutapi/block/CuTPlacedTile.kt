@@ -33,13 +33,13 @@ public open class CuTPlacedTileEntity(
 ) : CuTPlacedTile(handle) {
 
     final override val typeTag: NotNullTag<String, CustomTileEntity<*>> =
-        customTileEntityTag(id(Plugin, "type"), CustomTileEntity.Unknown)
+        customTileEntityTag(id(Plugin, "type")) { CustomTileEntity.Unknown }
 
 
 }
 
 public open class CuTPlacedBlock(handle: Block) : CuTPlacedTile(handle) {
     final override val typeTag: NotNullTag<String, CustomBlock<*>> =
-        customBlockTag(id(Plugin, "type"), CustomBlock.Unknown)
+        customBlockTag(id(Plugin, "type")) { CustomBlock.Unknown }
 
 }

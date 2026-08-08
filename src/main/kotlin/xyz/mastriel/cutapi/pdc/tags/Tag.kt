@@ -7,7 +7,8 @@ public interface Tag<T> {
     public fun store(value: T)
     public fun get(): T
 
-    public val default: T?
+    /** Produces this delegate's default when no stored value exists. */
+    public val defaultProducer: () -> T
     public val key: Identifier
     public var container: TagContainer
 

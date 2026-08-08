@@ -61,7 +61,7 @@ internal class StructuredProperty<R : Any, T>(
     private val getProperty: (R) -> T,
     private val shouldSerialize: (R) -> Boolean = { true }
 ) : SerializedPropertyDescriptor {
-    override val serializerDescriptor: SerializerDescriptor
+    override val serializerDescriptor: SerializerDescriptor<*>
         get() = serializer.descriptor
 
     var debugFormatter: DebugFormatter<T>? = null
@@ -166,6 +166,7 @@ internal class StructuredRepresentationBuilderState<R : Any>(
     ).also { addProperty(it) }
 
     fun addProperty(property: StructuredProperty<R, *>) {
+        (property.serializer as? TaggedSerializer<*>)?.requireDescriptorIdentity()
         require(property.name.isNotBlank()) { "$description property names cannot be blank" }
         require(property.name != SCHEMA_TYPE_DISCRIMINATOR) {
             "'$SCHEMA_TYPE_DISCRIMINATOR' is reserved for schema type information"

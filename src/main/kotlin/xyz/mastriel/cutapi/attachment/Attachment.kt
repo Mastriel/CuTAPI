@@ -37,13 +37,13 @@ public fun Attachment.isRepeatableAttachment(): Boolean =
     this::class.hasAnnotation<RepeatableAttachment>()
 
 @Suppress("UNCHECKED_CAST")
-public fun Attachment.schema(): Schema<out Attachment> {
-    if (this is Schema<*>) return this as Schema<out Attachment>
+public fun Attachment.schema(): Schema<Attachment> {
+    if (this is Schema<*>) return this as Schema<Attachment>
     val instance = this::class.accessibleCompanionObjectInstance()
     require(instance is Schema<*>) {
         "Attachment ${this::class.qualifiedName} must have a companion object implementing ${Schema::class.qualifiedName}"
     }
-    return instance as Schema<out Attachment>
+    return instance as Schema<Attachment>
 }
 
 @Suppress("UNCHECKED_CAST")

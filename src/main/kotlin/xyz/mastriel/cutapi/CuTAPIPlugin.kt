@@ -5,6 +5,7 @@ package xyz.mastriel.cutapi
 import com.github.shynixn.mccoroutine.bukkit.*
 import io.papermc.paper.plugin.lifecycle.event.types.*
 import kotlinx.coroutines.*
+import net.kyori.adventure.text.*
 import org.bukkit.*
 import org.bukkit.event.*
 import org.bukkit.event.server.*
@@ -172,6 +173,13 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             })
             register(VariantSerializer.ResourceRef.debugFormatter {
                 "&${DebugFormatter.ResourceRefColor}${value}".colored
+            })
+
+            register(ComponentSerializer.debugFormatter {
+                Component.empty()
+                    .append("&${DebugFormatter.IdentifierColor}\"".colored)
+                    .append(value)
+                    .append("&${DebugFormatter.IdentifierColor}\"".colored)
             })
         }
     }

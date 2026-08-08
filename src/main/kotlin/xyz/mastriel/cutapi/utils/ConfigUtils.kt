@@ -6,20 +6,23 @@ import kotlin.properties.*
 import kotlin.reflect.*
 
 
-public fun <T : Any> configValue(plugin: Plugin, path: String, default: T): ConfigDelegate<T> {
+public fun <T : Any> configValue(plugin: Plugin, path: String, default: () -> T): ConfigDelegate<T> {
     return ConfigDelegate(plugin, path, default)
 }
 
-internal fun <T : Any> cutConfigValue(path: String, default: T): ConfigDelegate<T> {
+internal fun <T : Any> cutConfigValue(path: String, default: () -> T): ConfigDelegate<T> {
     return ConfigDelegate(Plugin, path, default)
 }
 
 public class ConfigDelegate<T : Any> internal constructor(
     public val plugin: Plugin,
     public val path: String,
-    public val default: T
+    default: () -> T
 ) :
     ReadOnlyProperty<Any?, T> {
+
+    /** The default produced specifically for this delegated property. */
+    public val default: T by lazy(default)
 
     @Suppress("UNCHECKED_CAST")
     override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {

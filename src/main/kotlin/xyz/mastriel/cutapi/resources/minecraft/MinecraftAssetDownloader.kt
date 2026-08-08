@@ -29,7 +29,7 @@ public interface MinecraftAssetDownloader : Identifiable {
         IdentifierRegistry<MinecraftAssetDownloader>(id("cutapi:registry/minecraft_asset_downloader")) {
         public val cacheFolder: File = Plugin.dataFolder.appendPath(".cache")
 
-        public val downloaderId: String by cutConfigValue("asset-downloader.id", "cutapi:github")
+        public val downloaderId: String by cutConfigValue("asset-downloader.id") { "cutapi:github" }
         public fun getActive(): MinecraftAssetDownloader? =
             idOrNull(downloaderId)?.let { MinecraftAssetDownloader.getOrNull(it) }
     }

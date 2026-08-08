@@ -13,7 +13,7 @@ import kotlin.reflect.full.*
  * type needs a partial or otherwise different representation for debugging.
  */
 public interface EncodeOnlySerializer<in T> {
-    public val descriptor: SerializerDescriptor
+    public val descriptor: SerializerDescriptor<*>
 
     public fun serialize(value: T): SerializeResult
 }
@@ -201,8 +201,8 @@ private class EncodeOnlySerializerBuilderImpl<R : Any>(
         return object : DebugView<R>, StructuredRepresentationMetadata {
             override val type: KClass<R> = builtType
             override val id: Identifier = id
-            override val descriptor: SerializerDescriptor.Object
-                get() = SerializerDescriptor.Object(
+            override val descriptor: SerializerDescriptor<SerializerShape.Object>
+                get() = SerializerDescriptor.`object`(
                     id = id,
                     type = builtType,
                     tagged = true,
@@ -262,7 +262,7 @@ private class DeferredDebugView<T : Any>(
 ) : DebugView<T>, StructuredRepresentationMetadata {
     private val resolved: DebugView<T> by lazy(LazyThreadSafetyMode.SYNCHRONIZED, resolve)
 
-    override val descriptor: SerializerDescriptor
+    override val descriptor: SerializerDescriptor<*>
         get() = resolved.descriptor
 
     override fun serializedName(key: StructuredPropertyKey): String? =
@@ -278,9 +278,9 @@ private class DeferredDebugView<T : Any>(
     }
 }
 
-private fun SerializerDescriptor.objectProperties(): List<SerializedPropertyDescriptor> = when (this) {
-    is SerializerDescriptor.Object -> properties
-    is SerializerDescriptor.Polymorphic -> base.properties
+private fun SerializerDescriptor<*>.objectProperties(): List<SerializedPropertyDescriptor> = when (val shape = shape) {
+    is SerializerShape.Object -> shape.properties
+    is SerializerShape.Polymorphic -> shape.base.shape.properties
     else -> emptyList()
 }
 

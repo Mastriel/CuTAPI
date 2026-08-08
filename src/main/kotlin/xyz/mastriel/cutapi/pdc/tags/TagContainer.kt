@@ -119,141 +119,161 @@ public inline fun <reified T : Resource> TagContainer.setResourceRef(
 public inline fun <reified T : Resource> TagContainer.getResourceRef(key: Identifier): ResourceRef<T>? =
     get(key, ResourceRefTagConverter<T>())
 
-public fun TagContainer.playerTag(key: Identifier, default: OfflinePlayer): NotNullTag<String, OfflinePlayer> =
+public fun TagContainer.playerTag(key: Identifier, default: () -> OfflinePlayer): NotNullTag<String, OfflinePlayer> =
     NotNullTag(key, this, default, PlayerTagConverter)
 
 public fun TagContainer.nullablePlayerTag(
     key: Identifier,
-    default: OfflinePlayer? = null
+    default: () -> OfflinePlayer? = { null }
 ): NullableTag<String, OfflinePlayer> =
     NullableTag(key, this, default, PlayerTagConverter)
 
-public fun TagContainer.identifierTag(key: Identifier, default: Identifier): NotNullTag<String, Identifier> =
+public fun TagContainer.identifierTag(key: Identifier, default: () -> Identifier): NotNullTag<String, Identifier> =
     NotNullTag(key, this, default, IdentifierTagConverter)
 
 public fun TagContainer.nullableIdentifierTag(
     key: Identifier,
-    default: Identifier? = null
+    default: () -> Identifier? = { null }
 ): NullableTag<String, Identifier> =
     NullableTag(key, this, default, IdentifierTagConverter)
 
-public fun TagContainer.customItemTag(key: Identifier, default: CustomItem<*>): NotNullTag<String, CustomItem<*>> =
+public fun TagContainer.customItemTag(key: Identifier, default: () -> CustomItem<*>): NotNullTag<String, CustomItem<*>> =
     NotNullTag(key, this, default, IdentifiableTagConverter.CustomItem)
 
 public fun TagContainer.nullableCustomItemTag(
     key: Identifier,
-    default: CustomItem<*>? = null
+    default: () -> CustomItem<*>? = { null }
 ): NullableTag<String, CustomItem<*>> =
     NullableTag(key, this, default, IdentifiableTagConverter.CustomItem)
 
-public fun TagContainer.customBlockTag(key: Identifier, default: CustomBlock<*>): NotNullTag<String, CustomBlock<*>> =
+public fun TagContainer.customBlockTag(key: Identifier, default: () -> CustomBlock<*>): NotNullTag<String, CustomBlock<*>> =
     NotNullTag(key, this, default, IdentifiableTagConverter.CustomBlock)
 
 public fun TagContainer.nullableCustomBlockTag(
     key: Identifier,
-    default: CustomBlock<*>? = null
+    default: () -> CustomBlock<*>? = { null }
 ): NullableTag<String, CustomBlock<*>> =
     NullableTag(key, this, default, IdentifiableTagConverter.CustomBlock)
 
-public fun TagContainer.customBlockTag(key: Identifier, default: CustomTile<*>): NotNullTag<String, CustomTile<*>> =
+public fun TagContainer.customTileTag(key: Identifier, default: () -> CustomTile<*>): NotNullTag<String, CustomTile<*>> =
     NotNullTag(key, this, default, IdentifiableTagConverter.CustomTile)
 
-public fun TagContainer.nullableCustomBlockTag(
+public fun TagContainer.nullableCustomTileTag(
     key: Identifier,
-    default: CustomTile<*>? = null
+    default: () -> CustomTile<*>? = { null }
 ): NullableTag<String, CustomTile<*>> =
     NullableTag(key, this, default, IdentifiableTagConverter.CustomTile)
 
 public fun TagContainer.customTileEntityTag(
     key: Identifier,
-    default: CustomTileEntity<*>
+    default: () -> CustomTileEntity<*>
 ): NotNullTag<String, CustomTileEntity<*>> =
     NotNullTag(key, this, default, IdentifiableTagConverter.CustomTileEntity)
 
 public fun TagContainer.nullableTileEntityTag(
     key: Identifier,
-    default: CustomTileEntity<*>? = null
+    default: () -> CustomTileEntity<*>? = { null }
 ): NullableTag<String, CustomTileEntity<*>> =
     NullableTag(key, this, default, IdentifiableTagConverter.CustomTileEntity)
 
-public fun TagContainer.stringTag(key: Identifier, default: String): NotNullTag<String, String> =
+public fun TagContainer.stringTag(key: Identifier, default: () -> String): NotNullTag<String, String> =
     NotNullTag(key, this, default, PrimitiveTagConverter.String)
 
-public fun TagContainer.nullableStringTag(key: Identifier, default: String? = null): NullableTag<String, String> =
+public fun TagContainer.nullableStringTag(
+    key: Identifier,
+    default: () -> String? = { null }
+): NullableTag<String, String> =
     NullableTag(key, this, default, PrimitiveTagConverter.String)
 
-public fun TagContainer.doubleTag(key: Identifier, default: Double): NotNullTag<Double, Double> =
+public fun TagContainer.doubleTag(key: Identifier, default: () -> Double): NotNullTag<Double, Double> =
     NotNullTag(key, this, default, PrimitiveTagConverter.Double)
 
-public fun TagContainer.nullableDoubleTag(key: Identifier, default: Double? = null): NullableTag<Double, Double> =
+public fun TagContainer.nullableDoubleTag(
+    key: Identifier,
+    default: () -> Double? = { null }
+): NullableTag<Double, Double> =
     NullableTag(key, this, default, PrimitiveTagConverter.Double)
 
-public fun TagContainer.longTag(key: Identifier, default: Long): NotNullTag<Long, Long> =
+public fun TagContainer.longTag(key: Identifier, default: () -> Long): NotNullTag<Long, Long> =
     NotNullTag(key, this, default, PrimitiveTagConverter.Long)
 
-public fun TagContainer.nullableLongTag(key: Identifier, default: Long? = null): NullableTag<Long, Long> =
+public fun TagContainer.nullableLongTag(
+    key: Identifier,
+    default: () -> Long? = { null }
+): NullableTag<Long, Long> =
     NullableTag(key, this, default, PrimitiveTagConverter.Long)
 
-public fun TagContainer.intTag(key: Identifier, default: Int): NotNullTag<Int, Int> =
+public fun TagContainer.intTag(key: Identifier, default: () -> Int): NotNullTag<Int, Int> =
     NotNullTag(key, this, default, PrimitiveTagConverter.Int)
 
-public fun TagContainer.nullableIntTag(key: Identifier, default: Int? = null): NullableTag<Int, Int> =
+public fun TagContainer.nullableIntTag(
+    key: Identifier,
+    default: () -> Int? = { null }
+): NullableTag<Int, Int> =
     NullableTag(key, this, default, PrimitiveTagConverter.Int)
 
-public fun TagContainer.booleanTag(key: Identifier, default: Boolean): NotNullTag<Byte, Boolean> =
+public fun TagContainer.booleanTag(key: Identifier, default: () -> Boolean): NotNullTag<Byte, Boolean> =
     NotNullTag(key, this, default, BooleanTagConverter)
 
-public fun TagContainer.nullableBooleanTag(key: Identifier, default: Boolean? = null): NullableTag<Byte, Boolean> =
+public fun TagContainer.nullableBooleanTag(
+    key: Identifier,
+    default: () -> Boolean? = { null }
+): NullableTag<Byte, Boolean> =
     NullableTag(key, this, default, BooleanTagConverter)
 
-public fun TagContainer.uuidTag(key: Identifier, default: UUID): NotNullTag<String, UUID> =
+public fun TagContainer.uuidTag(key: Identifier, default: () -> UUID): NotNullTag<String, UUID> =
     NotNullTag(key, this, default, UUIDTagConverter)
 
-public fun TagContainer.nullableUuidTag(key: Identifier, default: UUID? = null): NullableTag<String, UUID> =
+public fun TagContainer.nullableUuidTag(
+    key: Identifier,
+    default: () -> UUID? = { null }
+): NullableTag<String, UUID> =
     NullableTag(key, this, default, UUIDTagConverter)
 
-public fun TagContainer.locationTag(key: Identifier, default: Location): NotNullTag<ByteArray, Location> =
-    objectTag(key, default, LocationSerializer)
+public fun TagContainer.locationTag(key: Identifier, default: () -> Location): NotNullTag<ByteArray, Location> =
+    NotNullTag(key, this, default, ObjectTagConverter(Location::class, LocationSerializer))
 
 public fun TagContainer.nullableLocationTag(
     key: Identifier,
-    default: Location? = null
+    default: () -> Location? = { null }
 ): NullableTag<ByteArray, Location> =
-    nullableObjectTag(key, default, LocationSerializer)
+    NullableTag(key, this, default, ObjectTagConverter(Location::class, LocationSerializer))
 
-public inline fun <reified T : Enum<T>> TagContainer.enumTag(key: Identifier, default: T): NotNullTag<String, T> =
+public inline fun <reified T : Enum<T>> TagContainer.enumTag(
+    key: Identifier,
+    noinline default: () -> T
+): NotNullTag<String, T> =
     NotNullTag(key, this, default, EnumTagConverter(T::class))
 
 public inline fun <reified T : Enum<T>> TagContainer.nullableEnumTag(
     key: Identifier,
-    default: T? = null
+    noinline default: () -> T? = { null }
 ): NullableTag<String, T> =
     NullableTag(key, this, default, EnumTagConverter(T::class))
 
-
 public inline fun <reified T : Resource> TagContainer.refTag(
     key: Identifier,
-    default: ResourceRef<T>
+    noinline default: () -> ResourceRef<T>
 ): NotNullTag<String, ResourceRef<T>> =
     NotNullTag(key, this, default, ResourceRefTagConverter())
 
 public inline fun <reified T : Resource> TagContainer.nullableRefTag(
     key: Identifier,
-    default: ResourceRef<T>? = null
+    noinline default: () -> ResourceRef<T>? = { null }
 ): NullableTag<String, ResourceRef<T>> =
     NullableTag(key, this, default, ResourceRefTagConverter())
 
 public inline fun <reified T : Any> TagContainer.objectTag(
     key: Identifier,
-    default: T,
-    serializer: KSerializer<T>
+    serializer: KSerializer<T>,
+    noinline default: () -> T
 ): NotNullTag<ByteArray, T> =
     NotNullTag(key, this, default, ObjectTagConverter(T::class, serializer))
 
 public inline fun <reified T : Any> TagContainer.nullableObjectTag(
     key: Identifier,
-    default: T?,
-    serializer: KSerializer<T>
+    serializer: KSerializer<T>,
+    noinline default: () -> T? = { null }
 ): NullableTag<ByteArray, T> =
     NullableTag(key, this, default, ObjectTagConverter(T::class, serializer))
 

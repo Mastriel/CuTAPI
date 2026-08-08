@@ -206,9 +206,7 @@ private inline fun BrigadierCommandExecutorContext.withAttachmentErrors(
     if (schemaJsonError != null) {
         sender.sendMessage(schemaJsonError.attachmentErrorComponent())
     } else {
-        val message = causes
-            .mapNotNull { it.message }
-            .firstOrNull()
+        val message = causes.firstNotNullOfOrNull { it.message }
             ?: "Attachment command failed"
         sender.sendMessage("&c$message".colored)
     }
@@ -351,7 +349,7 @@ private fun Schema<*>.propertyPaths(prefix: String = ""): List<String> =
 private fun Schema<*>.jsonPlaceholderAt(path: String): String? {
     val segments = path.split('.').filter(String::isNotBlank)
     if (segments.isEmpty()) return null
-    var current: SerializerDescriptor = descriptor
+    var current: SerializerDescriptor<*> = descriptor
     for ((index, segment) in segments.withIndex()) {
         val property = current.objectProperties().firstOrNull { it.name == segment }
             ?: return null
@@ -363,46 +361,49 @@ private fun Schema<*>.jsonPlaceholderAt(path: String): String? {
     return null
 }
 
-private fun SerializerDescriptor.jsonPlaceholder(): String = when (this) {
-    is SerializerDescriptor.Nullable -> "null"
-    is SerializerDescriptor.Mapped -> encoded.jsonPlaceholder()
-    is SerializerDescriptor.List -> "[]"
-    is SerializerDescriptor.Map -> "{}"
-    is SerializerDescriptor.Object -> objectJsonPlaceholder()
-    is SerializerDescriptor.Polymorphic -> base.objectJsonPlaceholder()
-    is SerializerDescriptor.Opaque -> "\"\""
-    is SerializerDescriptor.Primitive -> when (kind) {
-        VariantKind.NULL -> "null"
-        VariantKind.BOOLEAN -> "false"
-        VariantKind.BYTE,
-        VariantKind.SHORT,
-        VariantKind.INT,
-        VariantKind.LONG,
-        VariantKind.FLOAT,
-        VariantKind.DOUBLE -> "0"
+private fun SerializerDescriptor<*>.jsonPlaceholder(): String = when (val shape = shape) {
+    is SerializerShape.Nullable -> "null"
+    is SerializerShape.Mapped -> shape.encoded.jsonPlaceholder()
+    is SerializerShape.List -> "[]"
+    is SerializerShape.Map -> "{}"
+    is SerializerShape.Object -> shape.objectJsonPlaceholder()
+    is SerializerShape.Polymorphic -> shape.base.shape.objectJsonPlaceholder()
+    SerializerShape.Opaque -> "\"\""
+    is SerializerShape.Primitive -> when (shape.kind) {
+        VariantKind.Null -> "null"
+        VariantKind.Boolean -> "false"
+        VariantKind.Byte,
+        VariantKind.Short,
+        VariantKind.Int,
+        VariantKind.Long,
+        VariantKind.Float,
+        VariantKind.Double -> "0"
 
-        VariantKind.ANY,
-        VariantKind.STRING,
-        VariantKind.CHAR,
-        VariantKind.IDENTIFIER,
-        VariantKind.RESOURCE_REF -> valueDomain.firstValueOrNull()?.let(::jsonString) ?: "\"\""
+        VariantKind.List -> "[]"
+        VariantKind.Map -> "{}"
+
+        VariantKind.Any,
+        VariantKind.String,
+        VariantKind.Char,
+        VariantKind.Identifier,
+        VariantKind.ResourceRef -> valueDomain.firstValueOrNull()?.let(::jsonString) ?: "\"\""
     }
 }
 
-private fun SerializerDescriptor.Object.objectJsonPlaceholder(): String =
+private fun SerializerShape.Object.objectJsonPlaceholder(): String =
     properties.joinToString(prefix = "{", postfix = "}", separator = ",") { property ->
         "${jsonString(property.name)}:${property.serializerDescriptor.jsonPlaceholder()}"
     }
 
-private fun SerializerDescriptor.objectProperties(): List<SerializedPropertyDescriptor> = when (this) {
-    is SerializerDescriptor.Nullable -> value.objectProperties()
-    is SerializerDescriptor.Mapped -> encoded.objectProperties()
-    is SerializerDescriptor.Object -> properties
-    is SerializerDescriptor.Polymorphic -> base.properties
+private fun SerializerDescriptor<*>.objectProperties(): List<SerializedPropertyDescriptor> = when (val shape = shape) {
+    is SerializerShape.Nullable -> shape.value.objectProperties()
+    is SerializerShape.Mapped -> shape.encoded.objectProperties()
+    is SerializerShape.Object -> shape.properties
+    is SerializerShape.Polymorphic -> shape.base.shape.properties
     else -> emptyList()
 }
 
-private fun SerializerDescriptor.propertyPaths(prefix: String): List<String> =
+private fun SerializerDescriptor<*>.propertyPaths(prefix: String): List<String> =
     objectProperties().flatMap { property ->
         val path = "$prefix.${property.name}"
         listOf(path) + property.serializerDescriptor.propertyPaths(path)

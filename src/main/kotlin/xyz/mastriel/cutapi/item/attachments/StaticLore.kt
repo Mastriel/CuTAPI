@@ -20,9 +20,9 @@ public data class StaticLore(public val lore: Component) : ItemLoreAttachment {
     }
 }
 
-private val ComponentSerializer: Serializer<Component> = VariantSerializer.mapped(
+public val ComponentSerializer: TaggedSerializer<Component> = VariantSerializer.mapped(
     serializer = VariantSerializer.String,
-    id = id(Plugin, "gson_kyori_component"),
+    id = id("cutapi:gson_kyori_component"),
     serialize = { GsonComponentSerializer.gson().serialize(it) },
     deserialize = { GsonComponentSerializer.gson().deserialize(it) }
 )

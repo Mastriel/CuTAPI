@@ -7,27 +7,43 @@ import kotlin.reflect.*
 public open class NullableTag<P : Any, C : Any>(
     override val key: Identifier,
     override var container: TagContainer,
-    override val default: C?,
+    override val defaultProducer: () -> C?,
     private val converter: TagConverter<P, C>
 ) : Tag<C?> {
 
     private var cachedValue: C? = null
+    private var hasCachedValue: Boolean = false
 
     override fun store(value: C?) {
-        if (value == null) return container.storeNull(key)
+        if (value == null) {
+            container.storeNull(key)
+            cachedValue = null
+            hasCachedValue = true
+            return
+        }
         container.set(key, value, converter)
 
         cachedValue = value
+        hasCachedValue = true
     }
 
     @Suppress("DuplicatedCode")
     override fun get(): C? {
-        if (container.isNull(key)) return null
-        if (cachedValue != null) return cachedValue!!
+        if (container.isNull(key)) {
+            cachedValue = null
+            hasCachedValue = true
+            return null
+        }
+        if (hasCachedValue) return cachedValue
 
-        val value = container.get(key, converter)
+        val value = if (container.has(key)) {
+            container.get(key, converter)
+        } else {
+            defaultProducer()
+        }
 
         cachedValue = value
+        hasCachedValue = true
         return value
     }
 

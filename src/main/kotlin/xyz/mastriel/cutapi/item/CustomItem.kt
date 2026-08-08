@@ -92,6 +92,11 @@ public open class CustomItem<TStack : CuTItemStack>(
                 property("stackTypeClass", VariantSerializer.String) {
                     it.stackTypeClass.qualifiedName ?: "<anonymous class>"
                 }
+                property("intrinsicAttachments", VariantSerializer.List) { it ->
+                    it.getAllAttachments().map { attachment ->
+                        attachment.schema().serialize(attachment).getOrThrow()
+                    }
+                }
             }
         ) {
         internal val DeferredRegistry = defer(RegistryPriority(Int.MAX_VALUE))

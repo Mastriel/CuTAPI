@@ -4,87 +4,141 @@ import xyz.mastriel.cutapi.registry.*
 import kotlin.reflect.*
 
 /**
- * Public metadata describing the Variant representation produced by a serializer.
+ * Public metadata describing a serializer's logical identity and Variant representation.
  */
-public sealed interface SerializerDescriptor {
-    /** Human-readable expected type used by diagnostics and tooling. */
-    public val displayName: String
-
+public data class SerializerDescriptor<out S : SerializerShape>(
+    /** Stable logical identifier used by diagnostics and tooling. */
+    public val id: Identifier,
+    /** Structural Variant representation consumed by formats and tooling. */
+    public val shape: S,
     /** Optional finite or registry-backed domain for suggestions. */
-    public val valueDomain: SerializerValueDomain?
-        get() = null
+    public val valueDomain: SerializerValueDomain? = null
+) {
+    public companion object {
+        public fun primitive(
+            kind: VariantKind,
+            valueDomain: SerializerValueDomain? = null
+        ): SerializerDescriptor<SerializerShape.Primitive> = SerializerDescriptor(
+            id = kind.id,
+            shape = SerializerShape.Primitive(kind),
+            valueDomain = valueDomain
+        )
 
-    public data class Primitive(
-        public val kind: VariantKind,
-        override val displayName: String = kind.displayName,
-        override val valueDomain: SerializerValueDomain? = null
-    ) : SerializerDescriptor
+        public fun nullable(
+            value: SerializerDescriptor<*>,
+            id: Identifier = value.id.appendSubId("nullable")
+        ): SerializerDescriptor<SerializerShape.Nullable> = SerializerDescriptor(
+            id = id,
+            shape = SerializerShape.Nullable(value),
+            valueDomain = value.valueDomain
+        )
 
-    public data class Nullable(
-        public val value: SerializerDescriptor
-    ) : SerializerDescriptor {
-        override val displayName: String = "${value.displayName} or null"
-        override val valueDomain: SerializerValueDomain? = value.valueDomain
-    }
+        public fun list(
+            element: SerializerDescriptor<*>,
+            id: Identifier = VariantKind.List.id
+        ): SerializerDescriptor<SerializerShape.List> = SerializerDescriptor(
+            id = id,
+            shape = SerializerShape.List(element)
+        )
 
-    public data class List(
-        public val element: SerializerDescriptor,
-        override val displayName: String = "array"
-    ) : SerializerDescriptor
+        public fun map(
+            key: SerializerDescriptor<*>,
+            value: SerializerDescriptor<*>,
+            id: Identifier = VariantKind.Map.id
+        ): SerializerDescriptor<SerializerShape.Map> = SerializerDescriptor(
+            id = id,
+            shape = SerializerShape.Map(key, value)
+        )
 
-    public data class Map(
-        public val key: SerializerDescriptor,
-        public val value: SerializerDescriptor,
-        override val displayName: String = "object"
-    ) : SerializerDescriptor
+        public fun `object`(
+            id: Identifier,
+            type: KClass<*>,
+            tagged: Boolean,
+            properties: kotlin.collections.List<SerializedPropertyDescriptor>
+        ): SerializerDescriptor<SerializerShape.Object> = SerializerDescriptor(
+            id = id,
+            shape = SerializerShape.Object(type, tagged, properties)
+        )
 
-    public data class Object(
-        public val id: Identifier,
-        public val type: KClass<*>,
-        public val tagged: Boolean,
-        public val properties: kotlin.collections.List<SerializedPropertyDescriptor>,
-        override val displayName: String = "${type.simpleName ?: id} object"
-    ) : SerializerDescriptor
+        public fun polymorphic(
+            base: SerializerDescriptor<SerializerShape.Object>,
+            included: kotlin.collections.List<SerializerDescriptor<SerializerShape.Object>>
+        ): SerializerDescriptor<SerializerShape.Polymorphic> = SerializerDescriptor(
+            id = base.id,
+            shape = SerializerShape.Polymorphic(base, included)
+        )
 
-    public data class Polymorphic(
-        public val base: Object,
-        public val included: kotlin.collections.List<Object>
-    ) : SerializerDescriptor {
-        override val displayName: String = base.displayName
-    }
+        public fun mapped(
+            encoded: SerializerDescriptor<*>,
+            id: Identifier = encoded.id
+        ): SerializerDescriptor<SerializerShape.Mapped> = SerializerDescriptor(
+            id = id,
+            shape = SerializerShape.Mapped(encoded),
+            valueDomain = encoded.valueDomain
+        )
 
-    public data class Mapped(
-        public val encoded: SerializerDescriptor,
-        override val displayName: String = encoded.displayName,
-        override val valueDomain: SerializerValueDomain? = encoded.valueDomain
-    ) : SerializerDescriptor
-
-    /**
-     * Explicit escape hatch for serializers whose Variant shape cannot be described.
-     */
-    public data class Opaque(
-        public val name: Identifier
-    ) : SerializerDescriptor {
-        override val displayName: String = name.toString()
+        public fun opaque(id: Identifier): SerializerDescriptor<SerializerShape.Opaque> =
+            SerializerDescriptor(id, SerializerShape.Opaque)
     }
 }
 
+/** The structural Variant representation produced by a serializer. */
+public sealed interface SerializerShape {
+    /** Shape shared by concrete and polymorphic structured objects. */
+    public sealed interface ObjectLike : SerializerShape
+
+    public data class Primitive(public val kind: VariantKind) : SerializerShape
+
+    public data class Nullable(
+        public val value: SerializerDescriptor<*>
+    ) : SerializerShape
+
+    public data class List(
+        public val element: SerializerDescriptor<*>
+    ) : SerializerShape
+
+    public data class Map(
+        public val key: SerializerDescriptor<*>,
+        public val value: SerializerDescriptor<*>
+    ) : SerializerShape
+
+    public data class Object(
+        public val type: KClass<*>,
+        public val tagged: Boolean,
+        public val properties: kotlin.collections.List<SerializedPropertyDescriptor>
+    ) : ObjectLike
+
+    public data class Polymorphic(
+        public val base: SerializerDescriptor<Object>,
+        public val included: kotlin.collections.List<SerializerDescriptor<Object>>
+    ) : ObjectLike
+
+    public data class Mapped(
+        public val encoded: SerializerDescriptor<*>
+    ) : SerializerShape
+
+    /** Escape hatch for serializers whose Variant representation cannot be described. */
+    public data object Opaque : SerializerShape
+}
+
 public enum class VariantKind(
-    public val displayName: String
-) {
-    ANY("variant"),
-    NULL("null"),
-    STRING("string"),
-    BOOLEAN("boolean"),
-    BYTE("byte-sized integer"),
-    SHORT("short integer"),
-    INT("integer"),
-    LONG("long integer"),
-    FLOAT("floating-point number"),
-    DOUBLE("number"),
-    CHAR("single-character string"),
-    IDENTIFIER("identifier string"),
-    RESOURCE_REF("resource reference string")
+    override val id: Identifier
+) : Identifiable {
+    Any(id("cutapi:variant")),
+    Null(id("cutapi:variant/null")),
+    String(id("cutapi:variant/string")),
+    Boolean(id("cutapi:variant/boolean")),
+    Byte(id("cutapi:variant/byte")),
+    Short(id("cutapi:variant/short")),
+    Int(id("cutapi:variant/int")),
+    Long(id("cutapi:variant/long")),
+    Float(id("cutapi:variant/float")),
+    Double(id("cutapi:variant/double")),
+    Char(id("cutapi:variant/char")),
+    Identifier(id("cutapi:variant/id")),
+    ResourceRef(id("cutapi:variant/resource_ref")),
+    List(id("cutapi:variant/list")),
+    Map(id("cutapi:variant/map"))
 }
 
 public sealed interface SerializerValueDomain {
@@ -103,17 +157,13 @@ public sealed interface SerializerValueDomain {
     ) : SerializerValueDomain
 }
 
-/**
- * Common read-only metadata shared by schema and debug-view properties.
- */
+/** Common read-only metadata shared by schema and debug-view properties. */
 public interface SerializedPropertyDescriptor {
     public val name: String
-    public val serializerDescriptor: SerializerDescriptor
+    public val serializerDescriptor: SerializerDescriptor<*>
 }
 
-/**
- * Read-only schema-specific metadata for one serialized property.
- */
+/** Read-only schema-specific metadata for one serialized property. */
 public interface SchemaPropertyDescriptor : SerializedPropertyDescriptor {
     public val sourceName: String?
     public val constructorParameterName: String?

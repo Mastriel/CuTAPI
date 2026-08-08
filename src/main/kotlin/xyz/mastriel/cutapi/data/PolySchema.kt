@@ -12,7 +12,7 @@ public interface PolySchemaBuilder<R : Any> : SchemaBuilder<R> {
 public interface PolySchema<T : Any> : Schema<T> {
     public val includedTypes: Set<KClass<out T>>
 
-    override val descriptor: SerializerDescriptor.Polymorphic
+    override val descriptor: SerializerDescriptor<SerializerShape.Polymorphic>
 
     /** Includes an already-created subtype schema after this polymorphic schema has been built. */
     public fun <S : T> include(schema: Schema<S>)
@@ -50,14 +50,13 @@ private class PolySchemaImpl<T : Any>(
     override val includedTypes: Set<KClass<out T>>
         get() = includes.mapTo(linkedSetOf()) { it.type }
 
-    override val descriptor: SerializerDescriptor.Polymorphic
-        get() = SerializerDescriptor.Polymorphic(
-            base = base.descriptor as SerializerDescriptor.Object,
+    override val descriptor: SerializerDescriptor<SerializerShape.Polymorphic>
+        get() = SerializerDescriptor.polymorphic(
+            base = base.descriptor.requireObjectDescriptor(base.id),
             included = includes.map { schema ->
-                when (val descriptor = schema.descriptor) {
-                    is SerializerDescriptor.Object -> descriptor
-                    is SerializerDescriptor.Polymorphic -> descriptor.base
-                    else -> error("Schema ${schema.id} must have an object descriptor")
+                when (val shape = schema.descriptor.shape) {
+                    is SerializerShape.Object -> schema.descriptor.requireObjectDescriptor(schema.id)
+                    is SerializerShape.Polymorphic -> shape.base
                 }
             }
         )
@@ -171,7 +170,7 @@ private class DeferredPolySchema<T : Any>(
     override val properties: List<SchemaProperty<T, *>> get() = resolved.properties
     override val untagged: Boolean get() = resolved.untagged
     override val includedTypes: Set<KClass<out T>> get() = resolved.includedTypes
-    override val descriptor: SerializerDescriptor.Polymorphic get() = resolved.descriptor
+    override val descriptor: SerializerDescriptor<SerializerShape.Polymorphic> get() = resolved.descriptor
 
     override fun serialize(value: T): SerializeResult = resolved.serialize(value)
 
@@ -180,6 +179,16 @@ private class DeferredPolySchema<T : Any>(
     override fun <S : T> include(schema: Schema<S>) {
         resolved.include(schema)
     }
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun SerializerDescriptor<*>.requireObjectDescriptor(
+    schemaId: Identifier
+): SerializerDescriptor<SerializerShape.Object> {
+    require(shape is SerializerShape.Object) {
+        "Schema $schemaId must have an object shape"
+    }
+    return this as SerializerDescriptor<SerializerShape.Object>
 }
 
 /**

@@ -33,13 +33,11 @@ public interface SchemaPropertyBuilder<R : Any, T> : DebugPropertyBuilder<T> {
     /** Allows the property to be absent without defining a schema default. */
     public fun optional()
 
-    /** Defines the value used when the property is absent. */
-    public fun optional(
-        default: T,
-        omitDefaults: Boolean = false
-    )
-
-    /** Defines a lazily created value used when the property is absent. */
+    /**
+     * Defines a newly produced value used when the property is absent.
+     *
+     * Capture and return an existing value only when shared identity is intentional.
+     */
     public fun optional(
         omitDefaults: Boolean = false,
         default: () -> T

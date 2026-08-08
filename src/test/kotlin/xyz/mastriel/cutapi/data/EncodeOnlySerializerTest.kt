@@ -173,7 +173,7 @@ private data class SerializableDebugValue(
 }
 
 private val SerializableDebugValueSerializer: Serializer<SerializableDebugValue> = serializer(
-    descriptor = SerializerDescriptor.Opaque(id("test:serializable_debug_value")),
+    descriptor = SerializerDescriptor.opaque(id("test:serializable_debug_value")),
     serialize = { Variant.String(it.value) },
     deserialize = {
         val value = (it as? Variant.String)?.value

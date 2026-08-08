@@ -23,7 +23,7 @@ public class ResourcePackManager {
     /**
      * The name of the generated resource pack zip file.
      */
-    private val zipName by cutConfigValue("generated-pack-name", "pack.zip")
+    private val zipName by cutConfigValue("generated-pack-name") { "pack.zip" }
 
     /**
      * The file where the generated resource pack zip is stored.

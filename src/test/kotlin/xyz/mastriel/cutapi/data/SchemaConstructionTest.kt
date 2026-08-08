@@ -135,7 +135,7 @@ class SchemaConstructionTest {
         var captured: SchemaProperty<PropertyMetadata, String>? = null
         schema<PropertyMetadata>(id("test:property_metadata")) {
             captured = property(PropertyMetadata::value, VariantSerializer.String) {
-                optional(default = "default", omitDefaults = true)
+                optional(omitDefaults = true) { "default" }
             }
         }
 
@@ -149,6 +149,48 @@ class SchemaConstructionTest {
         assertTrue(optional.hasDefault)
         assertTrue(optional.omitDefaults)
         assertEquals("default", optional.defaultValue())
+    }
+
+    @Test
+    fun `schema default producers create independent values`() {
+        val mutableListSerializer = VariantSerializer.mapped(
+            VariantSerializer.ListOf(VariantSerializer.String),
+            serialize = { value: MutableList<String> -> value.toList() },
+            deserialize = { value -> value.toMutableList() }
+        )
+        val schema = schema<ProducedDefault>(id("test:produced_default")) {
+            property(ProducedDefault::values, mutableListSerializer) {
+                optional { mutableListOf() }
+            }
+        }
+
+        val first = schema.deserialize(variantMap(schema.id)).getOrThrow()
+        val second = schema.deserialize(variantMap(schema.id)).getOrThrow()
+
+        assertNotSame(first.values, second.values)
+        first.values += "first only"
+        assertTrue(second.values.isEmpty())
+    }
+
+    @Test
+    fun `schema default producers permit explicitly shared values`() {
+        val shared = mutableListOf("shared")
+        val mutableListSerializer = VariantSerializer.mapped(
+            VariantSerializer.ListOf(VariantSerializer.String),
+            serialize = { value: MutableList<String> -> value.toList() },
+            deserialize = { value -> value.toMutableList() }
+        )
+        val schema = schema<ProducedDefault>(id("test:shared_produced_default")) {
+            property(ProducedDefault::values, mutableListSerializer) {
+                optional { shared }
+            }
+        }
+
+        val first = schema.deserialize(variantMap(schema.id)).getOrThrow()
+        val second = schema.deserialize(variantMap(schema.id)).getOrThrow()
+
+        assertSame(shared, first.values)
+        assertSame(first.values, second.values)
     }
 }
 
@@ -164,7 +206,7 @@ private data class PresenceData(
             optional()
         }
         property(PresenceData::schemaDefault, VariantSerializer.Int) {
-            optional(default = 9, omitDefaults = true)
+            optional(omitDefaults = true) { 9 }
         }
         property(PresenceData::nullable, VariantSerializer.String.nullable())
     })
@@ -240,6 +282,10 @@ private object ConstructedSingleton
 
 private data class PropertyMetadata(
     val value: String
+)
+
+private data class ProducedDefault(
+    val values: MutableList<String>
 )
 
 private fun variantMap(

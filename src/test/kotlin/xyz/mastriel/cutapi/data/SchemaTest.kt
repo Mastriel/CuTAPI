@@ -38,8 +38,8 @@ class SchemaTest : MockBukkitTest() {
         data class ManualValue(val value: String)
 
         val serializer = object : Serializer<ManualValue> {
-            override val descriptor: SerializerDescriptor =
-                SerializerDescriptor.Opaque(id("test:manual_value"))
+            override val descriptor: SerializerDescriptor<*> =
+                SerializerDescriptor.opaque(id("test:manual_value"))
 
             override fun serialize(value: ManualValue): SerializeResult =
                 SerializeResult.Success(Variant.String(value.value))
@@ -355,7 +355,7 @@ class SchemaTest : MockBukkitTest() {
         )
         val invalidCountError = assertIs<SchemaJsonException>(invalidCount.error)
         assertContains(invalidCountError.errorMessage, "at 'count'")
-        assertEquals("integer", invalidCountError.expected)
+        assertEquals(VariantKind.Int.id.toString(), invalidCountError.expected)
         assertEquals(""""four"""", invalidCountError.found)
 
         val unknownProperty = assertIs<DeserializeResult.Failure>(
@@ -380,7 +380,7 @@ class SchemaTest : MockBukkitTest() {
 
         val error = assertIs<SchemaJsonException>(failure.error)
         assertContains(error.errorMessage, "at 'nested.label'")
-        assertEquals("string", error.expected)
+        assertEquals(VariantKind.String.id.toString(), error.expected)
         assertEquals("false", error.found)
     }
 
@@ -395,7 +395,7 @@ class SchemaTest : MockBukkitTest() {
         val error = assertIs<SchemaJsonException>(failure.error)
         assertContains(error.errorMessage, "at 'nested.label'")
         assertContains(error.errorMessage, "Missing required property")
-        assertEquals("string", error.expected)
+        assertEquals(VariantKind.String.id.toString(), error.expected)
         assertEquals("<missing>", error.found)
     }
 
@@ -407,7 +407,7 @@ class SchemaTest : MockBukkitTest() {
 
         val error = assertIs<SchemaJsonException>(failure.error)
         assertContains(error.errorMessage, "at 'mode'")
-        assertEquals("JsonMode", error.expected)
+        assertEquals(VariantKind.String.id.toString(), error.expected)
         assertEquals(""""THIRD"""", error.found)
         val entries = assertIs<SerializerValueDomain.Enum>(error.availableEntries)
         assertEquals(listOf("FIRST", "SECOND"), entries.values)
@@ -434,7 +434,7 @@ class SchemaTest : MockBukkitTest() {
         )
 
         val error = assertIs<SchemaJsonException>(failure.error)
-        assertEquals("identifier string", error.expected)
+        assertEquals(VariantKind.Identifier.id.toString(), error.expected)
         assertEquals(""""test:missing"""", error.found)
         val entries = assertIs<SerializerValueDomain.Registry>(error.availableEntries)
         assertEquals(JsonEntryRegistry.id, entries.registryId)
@@ -473,7 +473,7 @@ class SchemaTest : MockBukkitTest() {
         )
         val invalidValueError = assertIs<SchemaJsonException>(invalidValue.error)
         assertContains(invalidValueError.errorMessage, "at 'count'")
-        assertEquals("integer", invalidValueError.expected)
+        assertEquals(VariantKind.Int.id.toString(), invalidValueError.expected)
         assertEquals(""""not a number"""", invalidValueError.found)
 
         val malformedValue = assertIs<DeserializeResult.Failure>(

@@ -30,7 +30,9 @@ public fun interface DebugFormatter<T> {
             hasSourceValue: Boolean,
             defaultFormatter: () -> Component
         ): Component? {
-            val declaredId = (serializer as? Identifiable)?.id
+            val declaredSerializer = serializer as? TaggedSerializer<*>
+            declaredSerializer?.requireDescriptorIdentity()
+            val declaredId = declaredSerializer?.descriptor?.id
             val declaredFormatter = declaredId?.let(::getOrNull)
             if (declaredFormatter != null) {
                 return declaredFormatter.format(
@@ -107,28 +109,31 @@ public class IdentifiableDebugFormatter<T> internal constructor(
  */
 public fun <T> TaggedSerializer<T>.debugFormatter(
     formatter: DebugFormatterContext<T>.() -> Component
-): IdentifiableDebugFormatter<T> = IdentifiableDebugFormatter(
-    id = id,
-    serializer = this,
-    formatter = formatter.asDebugFormatter()
-)
+): IdentifiableDebugFormatter<T> {
+    requireDescriptorIdentity()
+    return IdentifiableDebugFormatter(
+        id = id,
+        serializer = this,
+        formatter = formatter.asDebugFormatter()
+    )
+}
 
 internal fun <T> (DebugFormatterContext<T>.() -> Component).asDebugFormatter(): DebugFormatter<T> =
     DebugFormatter { context -> this(context) }
 
 private fun Variant.canonicalSerializerId(): Identifier? = when (this) {
-    Variant.Null -> VariantSerializer.Null.id
-    is Variant.String -> VariantSerializer.String.id
-    is Variant.Boolean -> VariantSerializer.Boolean.id
-    is Variant.Byte -> VariantSerializer.Byte.id
-    is Variant.Short -> VariantSerializer.Short.id
-    is Variant.Int -> VariantSerializer.Int.id
-    is Variant.Long -> VariantSerializer.Long.id
-    is Variant.Float -> VariantSerializer.Float.id
-    is Variant.Double -> VariantSerializer.Double.id
-    is Variant.Char -> VariantSerializer.Char.id
-    is Variant.Identifier -> VariantSerializer.Id.id
-    is Variant.ResourceRef -> VariantSerializer.ResourceRef.id
-    is Variant.List -> VariantSerializer.List.id
-    is Variant.Map -> VariantSerializer.Map.id
+    Variant.Null -> VariantKind.Null.id
+    is Variant.String -> VariantKind.String.id
+    is Variant.Boolean -> VariantKind.Boolean.id
+    is Variant.Byte -> VariantKind.Byte.id
+    is Variant.Short -> VariantKind.Short.id
+    is Variant.Int -> VariantKind.Int.id
+    is Variant.Long -> VariantKind.Long.id
+    is Variant.Float -> VariantKind.Float.id
+    is Variant.Double -> VariantKind.Double.id
+    is Variant.Char -> VariantKind.Char.id
+    is Variant.Identifier -> VariantKind.Identifier.id
+    is Variant.ResourceRef -> VariantKind.ResourceRef.id
+    is Variant.List -> VariantKind.List.id
+    is Variant.Map -> VariantKind.Map.id
 }

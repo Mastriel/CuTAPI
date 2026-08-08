@@ -50,7 +50,7 @@ public class ItemLore {
 }
 
 public fun TagContainer.loreTag(id: Identifier): NotNullTag<ByteArray, ItemLore> =
-    NotNullTag(id, this, ItemLore(), LoreTagConverter)
+    NotNullTag(id, this, { ItemLore() }, LoreTagConverter)
 
 public var CuTItemStack.displayLoreVisible: Boolean
     get() = lore.displayLoreVisible

@@ -7,26 +7,32 @@ import kotlin.reflect.*
 public open class NotNullTag<P : Any, C : Any>(
     override val key: Identifier,
     override var container: TagContainer,
-    override val default: C,
+    override val defaultProducer: () -> C,
     private val converter: TagConverter<P, C>
 ) : Tag<C> {
 
     private var cachedValue: C? = null
+    private var hasCachedValue: Boolean = false
 
     override fun store(value: C) {
         container.set(key, value, converter)
 
         cachedValue = value
+        hasCachedValue = true
     }
 
     @Suppress("DuplicatedCode")
     override fun get(): C {
-        if (cachedValue != null) return cachedValue!!
-        if (!container.has(key)) return default
+        if (hasCachedValue) return cachedValue!!
 
-        val value = container.get(key, converter)!!
+        val value = if (container.has(key)) {
+            container.get(key, converter)!!
+        } else {
+            defaultProducer()
+        }
 
         cachedValue = value
+        hasCachedValue = true
         return value
     }
 

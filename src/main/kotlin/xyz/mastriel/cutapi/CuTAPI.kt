@@ -54,7 +54,7 @@ public object CuTAPI {
     public val packetEventManager: PacketEventManager = PacketEventManager()
     internal val blockBreakManager = BlockBreakManager()
 
-    public val experimentalBlockSupport: Boolean by cutConfigValue("experimental_block_support", false)
+    public val experimentalBlockSupport: Boolean by cutConfigValue("experimental_block_support") { false }
 
     /**
      * Most registries should probably be initialized here.

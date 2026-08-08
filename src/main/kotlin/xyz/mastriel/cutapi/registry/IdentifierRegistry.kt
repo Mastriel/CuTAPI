@@ -54,9 +54,9 @@ public open class IdentifierRegistry<T : Identifiable> private constructor(
 ) : Serializer<T>, Identifiable {
     public constructor(id: Identifier) : this(id, registerGlobally = true)
 
-    override val descriptor: SerializerDescriptor =
-        SerializerDescriptor.Primitive(
-            kind = VariantKind.IDENTIFIER,
+    override val descriptor: SerializerDescriptor<SerializerShape.Primitive> =
+        SerializerDescriptor.primitive(
+            kind = VariantKind.Identifier,
             valueDomain = SerializerValueDomain.Registry(id)
         )
 

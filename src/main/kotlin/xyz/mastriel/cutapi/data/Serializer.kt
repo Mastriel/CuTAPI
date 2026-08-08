@@ -52,15 +52,27 @@ public interface Serializer<T> : EncodeOnlySerializer<T> {
     }
 }
 
+/**
+ * A serializer with a stable logical identity.
+ *
+ * Implementations must expose the same identifier through [id] and [descriptor].
+ */
 public interface TaggedSerializer<T> : Serializer<T>, Identifiable {
     public companion object : IdentifierRegistry<TaggedSerializer<*>>(id("cutapi:registry/tagged_serializer")) {
+        protected override fun register(item: TaggedSerializer<*>): TaggedSerializer<*> {
+            item.requireDescriptorIdentity()
+            return super.register(item)
+        }
+
         public fun <T : Any> fromCompanion(type: KClass<T>): TaggedSerializer<T> {
             val instance = type.accessibleCompanionObjectInstance()
             require(instance is TaggedSerializer<*>) {
                 "Companion object of ${type.qualifiedName} must implement ${TaggedSerializer::class.qualifiedName}"
             }
             @Suppress("UNCHECKED_CAST")
-            return instance as TaggedSerializer<T>
+            return (instance as TaggedSerializer<T>).also {
+                it.requireDescriptorIdentity()
+            }
         }
 
         public inline fun <reified T : Any> fromCompanion(): TaggedSerializer<T> = fromCompanion(T::class)
@@ -110,9 +122,8 @@ internal fun <E : Enum<E>> enumSerializer(
 ): Serializer<E> {
     val entries = EnumEntryCatalog.register(type, values.map { it.name })
     return serializer(
-        descriptor = SerializerDescriptor.Primitive(
-            kind = VariantKind.STRING,
-            displayName = entries.displayName,
+        descriptor = SerializerDescriptor.primitive(
+            kind = VariantKind.String,
             valueDomain = entries
         ),
         serialize = { Variant.String(it.name) },
@@ -131,28 +142,33 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         private fun <T> tagged(
             id: Identifier,
-            descriptor: SerializerDescriptor,
+            descriptor: SerializerDescriptor<*>,
             serialize: (T) -> Variant,
             deserialize: (Variant) -> T
-        ): VariantSerializer<T> = object : VariantSerializer<T> {
-            override val id: Identifier = id
-            override val descriptor: SerializerDescriptor = descriptor
-
-            override fun serialize(value: T): SerializeResult = try {
-                SerializeResult.Success(serialize(value))
-            } catch (exception: Exception) {
-                SerializeResult.Failure(exception)
+        ): VariantSerializer<T> {
+            require(id == descriptor.id) {
+                "Tagged serializer $id must use a descriptor with the same id, but found ${descriptor.id}"
             }
+            return object : VariantSerializer<T> {
+                override val id: Identifier = id
+                override val descriptor: SerializerDescriptor<*> = descriptor
 
-            override fun deserialize(variant: Variant): DeserializeResult<T> = try {
-                DeserializeResult.Success(deserialize(variant))
-            } catch (exception: Exception) {
-                DeserializeResult.Failure(exception)
+                override fun serialize(value: T): SerializeResult = try {
+                    SerializeResult.Success(serialize(value))
+                } catch (exception: Exception) {
+                    SerializeResult.Failure(exception)
+                }
+
+                override fun deserialize(variant: Variant): DeserializeResult<T> = try {
+                    DeserializeResult.Success(deserialize(variant))
+                } catch (exception: Exception) {
+                    DeserializeResult.Failure(exception)
+                }
             }
         }
 
         public fun <T> from(
-            descriptor: SerializerDescriptor,
+            descriptor: SerializerDescriptor<*>,
             serialize: (T) -> Variant,
             deserialize: (Variant) -> T
         ): Serializer<T> = serializer(descriptor, serialize, deserialize)
@@ -162,7 +178,7 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
             serialize: (T) -> R,
             deserialize: (R) -> T
         ): Serializer<T> = serializer(
-            descriptor = SerializerDescriptor.Mapped(serializer.descriptor),
+            descriptor = SerializerDescriptor.mapped(serializer.descriptor),
             serialize = { serializer.serialize(serialize(it)).getOrThrow() },
             deserialize = { variant -> deserialize(serializer.deserialize(variant).getOrThrow()) }
         )
@@ -174,7 +190,7 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
             deserialize: (R) -> T
         ): TaggedSerializer<T> = tagged(
             id = id,
-            descriptor = SerializerDescriptor.Mapped(serializer.descriptor),
+            descriptor = SerializerDescriptor.mapped(serializer.descriptor, id),
             serialize = { serializer.serialize(serialize(it)).getOrThrow() },
             deserialize = { variant -> deserialize(serializer.deserialize(variant).getOrThrow()) }
         )
@@ -184,8 +200,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public fun <T : Identifiable> Identifiable(registry: IdentifierRegistry<T>): Serializer<T> =
             serializer(
-                descriptor = SerializerDescriptor.Primitive(
-                    kind = VariantKind.IDENTIFIER,
+                descriptor = SerializerDescriptor.primitive(
+                    kind = VariantKind.Identifier,
                     valueDomain = SerializerValueDomain.Registry(registry.id)
                 ),
                 serialize = { Variant.Identifier(it.id) },
@@ -196,7 +212,7 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
             )
 
         public fun <T> ListOf(serializer: Serializer<T>): Serializer<List<T>> = serializer(
-            descriptor = SerializerDescriptor.List(serializer.descriptor),
+            descriptor = SerializerDescriptor.list(serializer.descriptor),
             serialize = { values -> Variant.List(values.map { serializer.serialize(it).getOrThrow() }) },
             deserialize = { variant ->
                 val values = (variant as? Variant.List)?.value ?: throw VariantTypeException("List", variant)
@@ -204,19 +220,23 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
             }
         )
 
-        public fun <T> ListOf(serializer: TaggedSerializer<T>): TaggedSerializer<List<T>> = tagged(
-            id = id(serializer.id.namespace + ":list") / serializer.id.key,
-            descriptor = SerializerDescriptor.List(serializer.descriptor),
-            serialize = { values -> Variant.List(values.map { serializer.serialize(it).getOrThrow() }) },
-            deserialize = { variant ->
-                val values = (variant as? Variant.List)?.value ?: throw VariantTypeException("List", variant)
-                values.map { serializer.deserialize(it).getOrThrow() }
-            }
-        )
+        public fun <T> ListOf(serializer: TaggedSerializer<T>): TaggedSerializer<List<T>> {
+            serializer.requireDescriptorIdentity()
+            val listId = id(serializer.id.namespace + ":list") / serializer.id.key
+            return tagged(
+                id = listId,
+                descriptor = SerializerDescriptor.list(serializer.descriptor, listId),
+                serialize = { values -> Variant.List(values.map { serializer.serialize(it).getOrThrow() }) },
+                deserialize = { variant ->
+                    val values = (variant as? Variant.List)?.value ?: throw VariantTypeException("List", variant)
+                    values.map { serializer.deserialize(it).getOrThrow() }
+                }
+            )
+        }
 
         public fun <T : Resource> ResourceRef(): TaggedSerializer<ResourceRef<T>> = tagged(
-            id = id(Plugin, "variant/resource_ref"),
-            descriptor = SerializerDescriptor.Primitive(VariantKind.RESOURCE_REF),
+            id = VariantKind.ResourceRef.id,
+            descriptor = SerializerDescriptor.primitive(VariantKind.ResourceRef),
             serialize = { Variant.ResourceRef(it) },
             deserialize = { variant ->
                 ((variant as? Variant.ResourceRef)?.value ?: throw VariantTypeException("ResourceRef", variant)).cast()
@@ -225,8 +245,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val AnyVariant: VariantSerializer<Variant> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.ANY),
+                id = VariantKind.Any.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Any),
                 serialize = { it },
                 deserialize = { it }
             )
@@ -234,8 +254,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Null: VariantSerializer<Nothing?> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/null"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.NULL),
+                id = VariantKind.Null.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Null),
                 serialize = { Variant.Null },
                 deserialize = { variant ->
                     if (variant == Variant.Null) null else throw VariantTypeException(
@@ -248,8 +268,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val String: VariantSerializer<String> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/string"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.STRING),
+                id = VariantKind.String.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.String),
                 serialize = { Variant.String(it) },
                 deserialize = {
                     (it as? Variant.String)?.value ?: throw VariantTypeException("String", it)
@@ -259,8 +279,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Boolean: VariantSerializer<Boolean> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/boolean"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.BOOLEAN),
+                id = VariantKind.Boolean.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Boolean),
                 serialize = { Variant.Boolean(it) },
                 deserialize = {
                     (it as? Variant.Boolean)?.value ?: throw VariantTypeException("Boolean", it)
@@ -270,8 +290,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Byte: VariantSerializer<Byte> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/byte"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.BYTE),
+                id = VariantKind.Byte.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Byte),
                 serialize = { Variant.Byte(it) },
                 deserialize = {
                     (it as? Variant.Byte)?.value ?: throw VariantTypeException("Byte", it)
@@ -281,8 +301,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Short: VariantSerializer<Short> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/short"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.SHORT),
+                id = VariantKind.Short.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Short),
                 serialize = { Variant.Short(it) },
                 deserialize = {
                     (it as? Variant.Short)?.value ?: throw VariantTypeException("Short", it)
@@ -292,8 +312,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Int: VariantSerializer<Int> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/int"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.INT),
+                id = VariantKind.Int.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Int),
                 serialize = { Variant.Int(it) },
                 deserialize = {
                     (it as? Variant.Int)?.value ?: throw VariantTypeException("Int", it)
@@ -303,8 +323,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Long: VariantSerializer<Long> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/long"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.LONG),
+                id = VariantKind.Long.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Long),
                 serialize = { Variant.Long(it) },
                 deserialize = {
                     (it as? Variant.Long)?.value ?: throw VariantTypeException("Long", it)
@@ -314,8 +334,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Float: VariantSerializer<Float> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/float"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.FLOAT),
+                id = VariantKind.Float.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Float),
                 serialize = { Variant.Float(it) },
                 deserialize = {
                     (it as? Variant.Float)?.value ?: throw VariantTypeException("Float", it)
@@ -325,8 +345,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Double: VariantSerializer<Double> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/double"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.DOUBLE),
+                id = VariantKind.Double.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Double),
                 serialize = { Variant.Double(it) },
                 deserialize = {
                     (it as? Variant.Double)?.value ?: throw VariantTypeException("Double", it)
@@ -336,8 +356,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Char: VariantSerializer<Char> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/char"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.CHAR),
+                id = VariantKind.Char.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Char),
                 serialize = { Variant.Char(it) },
                 deserialize = {
                     (it as? Variant.Char)?.value ?: throw VariantTypeException("Char", it)
@@ -347,8 +367,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Id: VariantSerializer<Identifier> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/id"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.IDENTIFIER),
+                id = VariantKind.Identifier.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.Identifier),
                 serialize = { Variant.Identifier(it) },
                 deserialize = {
                     (it as? Variant.Identifier)?.value ?: throw VariantTypeException("Identifier", it)
@@ -358,8 +378,8 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val ResourceRef: VariantSerializer<ResourceRef<*>> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/resource_ref"),
-                descriptor = SerializerDescriptor.Primitive(VariantKind.RESOURCE_REF),
+                id = VariantKind.ResourceRef.id,
+                descriptor = SerializerDescriptor.primitive(VariantKind.ResourceRef),
                 serialize = { Variant.ResourceRef(it) },
                 deserialize = {
                     (it as? Variant.ResourceRef)?.value ?: throw VariantTypeException("ResourceRef", it)
@@ -369,9 +389,9 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val List: VariantSerializer<List<Variant>> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/list"),
-                descriptor = SerializerDescriptor.List(
-                    SerializerDescriptor.Primitive(VariantKind.ANY)
+                id = VariantKind.List.id,
+                descriptor = SerializerDescriptor.list(
+                    SerializerDescriptor.primitive(VariantKind.Any)
                 ),
                 serialize = { Variant.List(it) },
                 deserialize = {
@@ -382,10 +402,10 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 
         public val Map: VariantSerializer<Map<Variant, Variant>> by deferredRegistry.register {
             tagged(
-                id = id("cutapi:variant/map"),
-                descriptor = SerializerDescriptor.Map(
-                    key = SerializerDescriptor.Primitive(VariantKind.ANY),
-                    value = SerializerDescriptor.Primitive(VariantKind.ANY)
+                id = VariantKind.Map.id,
+                descriptor = SerializerDescriptor.map(
+                    key = SerializerDescriptor.primitive(VariantKind.Any),
+                    value = SerializerDescriptor.primitive(VariantKind.Any)
                 ),
                 serialize = { Variant.Map(it) },
                 deserialize = {
@@ -397,11 +417,11 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
 }
 
 public fun <T> serializer(
-    descriptor: SerializerDescriptor,
+    descriptor: SerializerDescriptor<*>,
     serialize: (T) -> Variant,
     deserialize: (Variant) -> T
 ): Serializer<T> = object : Serializer<T> {
-    override val descriptor: SerializerDescriptor = descriptor
+    override val descriptor: SerializerDescriptor<*> = descriptor
 
     override fun serialize(value: T): SerializeResult = try {
         SerializeResult.Success(serialize(value))
@@ -417,8 +437,8 @@ public fun <T> serializer(
 }
 
 public fun <T> Serializer<T>.nullable(): Serializer<T?> = object : Serializer<T?> {
-    override val descriptor: SerializerDescriptor =
-        SerializerDescriptor.Nullable(this@nullable.descriptor)
+    override val descriptor: SerializerDescriptor<*> =
+        SerializerDescriptor.nullable(this@nullable.descriptor)
 
     override fun serialize(value: T?): SerializeResult =
         if (value == null) SerializeResult.Success(Variant.Null) else this@nullable.serialize(value)
@@ -429,14 +449,23 @@ public fun <T> Serializer<T>.nullable(): Serializer<T?> = object : Serializer<T?
 
 public fun <T : Any> TaggedSerializer<T>.nullable(
     id: Identifier = this.id.appendSubId("nullable")
-): TaggedSerializer<T?> = object : TaggedSerializer<T?> {
-    override val id: Identifier = id
-    override val descriptor: SerializerDescriptor =
-        SerializerDescriptor.Nullable(this@nullable.descriptor)
+): TaggedSerializer<T?> {
+    requireDescriptorIdentity()
+    return object : TaggedSerializer<T?> {
+        override val id: Identifier = id
+        override val descriptor: SerializerDescriptor<*> =
+            SerializerDescriptor.nullable(this@nullable.descriptor, id)
 
-    override fun serialize(value: T?): SerializeResult =
-        if (value == null) SerializeResult.Success(Variant.Null) else this@nullable.serialize(value)
+        override fun serialize(value: T?): SerializeResult =
+            if (value == null) SerializeResult.Success(Variant.Null) else this@nullable.serialize(value)
 
-    override fun deserialize(variant: Variant): DeserializeResult<T?> =
-        if (variant == Variant.Null) DeserializeResult.Success(null) else this@nullable.deserialize(variant)
+        override fun deserialize(variant: Variant): DeserializeResult<T?> =
+            if (variant == Variant.Null) DeserializeResult.Success(null) else this@nullable.deserialize(variant)
+    }
+}
+
+internal fun TaggedSerializer<*>.requireDescriptorIdentity() {
+    require(id == descriptor.id) {
+        "Tagged serializer $id must use a descriptor with the same id, but found ${descriptor.id}"
+    }
 }

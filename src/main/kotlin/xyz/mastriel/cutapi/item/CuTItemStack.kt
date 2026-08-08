@@ -48,8 +48,8 @@ import kotlin.reflect.jvm.*
  *     // Leverage Tags to store persistant data easily in the stack.
  *
  *     // Will never be null, and instead the default of "hello".
- *     var persistentString by stringTag("TagName", "hello")
- *     private var uses by intTag("Uses", 0)
+ *     var persistentString by stringTag(id("example:tag_name")) { "hello" }
+ *     private var uses by intTag(id("example:uses")) { 0 }
  *
  *     // May be null.
  *     var nullablePersistentString by nullableStringTag("AnotherTagName")
@@ -127,7 +127,7 @@ public open class CuTItemStack protected constructor(
             set(ItemStackUtility.TypeId, value, IdentifiableTagConverter.CustomItem)
         }
 
-    public var nameHasChanged: Boolean by booleanTag(id("cutapi:name_has_changed"), false)
+    public var nameHasChanged: Boolean by booleanTag(id("cutapi:name_has_changed")) { false }
 
     internal var lore by loreTag(id("cutapi:lore"))
 

@@ -70,7 +70,7 @@ public class BuiltinUploader : Uploader {
     }
 
     public companion object {
-        public val ServerIp: String by cutConfigValue("uploader.ip-address", "0.0.0.0")
-        public val PackPort: Int by cutConfigValue("uploader.port", 32120)
+        public val ServerIp: String by cutConfigValue("uploader.ip-address") { "0.0.0.0" }
+        public val PackPort: Int by cutConfigValue("uploader.port") { 32120 }
     }
 }
