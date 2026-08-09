@@ -1,5 +1,9 @@
 # CuTAPI Development Rules
 
+## Enum Entry Names
+
+- Enum entry names must use UpperCamelCase, such as `MainHand` and `ReadOnly`, never SCREAMING_SNAKE_CASE.
+
 ## DSL Defaults
 
 - DSL APIs must accept default values through producers such as `() -> T`, never as preconstructed values.
@@ -15,5 +19,29 @@ property(...) {
 // Bad: the DSL captures and reuses one instance.
 property(...) {
     optional(MyInstance())
+}
+```
+
+## Registry Registration
+
+- Companion objects that implement `IdentifierRegistry` should not add `register` overloads that configure, mutate, or otherwise add behavior to the object being registered.
+- Registration should only register an already-configured object. Initialization, validation, side effects, and other object-specific behavior belong in the registered object itself or in the factory that creates it.
+
+```kotlin
+// Good: the registered object owns its behavior.
+class MyEntry(...) : Identifiable {
+    init {
+        configureEntry()
+    }
+
+    companion object : IdentifierRegistry<MyEntry>(id("example:registry/my_entry"))
+}
+
+// Bad: registration has a second responsibility.
+companion object : IdentifierRegistry<MyEntry>(id("example:registry/my_entry")) {
+    fun register(entry: MyEntry, configure: MyEntry.() -> Unit): MyEntry {
+        entry.configure()
+        return register(entry)
+    }
 }
 ```

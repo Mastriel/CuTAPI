@@ -9,7 +9,6 @@ import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
 
-@RepeatableAttachment
 public data class Equipable(
     public val slot: EquipmentSlot,
     public val isSwappable: Boolean = true,
@@ -25,9 +24,13 @@ public data class Equipable(
 
     public companion object : Schema<Equipable> by schema(id(Plugin, "equipable"), {
         property(Equipable::slot, VariantSerializer.Enum<EquipmentSlot>())
-        property(Equipable::isSwappable, VariantSerializer.Boolean)
+        property(Equipable::isSwappable, VariantSerializer.Boolean, name = "is_swappable")
         property(Equipable::model, VariantSerializer.ResourceRef<Model3D>().nullable())
-        property(Equipable::damageItemWhenHurt, VariantSerializer.Boolean)
+        property(
+            Equipable::damageItemWhenHurt,
+            VariantSerializer.Boolean,
+            name = "damage_item_when_hurt"
+        )
     }) {
         public fun of(slot: EquipmentSlot, builder: Builder.() -> Unit): Equipable {
             val b = Builder(slot).apply(builder)
@@ -61,19 +64,23 @@ public data class Equipable(
     }
 }
 
-internal object EquipableSystem : ItemSystem by attachmentItemSystem(Equipable) {
-
-    @Suppress("UnstableApiUsage")
-    override fun onCreate(context: ItemCreateContext) {
-        context.item.getAttachments(Equipable).forEach { attachment ->
-            context.item.handle.editMeta { meta ->
-                meta.setEquippable(meta.equippable.also {
-                    it.slot = attachment.slot
-                    it.isSwappable = attachment.isSwappable
-                    it.model = attachment.model?.getResource()?.getItemModel()?.toIdentifier()?.toNamespacedKey()
-                    it.isDamageOnHurt = attachment.damageItemWhenHurt
-                })
-            }
+@Suppress("UnstableApiUsage")
+internal val EquipableMaterializer: ItemAttachmentMaterializer<Equipable>
+    get() = itemAttachmentMaterializer(
+    id = Equipable.id / "materializer",
+    schema = Equipable,
+    revision = 1,
+    claims = setOf(ItemTraitClaim.Component(io.papermc.paper.datacomponent.DataComponentTypes.EQUIPPABLE)),
+) { context, output ->
+    val attachment = context.attachments.single()
+    output.setUsing(io.papermc.paper.datacomponent.DataComponentTypes.EQUIPPABLE) { stack ->
+        stack.editMeta { meta ->
+            meta.setEquippable(meta.equippable.also {
+                it.slot = attachment.slot
+                it.isSwappable = attachment.isSwappable
+                it.model = attachment.model?.getResource()?.getItemModel()?.toIdentifier()?.toNamespacedKey()
+                it.isDamageOnHurt = attachment.damageItemWhenHurt
+            })
         }
     }
 }

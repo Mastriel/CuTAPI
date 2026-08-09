@@ -4,16 +4,20 @@ import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
-import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
-import java.util.*
+import io.papermc.paper.datacomponent.DataComponentTypes
 
 public object Unstackable : ItemAttachment, Schema<Unstackable> by singletonSchema(id(Plugin, "unstackable"))
 
-internal object UnstackableSystem : ItemSystem by attachmentItemSystem(Unstackable) {
-    override fun onCreate(context: ItemCreateContext) {
-        var uuid by context.data(Unstackable).nullableUuidTag(id(Plugin, "unstackable_uuid"))
-        context.item.handle.amount = 1
-        uuid = UUID.randomUUID()
+internal val UnstackableMaterializer: ItemAttachmentMaterializer<Unstackable>
+    get() = itemAttachmentMaterializer(
+    id = Unstackable.id / "materializer",
+    schema = Unstackable,
+    revision = 1,
+    claims = setOf(ItemTraitClaim.Component(DataComponentTypes.MAX_STACK_SIZE)),
+) { context, output ->
+    require(context.item.handle.amount <= 1) {
+        "Unstackable cannot be materialized onto a stack with amount ${context.item.handle.amount}."
     }
+    output.set(DataComponentTypes.MAX_STACK_SIZE, 1)
 }

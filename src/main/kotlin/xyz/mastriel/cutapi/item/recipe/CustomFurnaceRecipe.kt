@@ -11,11 +11,11 @@ import kotlin.time.*
 public data class CustomFurnaceRecipe(
     override val id: Identifier,
     val input: Material,
-    val output: AgnosticItemStack,
+    val output: CuTItemStack,
     val cookTime: Duration,
     val experienceGranted: Float = 1.0f,
     // doesn't work; spigot hates me.
-    val inputRequirement : Computable<AgnosticItemStack, Boolean> = computable(true)
+    val inputRequirement : Computable<CuTItemStack, Boolean> = computable(true)
 ) : Identifiable {
 
     public companion object :

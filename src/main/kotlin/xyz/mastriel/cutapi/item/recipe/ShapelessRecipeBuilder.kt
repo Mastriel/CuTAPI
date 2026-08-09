@@ -9,14 +9,14 @@ import xyz.mastriel.cutapi.utils.computable.*
 public open class ShapelessRecipeIngredient(
     public val material: Material,
     public val quantity: Int = 1,
-    public val itemRequirement: Computable<AgnosticItemStack, Boolean>,
+    public val itemRequirement: Computable<CuTItemStack, Boolean>,
     public val onCraft: IngredientCraftContext.() -> Unit
 )
 
 public class CustomShapelessRecipeIngredient(
     material: Material,
     quantity: Int = 1,
-    itemRequirement: Computable<AgnosticItemStack, Boolean>,
+    itemRequirement: Computable<CuTItemStack, Boolean>,
     onCraft: IngredientCraftContext.() -> Unit,
     public val placeholderItem: CustomItem<*>
 ) : ShapelessRecipeIngredient(material, quantity, itemRequirement, onCraft)
@@ -56,7 +56,7 @@ public class ShapelessRecipeBuilder(
         material: Material,
         quantity: Int = 1,
         slotsRequired: Int = 1,
-        itemRequirement: Computable<AgnosticItemStack, Boolean> = computable(true),
+        itemRequirement: Computable<CuTItemStack, Boolean> = computable(true),
         onCraft: IngredientCraftContext.() -> Unit = {}
     ) {
         repeat(slotsRequired) {
@@ -72,7 +72,8 @@ public class ShapelessRecipeBuilder(
     ) {
         repeat(slotsRequired) {
             ingredients += CustomShapelessRecipeIngredient(
-                item.type,
+                item.backingItem.asMaterial()
+                    ?: error("Backing item ${item.backingItem.key} has no Bukkit Material."),
                 quantity,
                 IngredientPredicates.isItem(item),
                 onCraft,

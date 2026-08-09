@@ -42,7 +42,7 @@ private typealias MojangStack = net.minecraft.world.item.ItemStack
 public open class PlayerBlockBreaker(
     public val block: Block,
     public val playerUUID: PlayerUUID,
-    public val item: AgnosticItemStack,
+    public val item: CuTItemStack,
     public val startSequence: Int,
 ) {
     public val player: Player? by playerUUID
@@ -321,9 +321,10 @@ public open class PlayerBlockBreaker(
         // (also, fly hacks should be pretty obvious to spot)
         if (!player.isOnGround) totalSpeedMultiplier /= 5f
 
-        val correctToolIsUsed = when (item) {
-            is AgnosticItemStack.Custom -> isCorrectToolForDropsCustomTool(block)
-            is AgnosticItemStack.Vanilla -> isCorrectToolForDropsVanillaTool(block)
+        val correctToolIsUsed = if (item.isCustom) {
+            isCorrectToolForDropsCustomTool(block)
+        } else {
+            isCorrectToolForDropsVanillaTool(block)
         }
 
         val correctToolBonus = if (correctToolIsUsed) 30f else 100f

@@ -212,8 +212,8 @@ public interface Schema<T : Any> : TaggedSerializer<T>, DebugView<T> {
             property(Schema<*>::untagged, VariantSerializer.Boolean)
             property("properties", VariantSerializer.Map) { schema ->
                 schema.properties.associate { property ->
-                    Variant.String(property.name) to
-                        Variant.String(property.serializer.descriptor.id.toString())
+                    property.name to
+                        Variant.Identifier(property.serializer.descriptor.id)
                 }
             }
         }) {
@@ -831,13 +831,7 @@ private fun <T : Any> SchemaBuilderImpl<T>.buildSchema(
 
 internal fun Variant.stringValues(): LinkedHashMap<String, Variant> {
     val map = this as? Variant.Map ?: throw VariantTypeException("Map", this)
-    val result = linkedMapOf<String, Variant>()
-    for ((key, value) in map.value) {
-        val name = (key as? Variant.String)?.value
-            ?: throw DataSerializationException("Schema maps require string keys")
-        result[name] = value
-    }
-    return result
+    return LinkedHashMap(map.value)
 }
 
 @Suppress("UNCHECKED_CAST")

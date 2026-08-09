@@ -20,38 +20,31 @@ public data class ModifyAttribute(
 ) : ItemAttachment {
     public companion object : Schema<ModifyAttribute> by schema(id(Plugin, "attribute"), {
         property(ModifyAttribute::key, VariantSerializer.Id)
-        property(ModifyAttribute::slotGroup, EquipmentSlotGroupSerializer)
+        property(ModifyAttribute::slotGroup, EquipmentSlotGroupSerializer, name = "slot_group")
         property(ModifyAttribute::attribute, AttributeSerializer)
         property(ModifyAttribute::amount, VariantSerializer.Double)
         property(ModifyAttribute::operation, VariantSerializer.Enum<AttributeModifier.Operation>())
     })
 
-    public fun updateItem(item: CuTItemStack) {
-        item.handle.editMeta { meta ->
-
-            val previous = meta.getAttributeModifiers(attribute)?.firstOrNull { it.key == key.toNamespacedKey() }
-            if (previous != null) {
-                // If the attribute modifier is already present, remove it
-                meta.removeAttributeModifier(attribute, previous)
-            }
-
-            meta.addAttributeModifier(
-                attribute,
-                AttributeModifier(
-                    key.toNamespacedKey(),
-                    amount,
-                    operation,
-                    slotGroup
-                )
-            )
-        }
-    }
 }
 
-internal object ModifyAttributeSystem : ItemSystem by attachmentItemSystem(ModifyAttribute) {
-
-    override fun onCreate(context: ItemCreateContext) {
-        context.item.getAttachments(ModifyAttribute).forEach { it.updateItem(context.item) }
+internal val ModifyAttributeMaterializer: ItemAttachmentMaterializer<ModifyAttribute>
+    get() = itemAttachmentMaterializer(
+    id = ModifyAttribute.id / "materializer",
+    schema = ModifyAttribute,
+    revision = 1,
+    claims = setOf(ItemTraitClaim.KeyedAttributeModifiers),
+) { context, output ->
+    context.attachments.forEach { attachment ->
+        output.setAttributeModifier(
+            attachment.attribute,
+            AttributeModifier(
+                attachment.key.toNamespacedKey(),
+                attachment.amount,
+                attachment.operation,
+                attachment.slotGroup,
+            ),
+        )
     }
 }
 

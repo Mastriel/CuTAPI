@@ -1,6 +1,5 @@
 package xyz.mastriel.cutapi
 
-import org.bukkit.*
 import org.bukkit.plugin.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.utils.*
@@ -13,6 +12,7 @@ public interface CuTPlugin : ResourceRoot {
     public val plugin: Plugin get() = this as? Plugin ?: Plugin
     public override val cutPlugin: CuTPlugin get() = this
     public val descriptor: PluginDescriptor get() = CuTAPI.getDescriptor(this)
+    public val displayName: String get() = descriptor.options.displayName
     public override val namespace: String get() = descriptor.namespace
     public val isFromJar: Boolean get() = descriptor.options.isFromJar
 
@@ -31,33 +31,24 @@ public interface CuTPlugin : ResourceRoot {
 public data class PluginDescriptor internal constructor(
     val plugin: CuTPlugin,
     val namespace: String,
-    val options: PluginOptions = defaultPluginOptions()
+    val options: PluginOptions = defaultPluginOptions(plugin)
 )
 
 @ConsistentCopyVisibility
 public data class PluginOptions internal constructor(
-    val packFolder: String = "pack",
-    val autoDisplayAsForTexturedItems: Material? = null,
-    val strictResourceLoading: Boolean = false,
-    val isFromJar: Boolean = true
+    val packFolder: String,
+    val strictResourceLoading: Boolean,
+    val isFromJar: Boolean,
+    val displayName: String,
 )
 
-public class PluginOptionsBuilder {
+public class PluginOptionsBuilder(private val cutPlugin: CuTPlugin) {
     /**
      * The folder in `src/main/resources/` that will be used to generate a resource pack.
      *
      * `pack` by default.
      */
     public var packFolder: String = "pack"
-
-    /**
-     * If not null, this will automatically add the [DisplayAs][xyz.mastriel.cutapi.item.attachments.DisplayAs]
-     * component to any custom item with a texture specified. This will also add this Material to all textures
-     * .cutmeta files.
-     *
-     * `null` by default.
-     */
-    public var autoDisplayAsForTexturedItems: Material? = null
 
     /**
      * When true, if a resource is attempted to be loaded from a file and that operation fails, then your plugin
@@ -74,9 +65,16 @@ public class PluginOptionsBuilder {
      */
     public var isFromJar: Boolean = true
 
+    /**
+     * The display name of your CuTPlugin. By default, this is either:
+     * 1. Your plugin name, if your CuTPlugin also implements Bukkit's Plugin interface
+     * 2. Your namespace
+     */
+    public var displayName: String = (cutPlugin as? Plugin)?.name ?: cutPlugin.namespace
+
     public fun build(): PluginOptions {
-        return PluginOptions(packFolder, autoDisplayAsForTexturedItems, strictResourceLoading, isFromJar)
+        return PluginOptions(packFolder, strictResourceLoading, isFromJar, displayName)
     }
 }
 
-public fun defaultPluginOptions(): PluginOptions = PluginOptions()
+public fun defaultPluginOptions(plugin: CuTPlugin): PluginOptions = PluginOptionsBuilder(plugin).build()

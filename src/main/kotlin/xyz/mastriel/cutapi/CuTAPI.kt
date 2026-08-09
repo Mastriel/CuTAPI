@@ -55,6 +55,7 @@ public object CuTAPI {
     internal val blockBreakManager = BlockBreakManager()
 
     public val experimentalBlockSupport: Boolean by cutConfigValue("experimental_block_support") { false }
+    public val enableDebugItems: Boolean by cutConfigValue($$"$enable_debug_items") { false }
 
     /**
      * Most registries should probably be initialized here.
@@ -82,8 +83,8 @@ public object CuTAPI {
         requireNotRegistered(plugin)
         requireValidNamespace(namespace)
 
-        val optionsBuilder = PluginOptionsBuilder()
-        val pluginOptions = if (options != null) optionsBuilder.apply(options).build() else defaultPluginOptions()
+        val optionsBuilder = PluginOptionsBuilder(plugin)
+        val pluginOptions = if (options != null) optionsBuilder.apply(options).build() else defaultPluginOptions(plugin)
 
         val descriptor = PluginDescriptor(plugin, namespace, pluginOptions)
         plugins[plugin] = descriptor

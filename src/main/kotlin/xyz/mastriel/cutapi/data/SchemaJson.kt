@@ -53,15 +53,7 @@ internal fun Variant.toJsonElement(): JsonElement = when (this) {
     is Variant.Identifier -> JsonPrimitive(value.toString())
     is Variant.ResourceRef -> JsonPrimitive(value.toString())
     is Variant.List -> JsonArray(value.map(Variant::toJsonElement))
-    is Variant.Map -> JsonObject(
-        value.mapKeys { (key) ->
-            when (key) {
-                is Variant.String -> key.value
-                is Variant.Identifier -> key.value.toString()
-                else -> key.value.toString()
-            }
-        }.mapValues { (_, value) -> value.toJsonElement() }
-    )
+    is Variant.Map -> JsonObject(value.mapValues { (_, value) -> value.toJsonElement() })
 }
 
 internal fun Variant.toJson(pretty: Boolean = true): String {
@@ -72,7 +64,7 @@ internal fun Variant.toJson(pretty: Boolean = true): String {
 internal fun JsonElement.toVariant(): Variant = when (this) {
     JsonNull -> Variant.Null
     is JsonArray -> Variant.List(map(JsonElement::toVariant))
-    is JsonObject -> Variant.Map(map { (key, value) -> Variant.String(key) to value.toVariant() }.toMap())
+    is JsonObject -> Variant.Map(mapValues { (_, value) -> value.toVariant() })
     is JsonPrimitive -> when {
         isString -> Variant.String(content)
         booleanOrNull != null -> Variant.Boolean(boolean)
@@ -179,7 +171,7 @@ private fun JsonObject.toVariant(
     }
 
     val properties = schema.properties.associateBy { it.name }
-    val values = linkedMapOf<Variant, Variant>()
+    val values = linkedMapOf<String, Variant>()
     for ((name, element) in this) {
         if (name == SCHEMA_TYPE_DISCRIMINATOR) {
             val serializedId = (element as? JsonPrimitive)
@@ -200,7 +192,7 @@ private fun JsonObject.toVariant(
                     SerializerValueDomain.Literal(listOf(schema.id.toString()))
                 )
             }
-            values[Variant.String(name)] = Variant.String(serializedId)
+            values[name] = Variant.String(serializedId)
             continue
         }
 
@@ -212,7 +204,7 @@ private fun JsonObject.toVariant(
                 found = JsonPrimitive(name).toString(),
                 availableEntries = SerializerValueDomain.Literal(properties.keys.sorted())
             )
-        values[Variant.String(name)] = property.serializer.deserializeJsonValue(
+        values[name] = property.serializer.deserializeJsonValue(
             element = element,
             rootSchema = rootSchema,
             path = path + name
@@ -220,7 +212,7 @@ private fun JsonObject.toVariant(
     }
 
     if (!schema.untagged && SCHEMA_TYPE_DISCRIMINATOR !in this) {
-        values[Variant.String(SCHEMA_TYPE_DISCRIMINATOR)] = Variant.String(schema.id.toString())
+        values[SCHEMA_TYPE_DISCRIMINATOR] = Variant.String(schema.id.toString())
     }
     return Variant.Map(values)
 }
@@ -239,7 +231,7 @@ private fun Schema<*>.updateJsonProperty(
             "Invalid JSON property '${currentPath.renderPath()}' for schema ${rootSchema.id}: " +
                 "unknown property"
         )
-    val key = Variant.String(property.name)
+    val key = property.name
     val updatedValue = if (path.size == 1) {
         property.serializer.deserializeJsonValue(
             element = replacement,
@@ -352,12 +344,11 @@ private fun JsonElement.toVariant(
                 expectedDescriptor.id.toString(),
                 this,
                 expectedDescriptor.valueDomain
-            )
+        )
         Variant.Map(
-            jsonObject.map { (key, element) ->
-                key.toVariantMapKey(shape.key, rootSchema, path) to
-                    element.toVariant(shape.value, rootSchema, path + key)
-            }.toMap()
+            jsonObject.mapValues { (key, element) ->
+                element.toVariant(shape.value, rootSchema, path + key)
+            }
         )
     }
 
@@ -418,7 +409,7 @@ private fun JsonElement.toObjectVariant(
             this
         )
     val properties = shape.properties.associateBy { it.name }
-    val values = linkedMapOf<Variant, Variant>()
+    val values = linkedMapOf<String, Variant>()
     for ((name, element) in jsonObject) {
         if (name == SCHEMA_TYPE_DISCRIMINATOR) {
             val serializedId = (element as? JsonPrimitive)
@@ -439,7 +430,7 @@ private fun JsonElement.toObjectVariant(
                     SerializerValueDomain.Literal(listOf(descriptor.id.toString()))
                 )
             }
-            values[Variant.String(name)] = Variant.String(serializedId)
+            values[name] = Variant.String(serializedId)
             continue
         }
 
@@ -451,14 +442,14 @@ private fun JsonElement.toObjectVariant(
                 found = JsonPrimitive(name).toString(),
                 availableEntries = SerializerValueDomain.Literal(properties.keys.sorted())
             )
-        values[Variant.String(name)] = element.toVariant(
+        values[name] = element.toVariant(
             property.serializerDescriptor,
             rootSchema,
             path + name
         )
     }
     if (shape.tagged && SCHEMA_TYPE_DISCRIMINATOR !in jsonObject) {
-        values[Variant.String(SCHEMA_TYPE_DISCRIMINATOR)] =
+        values[SCHEMA_TYPE_DISCRIMINATOR] =
             Variant.String(descriptor.id.toString())
     }
     return Variant.Map(values)
@@ -489,9 +480,7 @@ private fun JsonElement.toPrimitiveVariant(
     }
     if (shape.kind == VariantKind.Map) {
         val values = this as? JsonObject ?: invalid()
-        return Variant.Map(
-            values.map { (key, value) -> Variant.String(key) to value.toVariant() }.toMap()
-        )
+        return Variant.Map(values.mapValues { (_, value) -> value.toVariant() })
     }
     val primitive = this as? JsonPrimitive ?: invalid()
     return try {
@@ -563,55 +552,6 @@ private fun SerializerValueDomain?.requireContains(
         }
         null -> Unit
     }
-}
-
-private fun String.toVariantMapKey(
-    descriptor: SerializerDescriptor<*>,
-    rootSchema: Schema<*>,
-    path: List<String>,
-    expectedDescriptor: SerializerDescriptor<*> = descriptor
-): Variant = when (val shape = descriptor.shape) {
-    is SerializerShape.Nullable ->
-        toVariantMapKey(shape.value, rootSchema, path, expectedDescriptor)
-    is SerializerShape.Mapped ->
-        toVariantMapKey(shape.encoded, rootSchema, path, expectedDescriptor)
-    is SerializerShape.Primitive -> try {
-        when (shape.kind) {
-            VariantKind.Any, VariantKind.String -> Variant.String(this)
-            VariantKind.Boolean -> Variant.Boolean(toBooleanStrict())
-            VariantKind.Byte -> Variant.Byte(toByte())
-            VariantKind.Short -> Variant.Short(toShort())
-            VariantKind.Int -> Variant.Int(toInt())
-            VariantKind.Long -> Variant.Long(toLong())
-            VariantKind.Float -> Variant.Float(toFloat())
-            VariantKind.Double -> Variant.Double(toDouble())
-            VariantKind.Char -> Variant.Char(single())
-            VariantKind.Identifier -> Variant.Identifier(id(this))
-            VariantKind.ResourceRef -> Variant.ResourceRef(ref<Resource>(this))
-            VariantKind.Null -> throw IllegalArgumentException("JSON object keys cannot be null")
-            VariantKind.List,
-            VariantKind.Map -> throw IllegalArgumentException(
-                "JSON object keys cannot be composite values"
-            )
-        }
-    } catch (exception: Exception) {
-        throw invalidJsonValue(
-            rootSchema,
-            path + this,
-            expectedDescriptor.id.toString(),
-            JsonPrimitive(this),
-            expectedDescriptor.valueDomain,
-            exception
-        )
-    }
-    SerializerShape.Opaque -> Variant.String(this)
-    else -> throw invalidJsonValue(
-        rootSchema,
-        path + this,
-        expectedDescriptor.id.toString(),
-        JsonPrimitive(this),
-        expectedDescriptor.valueDomain
-    )
 }
 
 private fun invalidJsonValue(

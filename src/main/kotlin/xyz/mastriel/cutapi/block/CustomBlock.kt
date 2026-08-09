@@ -69,7 +69,7 @@ public class CustomBlock<T : CuTPlacedBlock>(
         init {
             register(Unknown)
 
-            addHook(HookPriority.FIRST) {
+            addHook(HookPriority.First) {
                 CustomTile.register(item)
             }
         }
@@ -109,7 +109,7 @@ public class CustomTileEntity<T : CuTPlacedTileEntity>(
         init {
             register(Unknown)
 
-            addHook(HookPriority.FIRST) {
+            addHook(HookPriority.First) {
                 CustomTile.register(item)
             }
         }

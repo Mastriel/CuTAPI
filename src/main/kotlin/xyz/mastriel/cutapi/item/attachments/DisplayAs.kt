@@ -1,26 +1,49 @@
+@file:Suppress("UnstableApiUsage")
+
 package xyz.mastriel.cutapi.item.attachments
 
-import org.bukkit.*
-import xyz.mastriel.cutapi.*
-import xyz.mastriel.cutapi.attachment.*
-import xyz.mastriel.cutapi.data.*
-import xyz.mastriel.cutapi.item.*
-import xyz.mastriel.cutapi.registry.*
+import org.bukkit.NamespacedKey
+import org.bukkit.Registry
+import org.bukkit.inventory.ItemType
+import xyz.mastriel.cutapi.Plugin
+import xyz.mastriel.cutapi.attachment.ItemAttachment
+import xyz.mastriel.cutapi.data.Schema
+import xyz.mastriel.cutapi.data.VariantSerializer
+import xyz.mastriel.cutapi.data.schema
+import xyz.mastriel.cutapi.item.ItemRenderContext
+import xyz.mastriel.cutapi.item.ItemSystem
+import xyz.mastriel.cutapi.item.CustomItem
+import xyz.mastriel.cutapi.item.attachmentItemSystem
+import xyz.mastriel.cutapi.registry.id
+import xyz.mastriel.cutapi.registry.toIdentifier
 
-/**
- * Makes a custom item display as this material. This is purely client sided (except when
- * the holder is in creative mode, as creative mode enables client-sided changes like this
- * to occur without the server arguing)
- */
-public data class DisplayAs(public val material: Material) : ItemAttachment {
+/** Explicitly changes only the vanilla item type used for a rendered client copy. */
+public data class DisplayAs(public val itemType: ItemType) : ItemAttachment {
+    init {
+        require(
+            itemType.key.namespace == NamespacedKey.MINECRAFT &&
+                CustomItem.getOrNull(itemType.key.toIdentifier()) == null &&
+                itemType.asMaterial() != null
+        ) { "DisplayAs requires a vanilla ItemType: ${itemType.key}" }
+    }
+
     public companion object : Schema<DisplayAs> by schema(id(Plugin, "display_as"), {
-        property(DisplayAs::material, VariantSerializer.Enum<Material>())
+        property(DisplayAs::itemType, ItemTypeSerializer, name = "item_type")
     })
 }
 
-internal object DisplayAsSystem : ItemSystem by attachmentItemSystem(DisplayAs) {
+private val ItemTypeSerializer = VariantSerializer.mapped(
+    serializer = VariantSerializer.String,
+    serialize = { type: ItemType -> type.key.toString() },
+    deserialize = { value ->
+        val key = NamespacedKey.fromString(value) ?: error("Invalid ItemType key: $value")
+        Registry.ITEM.get(key) ?: error("Unknown ItemType: $value")
+    },
+)
 
+internal object DisplayAsSystem : ItemSystem by attachmentItemSystem(DisplayAs) {
     override fun onRender(context: ItemRenderContext) {
-        context.item.handle.type = context.attachment(DisplayAs).material
+        context.item.handle.type = context.attachment(DisplayAs).itemType.asMaterial()
+            ?: error("DisplayAs requires a vanilla ItemType.")
     }
 }

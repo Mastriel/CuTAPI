@@ -18,9 +18,9 @@ class SchemaTest : MockBukkitTest() {
         assertEquals(
             Variant.Map(
                 linkedMapOf(
-                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to Variant.String("cutapi:my_data"),
-                    Variant.String("name") to Variant.String("Ada"),
-                    Variant.String("age") to Variant.Int(37)
+                    SCHEMA_TYPE_DISCRIMINATOR to Variant.String("cutapi:my_data"),
+                    "name" to Variant.String("Ada"),
+                    "age" to Variant.Int(37)
                 )
             ),
             variant
@@ -76,8 +76,8 @@ class SchemaTest : MockBukkitTest() {
     @Test
     fun `variant serializers cover every variant type`() {
         val listValue = listOf(Variant.String("nested"), Variant.Int(3))
-        val mapValue = linkedMapOf<Variant, Variant>(
-            Variant.String("key") to Variant.Boolean(true)
+        val mapValue = linkedMapOf<String, Variant>(
+            "key" to Variant.Boolean(true)
         )
         val idValue = id("cutapi:variant_identifier")
         val refValue = ref<Resource>(VariantTestResourceRoot, "textures/widget.png")
@@ -109,12 +109,21 @@ class SchemaTest : MockBukkitTest() {
     }
 
     @Test
+    fun `variant maps reject non-string keys`() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            Variant.uncheckedFrom(mapOf(1 to "value"))
+        }
+
+        assertContains(error.message.orEmpty(), "Variant map keys must be strings")
+    }
+
+    @Test
     fun `schema failures identify the property`() {
         val invalid = Variant.Map(
             mapOf(
-                Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to Variant.String("cutapi:my_data"),
-                Variant.String("name") to Variant.String("Ada"),
-                Variant.String("age") to Variant.String("not an int")
+                SCHEMA_TYPE_DISCRIMINATOR to Variant.String("cutapi:my_data"),
+                "name" to Variant.String("Ada"),
+                "age" to Variant.String("not an int")
             )
         )
 
@@ -129,7 +138,7 @@ class SchemaTest : MockBukkitTest() {
         val variant = UntaggedData.serialize(value).getOrThrow()
 
         assertEquals(
-            Variant.Map(mapOf(Variant.String("value") to Variant.String("quiet"))),
+            Variant.Map(mapOf("value" to Variant.String("quiet"))),
             variant
         )
         assertTrue(UntaggedData.untagged)
@@ -147,7 +156,7 @@ class SchemaTest : MockBukkitTest() {
         val variant = SingletonData.serialize(SingletonData).getOrThrow()
 
         assertEquals(
-            Variant.Map(mapOf(Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to Variant.String("cutapi:singleton_data"))),
+            Variant.Map(mapOf(SCHEMA_TYPE_DISCRIMINATOR to Variant.String("cutapi:singleton_data"))),
             variant
         )
         assertSame(SingletonData, SingletonData.deserialize(variant).getOrThrow())
@@ -177,8 +186,8 @@ class SchemaTest : MockBukkitTest() {
         assertEquals(
             Variant.Map(
                 linkedMapOf(
-                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to Variant.String("cutapi:accessor_backed_data"),
-                    Variant.String("value") to Variant.Int(13)
+                    SCHEMA_TYPE_DISCRIMINATOR to Variant.String("cutapi:accessor_backed_data"),
+                    "value" to Variant.Int(13)
                 )
             ),
             variant
@@ -214,9 +223,9 @@ class SchemaTest : MockBukkitTest() {
         assertEquals(
             Variant.Map(
                 linkedMapOf(
-                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to Variant.String("cutapi:extended_data"),
-                    Variant.String("data") to Variant.Int(42),
-                    Variant.String("extraData") to Variant.String("leaf")
+                    SCHEMA_TYPE_DISCRIMINATOR to Variant.String("cutapi:extended_data"),
+                    "data" to Variant.Int(42),
+                    "extraData" to Variant.String("leaf")
                 )
             ),
             variant
@@ -248,9 +257,9 @@ class SchemaTest : MockBukkitTest() {
         assertEquals(
             Variant.Map(
                 linkedMapOf(
-                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to Variant.String("cutapi:late_included_data"),
-                    Variant.String("baseData") to Variant.Int(5),
-                    Variant.String("extraData") to Variant.String("late")
+                    SCHEMA_TYPE_DISCRIMINATOR to Variant.String("cutapi:late_included_data"),
+                    "baseData" to Variant.Int(5),
+                    "extraData" to Variant.String("late")
                 )
             ),
             variant
@@ -270,10 +279,10 @@ class SchemaTest : MockBukkitTest() {
         assertEquals(
             Variant.Map(
                 linkedMapOf(
-                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to Variant.String("cutapi:multi_parent_data"),
-                    Variant.String("firstData") to Variant.Int(7),
-                    Variant.String("secondData") to Variant.String("branch"),
-                    Variant.String("ownData") to Variant.Boolean(true)
+                    SCHEMA_TYPE_DISCRIMINATOR to Variant.String("cutapi:multi_parent_data"),
+                    "firstData" to Variant.Int(7),
+                    "secondData" to Variant.String("branch"),
+                    "ownData" to Variant.Boolean(true)
                 )
             ),
             variant
@@ -295,10 +304,10 @@ class SchemaTest : MockBukkitTest() {
         assertEquals(
             Variant.Map(
                 linkedMapOf(
-                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to
+                    SCHEMA_TYPE_DISCRIMINATOR to
                         Variant.String("cutapi:excluded_schema_child"),
-                    Variant.String("retainedData") to Variant.Boolean(true),
-                    Variant.String("ownData") to Variant.String("child")
+                    "retainedData" to Variant.Boolean(true),
+                    "ownData" to Variant.String("child")
                 )
             ),
             variant
@@ -318,9 +327,9 @@ class SchemaTest : MockBukkitTest() {
         assertEquals(
             Variant.Map(
                 linkedMapOf(
-                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to
+                    SCHEMA_TYPE_DISCRIMINATOR to
                         Variant.String("cutapi:my_child_data"),
-                    Variant.String("isAwesome") to Variant.Boolean(true)
+                    "isAwesome" to Variant.Boolean(true)
                 )
             ),
             variant
@@ -410,8 +419,8 @@ class SchemaTest : MockBukkitTest() {
         assertEquals(VariantKind.String.id.toString(), error.expected)
         assertEquals(""""THIRD"""", error.found)
         val entries = assertIs<SerializerValueDomain.Enum>(error.availableEntries)
-        assertEquals(listOf("FIRST", "SECOND"), entries.values)
-        assertContains(error.message.orEmpty(), "Available Entries: { FIRST, SECOND }")
+        assertEquals(listOf("First", "Second"), entries.values)
+        assertContains(error.message.orEmpty(), "Available Entries: { First, Second }")
     }
 
     @Test
@@ -424,7 +433,7 @@ class SchemaTest : MockBukkitTest() {
         val entries = assertIs<SerializerValueDomain.Enum>(error.availableEntries)
         assertEquals(11, entries.values.size)
         assertContains(error.message.orEmpty(), "Available Entries: { ... }")
-        assertFalse(error.message.orEmpty().contains("ELEVEN"))
+        assertFalse(error.message.orEmpty().contains("Eleven"))
     }
 
     @Test
@@ -656,8 +665,8 @@ private data class JsonAttachment(
 }
 
 private enum class JsonMode {
-    FIRST,
-    SECOND
+    First,
+    Second
 }
 
 private data class JsonEnumAttachment(val mode: JsonMode) {
@@ -667,17 +676,17 @@ private data class JsonEnumAttachment(val mode: JsonMode) {
 }
 
 private enum class JsonLongMode {
-    ONE,
-    TWO,
-    THREE,
-    FOUR,
-    FIVE,
-    SIX,
-    SEVEN,
-    EIGHT,
-    NINE,
-    TEN,
-    ELEVEN
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    Eleven
 }
 
 private data class JsonLongEnumAttachment(val mode: JsonLongMode) {

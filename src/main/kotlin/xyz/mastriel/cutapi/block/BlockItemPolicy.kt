@@ -31,8 +31,12 @@ public sealed class BlockItemPolicy {
                 is BlockStrategy.Vanilla -> strategy.material
                 else -> Material.STONE
             }
-            if (descriptor != null) return customItem(customTile.id / "item", material, descriptor)
-            return customItem(customTile.id / "item", material) {
+            val backingItem = material.asItemType()
+                ?: error("Block material $material cannot back an item.")
+            if (descriptor != null) {
+                return customItemFromDescriptor(customTile.id / "item", backingItem) { descriptor }
+            }
+            return customItem(customTile.id / "item", backingItem) {
                 attach(BlockPlaceAttachment(customTile))
 
                 display {

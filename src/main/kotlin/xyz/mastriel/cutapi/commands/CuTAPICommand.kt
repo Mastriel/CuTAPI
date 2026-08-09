@@ -31,11 +31,14 @@ public fun createRfsChatComponent(includeMinecraft: Boolean): Component {
 
     fun addFolder(folder: FolderRef) {
         folder.getChildren().forEach { ref ->
-            fun createSpaces(count: Int) = "&8- ".repeat(count)
+            fun createSpaces(count: Int) = "&${CatMocha.Overlay1}- ".repeat(count)
             when (ref) {
                 is FolderRef -> {
                     val spaceCount = ref.pathList.size
-                    components += "${createSpaces(spaceCount)}&e${ref.pathList.last()}/".colored
+                    components += (
+                        "${createSpaces(spaceCount)}&${CatMocha.Yellow}" +
+                            "${ref.pathList.last()}/"
+                        ).colored
                     addFolder(ref)
                 }
 
@@ -47,7 +50,8 @@ public fun createRfsChatComponent(includeMinecraft: Boolean): Component {
                     val spaceCount = ref.pathList.size
 
                     if (resource == null) {
-                        components += "${createSpaces(spaceCount)}&c$path".colored
+                        components +=
+                            "${createSpaces(spaceCount)}&${CatMocha.Red}$path".colored
                         return@forEach
                     }
 
@@ -55,13 +59,15 @@ public fun createRfsChatComponent(includeMinecraft: Boolean): Component {
                         return@forEach
                     }
 
-                    components += "${createSpaces(spaceCount)}&a${ref.name}".colored
-                        .hoverEvent(createInspectionHover(resource))
+                    components +=
+                        "${createSpaces(spaceCount)}&${CatMocha.Green}${ref.name}".colored
+                            .hoverEvent(createInspectionHover(resource))
 
                     for (subresource in resource.subResources) {
                         val subPath = subresource.ref.toString().split("#", limit = 2).last()
-                        components += "${createSpaces(spaceCount + 1)}&2#${subPath}".colored
-                            .hoverEvent(createInspectionHover(subresource))
+                        components +=
+                            "${createSpaces(spaceCount + 1)}&${CatMocha.Teal}#$subPath".colored
+                                .hoverEvent(createInspectionHover(subresource))
                     }
                 }
             }
@@ -73,7 +79,7 @@ public fun createRfsChatComponent(includeMinecraft: Boolean): Component {
         .forEach {
             if (!includeMinecraft && it.root == MinecraftAssets) return@forEach
 
-            components += "&e${it}".colored
+            components += "&${CatMocha.Mauve}$it".colored
             addFolder(it)
         }
 
@@ -89,6 +95,6 @@ public fun createInspectionHover(resource: Resource): Component {
             append(it.getInspectionComponent())
         }
         appendNewline()
-        append("&8Left Click to Inspect".colored)
+        append("&${CatMocha.Overlay1}Left Click to Inspect".colored)
     }
 }

@@ -72,6 +72,10 @@ dependencies {
     shadow("net.lingala.zip4j:zip4j:2.11.5")
     shadow("com.jhlabs:filters:2.0.235-1")
 
+    // Used to install the item codec bridge before players can connect.
+    shadow("net.bytebuddy:byte-buddy:1.17.8")
+    shadow("net.bytebuddy:byte-buddy-agent:1.17.8")
+
     paperweight.paperDevBundle("${minecraftVersion}-R0.1-SNAPSHOT")
 }
 
@@ -100,6 +104,8 @@ tasks.withType<ShadowJar> {
     manifest {
         attributes["paperweight-mappings-namespace"] = "mojang"
     }
+
+    relocate("net.bytebuddy", "xyz.mastriel.cutapi.libs.bytebuddy")
 }
 
 

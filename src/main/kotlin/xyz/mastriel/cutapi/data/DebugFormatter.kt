@@ -62,12 +62,12 @@ public fun interface DebugFormatter<T> {
             return registered ?: register(formatter)
         }
 
-        public val IdentifierColor: Color = Color.of(0xffa29e)
-        public val NumberColor: Color = Color.of(0xffc477)
-        public val TrueColor: Color = Color.of(0x94ffa2)
-        public val FalseColor: Color = Color.of(0xff666e)
-        public val EnumColor: Color = Color.of(0xaafaff)
-        public val ResourceRefColor: Color = Color.of(0xffd4fe)
+        public val IdentifierColor: Color = CatMocha.Yellow
+        public val NumberColor: Color = CatMocha.Peach
+        public val TrueColor: Color = CatMocha.Green
+        public val FalseColor: Color = CatMocha.Red
+        public val EnumColor: Color = CatMocha.Sky
+        public val ResourceRefColor: Color = CatMocha.Yellow
     }
 }
 

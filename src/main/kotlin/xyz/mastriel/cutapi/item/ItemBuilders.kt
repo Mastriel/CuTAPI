@@ -1,125 +1,102 @@
+@file:Suppress("UnstableApiUsage")
+
 package xyz.mastriel.cutapi.item
 
-import net.kyori.adventure.text.*
-import org.bukkit.*
-import xyz.mastriel.cutapi.attachment.*
-import xyz.mastriel.cutapi.registry.*
-import xyz.mastriel.cutapi.utils.personalized.*
-import kotlin.reflect.*
+import net.kyori.adventure.text.Component
+import org.bukkit.inventory.ItemType
+import xyz.mastriel.cutapi.attachment.ItemAttachment
+import xyz.mastriel.cutapi.registry.Deferred
+import xyz.mastriel.cutapi.registry.DeferredRegistry
+import xyz.mastriel.cutapi.registry.Identifier
+import xyz.mastriel.cutapi.utils.personalized.PersonalizedWithDefault
+import xyz.mastriel.cutapi.utils.personalized.withViewer
+import kotlin.reflect.KClass
 
-
+/** Creates a fully configured item before it is handed to the identifier registry. */
 public fun customItem(
     id: Identifier,
-    bukkitMaterial: Material,
-    block: (ItemDescriptorBuilder.() -> Unit)?
-): CustomItem<CuTItemStack> {
-    if (block == null) return CustomItem(id, bukkitMaterial, CuTItemStack::class, defaultItemDescriptor())
-    val descriptor = ItemDescriptorBuilder().apply(block).build()
+    backingItem: ItemType,
+    configure: ItemDescriptorBuilder.() -> Unit = {},
+): CustomItem<CuTItemStack> =
+    CustomItem(id, backingItem, CuTItemStack::class, ItemDescriptorBuilder().apply(configure).build())
 
-    return CustomItem(id, bukkitMaterial, CuTItemStack::class, descriptor)
-}
-
-public fun customItem(
+/** Producer-based variant for callers that already construct an [ItemDescriptor]. */
+public fun customItemFromDescriptor(
     id: Identifier,
-    bukkitMaterial: Material,
-    descriptor: ItemDescriptor
-): CustomItem<CuTItemStack> {
-    return CustomItem(id, bukkitMaterial, CuTItemStack::class, descriptor)
-}
+    backingItem: ItemType,
+    descriptor: () -> ItemDescriptor = ::defaultItemDescriptor,
+): CustomItem<CuTItemStack> = CustomItem(id, backingItem, CuTItemStack::class, descriptor())
 
 @JvmName("customItemWithStackType")
 public inline fun <reified T : CuTItemStack> customItem(
     id: Identifier,
-    bukkitMaterial: Material,
-    noinline block: (ItemDescriptorBuilder.() -> Unit)?
-): CustomItem<T> {
-    if (block == null) return CustomItem(id, bukkitMaterial, T::class, defaultItemDescriptor())
-    val descriptor = ItemDescriptorBuilder().apply(block).build()
+    backingItem: ItemType,
+    noinline configure: ItemDescriptorBuilder.() -> Unit = {},
+): CustomItem<T> =
+    CustomItem(id, backingItem, T::class, ItemDescriptorBuilder().apply(configure).build())
 
-    return CustomItem(id, bukkitMaterial, T::class, descriptor)
-}
+@JvmName("customItemFromDescriptorWithStackType")
+public inline fun <reified T : CuTItemStack> customItemFromDescriptor(
+    id: Identifier,
+    backingItem: ItemType,
+    noinline descriptor: () -> ItemDescriptor = ::defaultItemDescriptor,
+): CustomItem<T> = CustomItem(id, backingItem, T::class, descriptor())
 
-@JvmName("customItemWithStackType")
 public fun <T : CuTItemStack> typedCustomItem(
     id: Identifier,
-    bukkitMaterial: Material,
+    backingItem: ItemType,
     itemStackClass: KClass<T>,
-    block: (ItemDescriptorBuilder.() -> Unit)?
-): CustomItem<T> {
-    if (block == null) return CustomItem(id, bukkitMaterial, itemStackClass, defaultItemDescriptor())
-    val descriptor = ItemDescriptorBuilder().apply(block).build()
+    configure: ItemDescriptorBuilder.() -> Unit = {},
+): CustomItem<T> =
+    CustomItem(id, backingItem, itemStackClass, ItemDescriptorBuilder().apply(configure).build())
 
-    return CustomItem(id, bukkitMaterial, itemStackClass, descriptor)
-}
+public fun <T : CuTItemStack> typedCustomItemFromDescriptor(
+    id: Identifier,
+    backingItem: ItemType,
+    itemStackClass: KClass<T>,
+    descriptor: () -> ItemDescriptor = ::defaultItemDescriptor,
+): CustomItem<T> = CustomItem(id, backingItem, itemStackClass, descriptor())
 
 @JvmName("registerCustomItemWithStackType")
 public inline fun <reified T : CuTItemStack> DeferredRegistry<CustomItem<*>>.registerCustomItem(
     id: Identifier,
-    bukkitMaterial: Material,
-    noinline block: (ItemDescriptorBuilder.() -> Unit)?
-): Deferred<CustomItem<T>> {
-    @Suppress("UNCHECKED_CAST")
-    return register { customItem<T>(id, bukkitMaterial, block) }
+    backingItem: ItemType,
+    noinline configure: ItemDescriptorBuilder.() -> Unit = {},
+): Deferred<CustomItem<T>> = register { customItem<T>(id, backingItem, configure) }
+
+@JvmName("registerCustomItemFromDescriptorWithStackType")
+public inline fun <reified T : CuTItemStack> DeferredRegistry<CustomItem<*>>.registerCustomItemFromDescriptor(
+    id: Identifier,
+    backingItem: ItemType,
+    noinline descriptor: () -> ItemDescriptor = ::defaultItemDescriptor,
+): Deferred<CustomItem<T>> = register { customItemFromDescriptor<T>(id, backingItem, descriptor) }
+
+public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
+    id: Identifier,
+    backingItem: ItemType,
+    configure: ItemDescriptorBuilder.() -> Unit = {},
+): Deferred<CustomItem<CuTItemStack>> = register { customItem(id, backingItem, configure) }
+
+public fun DeferredRegistry<CustomItem<*>>.registerCustomItemFromDescriptor(
+    id: Identifier,
+    backingItem: ItemType,
+    descriptor: () -> ItemDescriptor = ::defaultItemDescriptor,
+): Deferred<CustomItem<CuTItemStack>> = register { customItemFromDescriptor(id, backingItem, descriptor) }
+
+public fun customItem(
+    id: Identifier,
+    backingItem: ItemType,
+    name: PersonalizedWithDefault<Component>,
+): CustomItem<CuTItemStack> = customItem(id, backingItem) {
+    display { this.name = name.withViewer(viewer) }
 }
 
 public fun customItem(
     id: Identifier,
-    bukkitMaterial: Material,
-    name: PersonalizedWithDefault<Component>
-): CustomItem<CuTItemStack> {
-    return customItem(id, bukkitMaterial) {
-        display {
-            this.name = name.withViewer(viewer)
-        }
-    }
-}
-
-public fun customItem(
-    id: Identifier,
-    bukkitMaterial: Material,
+    backingItem: ItemType,
     name: PersonalizedWithDefault<Component>,
-    attachments: Collection<ItemAttachment>
-): CustomItem<CuTItemStack> {
-    return customItem(id, bukkitMaterial) {
-        attach(attachments)
-
-        display {
-            this.name = name.withViewer(viewer)
-        }
-    }
-}
-
-public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
-    id: Identifier,
-    bukkitMaterial: Material,
-    block: ItemDescriptorBuilder.() -> Unit
-): Deferred<CustomItem<CuTItemStack>> {
-    return register { customItem(id, bukkitMaterial, block) }
-}
-
-public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
-    id: Identifier,
-    bukkitMaterial: Material,
-    descriptor: ItemDescriptor
-): Deferred<CustomItem<CuTItemStack>> {
-    return register { customItem(id, bukkitMaterial, descriptor) }
-}
-
-public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
-    id: Identifier,
-    bukkitMaterial: Material,
-    name: PersonalizedWithDefault<Component>
-): Deferred<CustomItem<CuTItemStack>> {
-    return register { customItem(id, bukkitMaterial, name) }
-}
-
-
-public fun DeferredRegistry<CustomItem<*>>.registerCustomItem(
-    id: Identifier,
-    bukkitMaterial: Material,
-    name: PersonalizedWithDefault<Component>,
-    attachments: Collection<ItemAttachment>
-): Deferred<CustomItem<CuTItemStack>> {
-    val customItem = customItem(id, bukkitMaterial, name, attachments)
-    return register { customItem }
+    attachments: Collection<ItemAttachment>,
+): CustomItem<CuTItemStack> = customItem(id, backingItem) {
+    attach(attachments)
+    display { this.name = name.withViewer(viewer) }
 }

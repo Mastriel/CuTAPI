@@ -7,10 +7,10 @@ import xyz.mastriel.cutapi.registry.*
 
 public class CustomSmithingTableRecipe(
     override val id: Identifier,
-    public val template: AgnosticMaterial,
-    public val base: AgnosticMaterial,
-    public val addition: AgnosticMaterial,
-    public val result: AgnosticItemStack
+    public val template: ItemIdentity,
+    public val base: ItemIdentity,
+    public val addition: ItemIdentity,
+    public val result: CuTItemStack
 ) : Identifiable {
 
     public companion object :
@@ -21,9 +21,9 @@ public class CustomSmithingTableRecipe(
                 val recipe = SmithingTransformRecipe(
                     id.toNamespacedKey(),
                     result.vanilla(),
-                    RecipeChoice.itemType(template.expectedVanillaMaterial.asItemType()!!),
-                    RecipeChoice.itemType(base.expectedVanillaMaterial.asItemType()!!),
-                    RecipeChoice.itemType(addition.expectedVanillaMaterial.asItemType()!!),
+                    RecipeChoice.itemType(template.backingItem),
+                    RecipeChoice.itemType(base.backingItem),
+                    RecipeChoice.itemType(addition.backingItem),
                 )
                 Bukkit.addRecipe(recipe)
             }

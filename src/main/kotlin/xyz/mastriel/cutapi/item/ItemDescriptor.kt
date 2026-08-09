@@ -184,7 +184,9 @@ public fun itemModel(stringPath: String, showSwapAnimation: Boolean = true): Ite
 @ItemDescriptorDsl
 public open class ItemDisplayBuilder(public val itemStack: CuTItemStack, public val viewer: Player?) {
 
-    public val type: CustomItem<*> get() = itemStack.type
+    public val type: CustomItem<*>
+        get() = itemStack.customItem
+            ?: error("ItemDisplayBuilder.type is only available while rendering a custom item.")
 
     private val lines = mutableListOf<Component>()
     public var name: Component? = null

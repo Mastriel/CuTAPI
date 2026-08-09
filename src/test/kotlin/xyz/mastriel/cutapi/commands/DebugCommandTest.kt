@@ -16,7 +16,7 @@ import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.testing.*
-import xyz.mastriel.cutapi.utils.colored
+import xyz.mastriel.cutapi.utils.*
 import kotlin.test.*
 
 public class DebugCommandTest : MockBukkitTest() {
@@ -74,9 +74,11 @@ public class DebugCommandTest : MockBukkitTest() {
             .child("helditem")
             .child("set")
             .child("id")
+
         @Suppress("UNCHECKED_CAST")
         val playerType =
             assertIs<ArgumentCommandNode<CommandSourceStack, *>>(playerIdNode).type as ArgumentType<Schema<*>>
+
         @Suppress("UNCHECKED_CAST")
         val itemType =
             assertIs<ArgumentCommandNode<CommandSourceStack, *>>(itemIdNode).type as ArgumentType<Schema<*>>
@@ -269,7 +271,7 @@ public class DebugCommandTest : MockBukkitTest() {
             suppressed = true
         )
         val redText = component.textSegments()
-            .filter { it.color == NamedTextColor.RED }
+            .filter { it.color == CatMocha.Red.textColor }
             .joinToString(separator = "") { it.text }
 
         assertTrue("❌" in redText)
@@ -286,13 +288,15 @@ public class DebugCommandTest : MockBukkitTest() {
         ).attachmentErrorComponent()
         val segments = component.textSegments()
 
-        assertTrue(segments.any { it.text == "Invalid attachment value." && it.color == NamedTextColor.RED })
-        assertTrue(segments.any { it.text == "Expected: " && it.color == NamedTextColor.RED })
-        assertTrue(segments.any { it.text == "integer" && it.color == NamedTextColor.YELLOW })
-        assertTrue(segments.any { it.text == "Found: " && it.color == NamedTextColor.RED })
-        assertTrue(segments.any { it.text == """"four"""" && it.color == NamedTextColor.YELLOW })
-        assertTrue(segments.any { it.text == "Available Entries: " && it.color == NamedTextColor.RED })
-        assertTrue(segments.any { it.text == "{ one, two }" && it.color == NamedTextColor.YELLOW })
+        val errorColor = CatMocha.Red.textColor
+        val valueColor = CatMocha.Yellow.textColor
+        assertTrue(segments.any { it.text == "Invalid attachment value." && it.color == errorColor })
+        assertTrue(segments.any { it.text == "Expected: " && it.color == errorColor })
+        assertTrue(segments.any { it.text == "integer" && it.color == valueColor })
+        assertTrue(segments.any { it.text == "Found: " && it.color == errorColor })
+        assertTrue(segments.any { it.text == """"four"""" && it.color == valueColor })
+        assertTrue(segments.any { it.text == "Available Entries: " && it.color == errorColor })
+        assertTrue(segments.any { it.text == "{ one, two }" && it.color == valueColor })
     }
 
     @Test
@@ -313,7 +317,7 @@ public class DebugCommandTest : MockBukkitTest() {
         assertEquals(ClickEvent.runCommand("/inspectenum ${entries.key}"), clickable.clickEvent())
         assertTrue(
             clickable.textSegments().any {
-                it.text == "{ ... }" && it.color == NamedTextColor.GRAY
+                it.text == "{ ... }" && it.color == CatMocha.Overlay1.textColor
             }
         )
     }
@@ -333,7 +337,7 @@ public class DebugCommandTest : MockBukkitTest() {
         assertEquals(ClickEvent.runCommand("/inspectregistry $registryId"), clickable.clickEvent())
         assertTrue(
             clickable.textSegments().any {
-                it.text == "{ ... }" && it.color == NamedTextColor.GRAY
+                it.text == "{ ... }" && it.color == CatMocha.Overlay1.textColor
             }
         )
     }
@@ -362,17 +366,17 @@ private fun Component.plainText(): String =
     textSegments().joinToString(separator = "") { it.text }
 
 private enum class CommandLongEnum {
-    ONE,
-    TWO,
-    THREE,
-    FOUR,
-    FIVE,
-    SIX,
-    SEVEN,
-    EIGHT,
-    NINE,
-    TEN,
-    ELEVEN
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    Eleven
 }
 
 private data class CommandItemAttachment(val value: String) : ItemAttachment {

@@ -17,6 +17,18 @@ public class IdentifierRegistryTest : MockBukkitTest() {
             IdentifierRegistry.AllRegistries.get(id("cutapi:registries"))
         )
     }
+
+    @Test
+    public fun `deferred contributions cannot commit after registry closure`() {
+        val registry = IdentifierRegistry<TestValue>(id("test:registry/closed"))
+        val deferred = registry.defer()
+        deferred.register { TestValue(id("test:late")) }
+        registry.initialize()
+
+        assertFailsWith<IllegalStateException> {
+            deferred.commitToRegistry()
+        }
+    }
 }
 
 private data class TestValue(override val id: Identifier) : Identifiable

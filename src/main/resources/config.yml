@@ -42,6 +42,15 @@ pack-description: "CuTAPI Generated Resource Pack"
 # Default: auto
 pack-version: auto
 
+# The formatter used for item origins (the tag in item lores which show where they come from). {} represents the name
+# of the data source it came from. Set to "$DISABLE" to disable item origins from appearing.
+#
+# {small} represents the name of the item's data source written in sᴍᴀʟʟ ᴄᴀᴘs.
+#
+# Type: string
+# Default: &9{}
+item-origin-formatter: "&9{}"
+
 uploader:
   # The port for the internal server (if that's the uploader being used). You may need
   # to port-forward this port to make the server work

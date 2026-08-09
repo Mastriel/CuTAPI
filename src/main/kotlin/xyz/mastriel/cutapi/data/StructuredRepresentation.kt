@@ -260,9 +260,9 @@ private fun <R : Any> encodeStructuredRepresentation(
     properties: List<StructuredProperty<R, *>>,
     parents: List<InheritedStructuredRepresentation<R>>
 ): Variant.Map {
-    val encoded = linkedMapOf<Variant, Variant>()
+    val encoded = linkedMapOf<String, Variant>()
     if (tagged) {
-        encoded[Variant.String(SCHEMA_TYPE_DISCRIMINATOR)] = Variant.String(id.toString())
+        encoded[SCHEMA_TYPE_DISCRIMINATOR] = Variant.String(id.toString())
     }
 
     for (parent in parents) {
@@ -277,7 +277,7 @@ private fun <R : Any> encodeStructuredRepresentation(
         parentValues.remove(SCHEMA_TYPE_DISCRIMINATOR)
         parent.excludedNames.forEach(parentValues::remove)
         for ((name, parentValue) in parentValues) {
-            require(encoded.put(Variant.String(name), parentValue) == null) {
+            require(encoded.put(name, parentValue) == null) {
                 "Inherited property '$name' is declared more than once for ${type.qualifiedName}"
             }
         }
@@ -292,7 +292,7 @@ private fun <R : Any> encodeStructuredRepresentation(
                 result.error
             )
         }
-        require(encoded.put(Variant.String(property.name), propertyValue) == null) {
+        require(encoded.put(property.name, propertyValue) == null) {
             "Property '${property.name}' is already inherited by ${type.qualifiedName}"
         }
     }

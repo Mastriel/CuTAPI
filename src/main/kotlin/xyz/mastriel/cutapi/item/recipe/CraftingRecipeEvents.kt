@@ -35,7 +35,7 @@ internal class CraftingRecipeEvents : Listener {
             for ((i, item) in e.inventory.matrix.withIndex()) {
                 if (item == null) continue
                 val ingredient = ingredientsRemaining.find {
-                    it.itemRequirement.withEntity(item.toAgnostic()) && item.amount >= it.quantity && item.type == it.material
+                    it.itemRequirement.withEntity(CuTItemStack.wrap(item)) && item.amount >= it.quantity && item.type == it.material
                 }
 
 
@@ -76,7 +76,7 @@ internal class CraftingRecipeEvents : Listener {
         val item = inventory.matrix[index] ?: return
         item.amount -= quantity - 1
 
-        val context = IngredientCraftContext(item.toAgnostic()).apply(onCraft)
+        val context = IngredientCraftContext(CuTItemStack.wrap(item)).apply(onCraft)
 
 
         if (context.dontConsume) {
@@ -167,7 +167,7 @@ internal class CraftingRecipeEvents : Listener {
         for (item in inventory.matrix) {
             if (item == null) continue
             val ingredient = ingredientsRemaining.find {
-                it.itemRequirement.withEntity(item.toAgnostic())
+                it.itemRequirement.withEntity(CuTItemStack.wrap(item))
                     && item.amount >= it.quantity
                     && item.type == it.material
                     && shapelessIngredientWorks(it, item)
@@ -213,7 +213,7 @@ internal class CraftingRecipeEvents : Listener {
                     continue
                 }
                 val succeeds =
-                    ingredient.itemRequirement.withEntity(item.toAgnostic())
+                    ingredient.itemRequirement.withEntity(CuTItemStack.wrap(item))
                         && item.amount >= ingredient.quantity
                         && item.type == ingredient.material
                         && shapedIngredientWorks(ingredient, item)
@@ -299,9 +299,9 @@ internal class CraftingRecipeEvents : Listener {
         val customRecipe = CustomSmithingTableRecipe.getOrNull(recipe.key.toIdentifier()) ?: return
 
         if (
-            !customRecipe.template.matches(template) ||
-            !customRecipe.base.matches(base) ||
-            !customRecipe.addition.matches(addition)
+            !customRecipe.template.matches(CuTItemStack.wrap(template)) ||
+            !customRecipe.base.matches(CuTItemStack.wrap(base)) ||
+            !customRecipe.addition.matches(CuTItemStack.wrap(addition))
         ) {
             ev.inventory.result = null
             return

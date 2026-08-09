@@ -23,7 +23,7 @@ import kotlin.reflect.full.*
  */
 public sealed interface Attachment
 
-/** Passive data that can be attached to custom item types and item stacks. */
+/** Passive data that can be attached to vanilla or custom item identities and item stacks. */
 public interface ItemAttachment : Attachment
 
 /** Passive data that can be attached to players. */

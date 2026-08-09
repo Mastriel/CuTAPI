@@ -25,9 +25,9 @@ private fun BrigadierCommandExecutorContext.sendRegistryContents(
 ): BrigadierCommandReturn {
     val entries = registry.getAllValues().sortedBy { it.id.toString() }
     val lines = buildList {
-        add("&eRegistry ${registry.id} (${entries.size})".colored)
+        add("&${CatMocha.Mauve}Registry ${registry.id} (${entries.size})".colored)
         if (entries.isEmpty()) {
-            add("&7No entries.".colored)
+            add("&${CatMocha.Overlay1}No entries.".colored)
         } else {
             addAll(entries.map { it.debugEntryComponent() })
         }

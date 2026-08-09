@@ -4,6 +4,8 @@ import com.github.shynixn.mccoroutine.bukkit.*
 import kotlinx.coroutines.*
 import org.bukkit.scheduler.*
 import xyz.mastriel.cutapi.*
+import java.lang.reflect.InvocationTargetException
+import java.util.logging.Level
 import kotlin.reflect.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.*
@@ -72,7 +74,17 @@ public class PeriodicManager {
     private fun createBukkitTask(function: KFunction<Unit>, instance: Any, plugin: CuTPlugin, ticks: Int) {
         val runnable = object : BukkitRunnable() {
             override fun run() {
-                function.call(instance)
+                try {
+                    function.call(instance)
+                } catch (failure: Throwable) {
+                    cancel()
+                    val cause = (failure as? InvocationTargetException)?.targetException ?: failure
+                    plugin.plugin.logger.log(
+                        Level.SEVERE,
+                        "Periodic function ${function.name} failed and was cancelled.",
+                        cause,
+                    )
+                }
             }
         }
         val task = runnable.runTaskTimer(plugin.plugin, ticks.toLong(), ticks.toLong())

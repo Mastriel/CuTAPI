@@ -1,9 +1,11 @@
 package xyz.mastriel.cutapi.pdc.tags
 
+import org.bukkit.*
 import org.bukkit.persistence.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
+import java.nio.charset.*
 
 internal object VariantPdcCodec {
     private val TypeKey = id("cutapi:variant_type").toNamespacedKey()
@@ -79,10 +81,8 @@ internal object VariantPdcCodec {
 
             is Variant.Map -> {
                 container.setType(VariantKind.Map)
-                container.set(SizeKey, PersistentDataType.INTEGER, variant.value.size)
-                variant.value.entries.forEachIndexed { index, (key, value) ->
-                    container.set(mapKey(index, "key"), PersistentDataType.TAG_CONTAINER, encode(context, key))
-                    container.set(mapKey(index, "value"), PersistentDataType.TAG_CONTAINER, encode(context, value))
+                for ((key, value) in variant.value) {
+                    container.set(mapKey(key), PersistentDataType.TAG_CONTAINER, encode(context, value))
                 }
             }
         }
@@ -128,12 +128,22 @@ internal object VariantPdcCodec {
             }
 
             typeOf(VariantKind.Map) -> {
-                val size = container.get(SizeKey, PersistentDataType.INTEGER) ?: 0
-                Variant.Map((0 until size).associate { index ->
-                    val key = decode(container.get(mapKey(index, "key"), PersistentDataType.TAG_CONTAINER)!!)
-                    val value = decode(container.get(mapKey(index, "value"), PersistentDataType.TAG_CONTAINER)!!)
-                    key to value
-                })
+                if (container.has(SizeKey)) {
+                    throw DataSerializationException(
+                        "Legacy indexed Variant maps must be migrated before they can be decoded"
+                    )
+                }
+                Variant.Map(
+                    container.keys
+                        .asSequence()
+                        .filter(::isMapKey)
+                        .sortedBy { it.key }
+                        .associateTo(linkedMapOf()) { key ->
+                            val value = container.get(key, PersistentDataType.TAG_CONTAINER)
+                                ?: throw DataSerializationException("Variant map entry '$key' is not a container")
+                            decodeMapKey(key) to decode(value)
+                        }
+                )
             }
 
             else -> throw DataSerializationException("Unsupported PDC variant type '$type'")
@@ -142,11 +152,41 @@ internal object VariantPdcCodec {
 
     private fun entryKey(index: Int) = id("cutapi:variant_entry/$index").toNamespacedKey()
 
-    private fun mapKey(index: Int, part: String) = id("cutapi:variant_entry/$index/$part").toNamespacedKey()
+    private fun mapKey(key: String) = id("cutapi:$MapEntryPrefix${key.encodeToHex()}").toNamespacedKey()
+
+    private fun isMapKey(key: NamespacedKey): Boolean =
+        key.namespace == "cutapi" && key.key.startsWith(MapEntryPrefix)
+
+    private fun decodeMapKey(key: NamespacedKey): String {
+        val encoded = key.key.removePrefix(MapEntryPrefix)
+        if (encoded.length % 2 != 0) {
+            throw DataSerializationException("Invalid Variant map key '$key'")
+        }
+        val bytes = ByteArray(encoded.length / 2) { index ->
+            encoded.substring(index * 2, index * 2 + 2).toIntOrNull(16)?.toByte()
+                ?: throw DataSerializationException("Invalid Variant map key '$key'")
+        }
+        return try {
+            bytes.decodeToString(throwOnInvalidSequence = true)
+        } catch (exception: CharacterCodingException) {
+            throw DataSerializationException("Invalid UTF-8 Variant map key '$key'", exception)
+        }
+    }
+
+    private fun String.encodeToHex(): String = buildString(length * 2) {
+        for (byte in this@encodeToHex.encodeToByteArray()) {
+            val unsigned = byte.toInt() and 0xff
+            append(HexDigits[unsigned ushr 4])
+            append(HexDigits[unsigned and 0x0f])
+        }
+    }
 
     private fun PersistentDataContainer.setType(kind: VariantKind) {
         set(TypeKey, PersistentDataType.STRING, typeOf(kind))
     }
 
     private fun typeOf(kind: VariantKind): String = kind.id.toString()
+
+    private const val MapEntryPrefix = "variant_map/"
+    private const val HexDigits = "0123456789abcdef"
 }

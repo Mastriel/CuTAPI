@@ -43,7 +43,7 @@ class SerializerDescriptorTest {
         val enumDescriptor = VariantSerializer.Enum<DescriptorMode>().descriptor
         assertEquals(VariantKind.String, assertIs<SerializerShape.Primitive>(enumDescriptor.shape).kind)
         val enumDomain = assertIs<SerializerValueDomain.Enum>(enumDescriptor.valueDomain)
-        assertEquals(listOf("FIRST", "SECOND"), enumDomain.values)
+        assertEquals(listOf("First", "Second"), enumDomain.values)
 
         val nullableSerializer = VariantSerializer.String.nullable()
         val nullable = nullableSerializer.descriptor
@@ -67,8 +67,25 @@ class SerializerDescriptorTest {
         assertEquals(VariantKind.List.id, anonymousList.id)
 
         val map = VariantSerializer.Map.descriptor
-        assertIs<SerializerShape.Map>(map.shape)
+        val mapShape = assertIs<SerializerShape.Map>(map.shape)
+        assertEquals(
+            VariantKind.Any,
+            assertIs<SerializerShape.Primitive>(mapShape.value.shape).kind
+        )
         assertEquals(VariantSerializer.Map.id, map.id)
+
+        val typedMap = VariantSerializer.MapOf(VariantSerializer.Int)
+        val typedMapShape = assertIs<SerializerShape.Map>(typedMap.descriptor.shape)
+        assertEquals(
+            VariantKind.Int,
+            assertIs<SerializerShape.Primitive>(typedMapShape.value.shape).kind
+        )
+        assertEquals(
+            mapOf("first" to 1, "second" to 2),
+            typedMap.deserialize(
+                typedMap.serialize(mapOf("first" to 1, "second" to 2)).getOrThrow()
+            ).getOrThrow()
+        )
 
         val mapped = VariantSerializer.mapped(
             VariantSerializer.String,
@@ -222,8 +239,8 @@ class SerializerDescriptorTest {
 }
 
 private enum class DescriptorMode {
-    FIRST,
-    SECOND
+    First,
+    Second
 }
 
 private data class DescriptorEntry(

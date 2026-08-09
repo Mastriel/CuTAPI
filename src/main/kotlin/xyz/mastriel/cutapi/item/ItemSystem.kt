@@ -10,6 +10,7 @@ import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.item.events.*
+import xyz.mastriel.cutapi.item.systems.*
 import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.system.*
@@ -22,9 +23,14 @@ public open class ItemSystemContext(public val item: CuTItemStack) {
         ItemAttachmentTagContainer(item.handle, schema.id)
 }
 
-public class ItemCreateContext(item: CuTItemStack) : ItemSystemContext(item)
-
-public class ItemRenderContext(item: CuTItemStack, public val viewer: Player?) : ItemSystemContext(item)
+public class ItemRenderContext(
+    item: CuTItemStack,
+    /**
+     * A copy of the stack before it's rendered. Changes made to this stack will not be reflected in the original stack.
+     */
+    public val prerenderStack: CuTItemStack,
+    public val viewer: Player?
+) : ItemSystemContext(item)
 
 public class ItemObtainContext(item: CuTItemStack, public val player: Player, public val event: CustomItemObtainEvent) :
     ItemSystemContext(item)
@@ -71,11 +77,10 @@ public class ItemHandTickContext(item: CuTItemStack, public val player: Player, 
 public class ItemEquippedTickContext(item: CuTItemStack, public val player: Player, public val slot: ArmorSlot) :
     ItemSystemContext(item)
 
-public enum class HandSlot { MAIN_HAND, OFF_HAND }
-public enum class ArmorSlot { HELMET, CHESTPLATE, LEGGINGS, BOOTS }
+public enum class HandSlot { MainHand, OffHand }
+public enum class ArmorSlot { Helmet, Chestplate, Leggings, Boots }
 
 public interface ItemSystem : CuTSystem<CuTItemStack> {
-    public fun onCreate(context: ItemCreateContext) {}
     public fun onRender(context: ItemRenderContext) {}
     public fun onObtain(context: ItemObtainContext) {}
     public fun onLeftClick(context: ItemInteractContext) {}
@@ -103,16 +108,8 @@ public interface ItemSystem : CuTSystem<CuTItemStack> {
             registerSystem(HideAttributesSystem)
             registerSystem(HideTooltipSystem)
             registerSystem(ShinySystem)
-            registerSystem(DurabilitySystem)
-            registerSystem(UnstackableSystem)
-            registerSystem(ModifyAttributeSystem)
-            registerSystem(EquipableSystem)
-            registerSystem(VanillaToolSystem)
             registerSystem(BlockPlaceSystem)
-        }
-
-        public fun dispatchCreate(context: ItemCreateContext) {
-            applicableTo(context.item).forEach { it.onCreate(context) }
+            registerSystem(ItemOriginSystem)
         }
 
         public fun dispatchRender(context: ItemRenderContext) {

@@ -18,9 +18,16 @@ internal fun debugEntryComponent(
     suppressed: Boolean = false
 ): Component {
     val entry = when {
-        suppressed -> "&7- &c❌ $id".colored
-        intrinsic -> "&7- &6★ &e$id".colored
-        else -> "&7- &a$id".colored
+        suppressed ->
+            "&${CatMocha.Overlay1}- &${CatMocha.Red}❌ $id".colored
+
+        intrinsic ->
+            (
+                "&${CatMocha.Overlay1}- &${CatMocha.Yellow}★ " +
+                    "&${CatMocha.Lavender}$id"
+                ).colored
+
+        else -> "&${CatMocha.Overlay1}- &${CatMocha.Green}$id".colored
     }
 
     if (debugView == null || value == null) return entry
@@ -36,13 +43,13 @@ private fun debugViewHover(
     suppressed: Boolean = false
 ): Component {
     val marker = when {
-        suppressed -> "&c❌ "
+        suppressed -> "&${CatMocha.Red}❌ "
         intrinsic -> "★ "
         else -> ""
     }
     val hint = when {
-        suppressed -> "&7 (intrinsic, suppressed)"
-        intrinsic -> "&7 (intrinsic)"
+        suppressed -> "&${CatMocha.Overlay1} (intrinsic, suppressed)"
+        intrinsic -> "&${CatMocha.Overlay1} (intrinsic)"
         else -> ""
     }
     val title =
@@ -51,7 +58,10 @@ private fun debugViewHover(
         val variant = (debugView as EncodeOnlySerializer<Any>).serialize(value).getOrThrow()
         variant.debugYamlComponent(debugView, DebugSource(value))
     } catch (exception: Exception) {
-        "&c${exception.message ?: "Unable to serialize debug properties"}".colored
+        (
+            "&${CatMocha.Red}" +
+                (exception.message ?: "Unable to serialize debug properties")
+            ).colored
     }
     return title.appendNewline().append(body)
 }
@@ -114,13 +124,19 @@ private fun Variant.Map.yamlLines(
     val entries = stringEntries()
     val typeId = (get(SCHEMA_TYPE_DISCRIMINATOR) as? Variant.String)?.value
     val displayedEntries = entries.filter { it.first != SCHEMA_TYPE_DISCRIMINATOR || typeId == null }
-    val typeTag = typeId?.let { "&7!<&${ResourceInspector.ObjectType}$it&7>".colored }
+    val typeTag = typeId?.let {
+        (
+            "&${CatMocha.Overlay1}!<" +
+                "&${ResourceInspector.ObjectType}$it" +
+                "&${CatMocha.Overlay1}>"
+            ).colored
+    }
 
     if (displayedEntries.isEmpty()) {
         return listOf(
             buildHeader(header, typeTag)
                 .append(if (header != null || typeTag != null) " ".colored else Component.empty())
-                .append("&7{}".colored)
+                .append("&${CatMocha.Overlay1}{}".colored)
         )
     }
 
@@ -137,7 +153,7 @@ private fun Variant.Map.yamlLines(
             }
             val keyHeader = yamlIndent(indent)
                 .append(yamlKeyComponent(key))
-                .append("&7:".colored)
+                .append("&${CatMocha.Teal}:".colored)
             addAll(
                 value.yamlLines(
                     indent = indent + YAML_INDENT,
@@ -160,7 +176,7 @@ private fun Variant.List.yamlLines(
         return listOf(
             (header ?: yamlIndent(indent))
                 .append(if (header != null) " ".colored else Component.empty())
-                .append("&7[]".colored)
+                .append("&${CatMocha.Overlay1}[]".colored)
         )
     }
 
@@ -168,7 +184,8 @@ private fun Variant.List.yamlLines(
         if (header != null) add(header)
         val sourceValues = (source?.value as? List<*>)
         for ((index, value) in this@yamlLines.withIndex()) {
-            val itemHeader = yamlIndent(indent).append("&7-".colored)
+            val itemHeader = yamlIndent(indent)
+                .append("&${CatMocha.Overlay1}-".colored)
             val itemSource = sourceValues
                 ?.takeIf { index in it.indices }
                 ?.let { DebugSource(it[index]) }
@@ -177,14 +194,7 @@ private fun Variant.List.yamlLines(
     }
 }
 
-private fun Variant.Map.stringEntries(): List<Pair<String, Variant>> = map { (key, value) ->
-    val name = when (key) {
-        is Variant.String -> key.value
-        is Variant.Identifier -> key.value.toString()
-        else -> key.value.toString()
-    }
-    name to value
-}
+private fun Variant.Map.stringEntries(): List<Pair<String, Variant>> = entries.map { it.toPair() }
 
 private fun buildHeader(
     header: Component?,

@@ -1,5 +1,6 @@
 package xyz.mastriel.cutapi.player
 
+import org.bukkit.persistence.*
 import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.pdc.tags.*
@@ -32,6 +33,30 @@ public class PlayerSystemTest : MockBukkitTest() {
         player.removeAttachment(TestPlayerAttachment)
         assertFalse(player.hasAttachment(TestPlayerAttachment))
         assertNull(player.getAttachmentOrNull(TestPlayerAttachment))
+    }
+
+    @Test
+    public fun `player attachments use the versioned native PDC layout`() {
+        val player = server.addPlayer()
+
+        player.setAttachment(TestPlayerAttachment(9))
+
+        val root = assertNotNull(
+            player.persistentDataContainer.get(
+                id("cutapi:attachments").toNamespacedKey(),
+                PersistentDataType.TAG_CONTAINER
+            )
+        )
+        val schema = assertNotNull(
+            root.get(TestPlayerAttachment.id.toNamespacedKey(), PersistentDataType.TAG_CONTAINER)
+        )
+        val values = assertNotNull(schema.get(id("cutapi:values").toNamespacedKey(), PersistentDataType.LIST.dataContainers()))
+
+        assertEquals(1, root.get(id("cutapi:format_version").toNamespacedKey(), PersistentDataType.INTEGER))
+        assertEquals(1, values.size)
+        assertEquals(9, values.single().get(id("test:amount").toNamespacedKey(), PersistentDataType.INTEGER))
+        assertFalse(schema.has(id("cutapi:count").toNamespacedKey()))
+        assertTrue(values.single().keys.none { it.namespace == "cutapi" && it.key.startsWith("variant_") })
     }
 
     @Test

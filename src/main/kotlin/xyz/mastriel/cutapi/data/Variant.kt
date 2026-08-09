@@ -50,7 +50,7 @@ public sealed interface Variant {
     @JvmInline
     public value class ResourceRef(override val value: xyz.mastriel.cutapi.resources.ResourceRef<*>) : Variant
 
-    private typealias VariantBackingMap = kotlin.collections.Map<Variant, Variant>;
+    private typealias VariantBackingMap = kotlin.collections.Map<kotlin.String, Variant>;
     private typealias VariantBackingList = kotlin.collections.List<Variant>;
 
     @JvmInline
@@ -64,12 +64,10 @@ public sealed interface Variant {
         }
     }
 
+    /** A string-keyed object value. Map keys are not Variants. */
     @JvmInline
-    public value class Map(override val value: kotlin.collections.Map<Variant, Variant>) : Variant,
-        kotlin.collections.Map<Variant, Variant> by value {
-
-        public operator fun get(key: kotlin.String): Variant? = value[String(key)]
-    }
+    public value class Map(override val value: VariantBackingMap) : Variant,
+        VariantBackingMap by value
 
     public fun <T> encodeTo(format: VariantFormat<T>): T = format.encode(this)
 
@@ -96,8 +94,10 @@ public sealed interface Variant {
             is xyz.mastriel.cutapi.registry.Identifier -> Identifier(value)
             is xyz.mastriel.cutapi.resources.ResourceRef<*> -> ResourceRef(value)
             is kotlin.collections.List<*> -> List(value.map { uncheckedFrom(it) })
-            is kotlin.collections.Map<*, *> -> Map(value.map { uncheckedFrom(it.key) to uncheckedFrom(it.value) }
-                .toMap())
+            is kotlin.collections.Map<*, *> -> Map(value.entries.associate { (key, entryValue) ->
+                require(key is kotlin.String) { "Variant map keys must be strings, found ${key?.let { it::class }}" }
+                key to uncheckedFrom(entryValue)
+            })
 
             else -> throw IllegalArgumentException("Unsupported variant type: ${value::class}")
         }
@@ -167,9 +167,9 @@ public inline fun <reified T : Variant> Collection<*>.toVariant(): Variant.List 
 }
 
 /**
- * Throws if the map does not entirely conform to Variants.
+ * Throws if the map values cannot be converted to Variants.
  */
 @Throws(IllegalArgumentException::class)
-public inline fun <reified K : Variant, reified V : Variant> Map<*, *>.toVariant(): Variant.Map {
+public fun Map<String, *>.toVariant(): Variant.Map {
     return Variant.uncheckedFrom(this) as Variant.Map;
 }

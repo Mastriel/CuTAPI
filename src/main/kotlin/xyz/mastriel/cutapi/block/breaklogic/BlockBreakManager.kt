@@ -128,7 +128,7 @@ public class BlockBreakManager : Listener, PacketListener {
             PlayerBlockBreaker(
                 blockPosition.bukkitBlock(player.world),
                 player.playerUUID,
-                activeItem.toAgnostic(),
+                CuTItemStack.wrap(activeItem),
                 sequence
             )
 

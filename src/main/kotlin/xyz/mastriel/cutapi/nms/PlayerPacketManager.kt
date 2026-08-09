@@ -3,6 +3,7 @@ package xyz.mastriel.cutapi.nms
 import org.bukkit.entity.*
 import org.bukkit.event.*
 import org.bukkit.event.player.*
+import xyz.mastriel.cutapi.item.nativeitem.NetworkPlayerKey
 
 /**
  * Manages packet handlers for all players. This is used to inject packet handlers into the player's pipeline.
@@ -19,6 +20,7 @@ public class PlayerPacketManager : Listener {
      * @param player The player to register
      */
     public fun registerPlayer(player: Player) {
+        player.nms().connection.connection.channel.attr(NetworkPlayerKey).set(player)
         val handler = PacketEventHandler(player)
         xyz.mastriel.cutapi.Plugin.info("Registered: ${player.nms().packetPipeline()}")
         player.nms().packetPipeline().addBefore("packet_handler", "cutapi_packets", handler)

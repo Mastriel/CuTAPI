@@ -3,7 +3,7 @@ version: '$version'
 main: xyz.mastriel.cutapi.CuTAPIPlugin
 description: An API designed to make creating cool things in plugins possible!
 api-version: '1.21'
-loader: xyz.mastriel.cutapi.CuTAPILoader
+bootstrapper: xyz.mastriel.cutapi.CuTAPIBootstrap
 permissions:
   cutapi.admin.give:
     default: op

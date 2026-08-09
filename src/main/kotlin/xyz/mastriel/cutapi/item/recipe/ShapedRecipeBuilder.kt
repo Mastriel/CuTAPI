@@ -12,7 +12,7 @@ public open class ShapedRecipeIngredient(
     public val char: Char,
     public val material: Material,
     public val quantity: Int = 1,
-    public val itemRequirement: Computable<AgnosticItemStack, Boolean>,
+    public val itemRequirement: Computable<CuTItemStack, Boolean>,
     public val onCraft: IngredientCraftContext.() -> Unit
 )
 
@@ -20,7 +20,7 @@ public class CustomShapedRecipeIngredient(
     char: Char,
     material: Material,
     quantity: Int = 1,
-    itemRequirement: Computable<AgnosticItemStack, Boolean>,
+    itemRequirement: Computable<CuTItemStack, Boolean>,
     onCraft: IngredientCraftContext.() -> Unit,
     public val placeholderItem: CustomItem<*>
 ) : ShapedRecipeIngredient(char, material, quantity, itemRequirement, onCraft)
@@ -144,7 +144,7 @@ public class ShapedRecipeBuilder(
         char: Char,
         material: Material,
         quantity: Int = 1,
-        itemRequirement: Computable<AgnosticItemStack, Boolean> = computable(true),
+        itemRequirement: Computable<CuTItemStack, Boolean> = computable(true),
         onCraft: IngredientCraftContext.() -> Unit = {}
     ) {
         ingredients[char] = ShapedRecipeIngredient(char, material, quantity, itemRequirement, onCraft)
@@ -159,7 +159,9 @@ public class ShapedRecipeBuilder(
     ) {
         repeat(slotsRequired) {
             val predicate = IngredientPredicates.isItem(item)
-            ingredients[char] = CustomShapedRecipeIngredient(char, item.type, quantity, predicate, onCraft, item)
+            val material = item.backingItem.asMaterial()
+                ?: error("Backing item ${item.backingItem.key} has no Bukkit Material.")
+            ingredients[char] = CustomShapedRecipeIngredient(char, material, quantity, predicate, onCraft, item)
         }
     }
 

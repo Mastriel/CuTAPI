@@ -1,4 +1,5 @@
 # Project exclude paths
+/.kotlin/
 /.gradle/
 /CuTAPI-Core/build/
 /ExamplePlugin/build/
@@ -6,3 +7,4 @@
 !/CuTAPI-Core/run/eula.txt
 run/
 build
+.DS_Store

@@ -2,7 +2,7 @@ package xyz.mastriel.cutapi.item.recipe
 
 import xyz.mastriel.cutapi.item.*
 
-public data class IngredientCraftContext(val itemStack: AgnosticItemStack) {
+public data class IngredientCraftContext(val itemStack: CuTItemStack) {
 
     var dontConsume: Boolean = false
 
@@ -14,5 +14,5 @@ public data class IngredientCraftContext(val itemStack: AgnosticItemStack) {
     /**
      * You should probably only use this with items that are not stackable.
      */
-    var replaceWith: AgnosticItemStack? = null
+    var replaceWith: CuTItemStack? = null
 }

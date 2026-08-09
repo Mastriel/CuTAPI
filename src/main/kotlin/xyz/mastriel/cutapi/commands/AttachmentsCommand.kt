@@ -35,7 +35,6 @@ internal val AttachmentsCommand = command("attachments") {
         attachmentActions(ItemAttachment::class) {
             val player = sender as Player
             val item = player.inventory.itemInMainHand.wrap()
-                ?: error("The held item is not a custom item")
             ItemAttachmentCommandTarget(item)
         }
     }
@@ -83,7 +82,12 @@ private fun BrigadierCommandNodeBuilder.attachmentActions(
                             .deserializeJson(json())
                             .getOrThrow()
                         resolveTarget().setAttachment(attachment)
-                        sender.sendMessage("&aSet attachment &e${schema().id}".colored)
+                        sender.sendMessage(
+                            (
+                                "&${CatMocha.Green}Set attachment " +
+                                    "&${CatMocha.Yellow}${schema().id}"
+                                ).colored
+                        )
                         BrigadierCommandReturn.Success
                     }
                 }
@@ -101,7 +105,12 @@ private fun BrigadierCommandNodeBuilder.attachmentActions(
                         "${target.description} does not have attachment ${schema().id}"
                     }
                     target.removeAttachment(schema().asAttachmentSchema(attachmentType))
-                    sender.sendMessage("&aRemoved attachment &e${schema().id}".colored)
+                    sender.sendMessage(
+                        (
+                            "&${CatMocha.Green}Removed attachment " +
+                                "&${CatMocha.Yellow}${schema().id}"
+                            ).colored
+                    )
                     BrigadierCommandReturn.Success
                 }
             }
@@ -139,7 +148,12 @@ private fun BrigadierCommandNodeBuilder.attachmentActions(
                                 .updateJsonProperty(matching.single(), key(), value())
                                 .getOrThrow()
                             target.setAttachment(updated)
-                            sender.sendMessage("&aUpdated &e${schema().id}.${key()}".colored)
+                            sender.sendMessage(
+                                (
+                                    "&${CatMocha.Green}Updated " +
+                                        "&${CatMocha.Yellow}${schema().id}.${key()}"
+                                    ).colored
+                            )
                             BrigadierCommandReturn.Success
                         }
                     }
@@ -168,9 +182,14 @@ private fun BrigadierCommandExecutorContext.viewAttachments(
 ): BrigadierCommandReturn {
     val entries = target.entries()
     val lines = buildList {
-        add("&eAttachments on ${target.description} (${entries.size})".colored)
+        add(
+            (
+                "&${CatMocha.Mauve}Attachments on " +
+                    "${target.description} (${entries.size})"
+                ).colored
+        )
         if (entries.isEmpty()) {
-            add("&7No attachments.".colored)
+            add("&${CatMocha.Overlay1}No attachments.".colored)
         } else {
             addAll(
                 entries
@@ -208,29 +227,34 @@ private inline fun BrigadierCommandExecutorContext.withAttachmentErrors(
     } else {
         val message = causes.firstNotNullOfOrNull { it.message }
             ?: "Attachment command failed"
-        sender.sendMessage("&c$message".colored)
+        sender.sendMessage("&${CatMocha.Red}$message".colored)
     }
     BrigadierCommandReturn.Failure
 }
 
 internal fun SchemaJsonException.attachmentErrorComponent(): Component {
     val lines = mutableListOf<Component>()
-    lines += errorMessage.literal(NamedTextColor.RED)
-    lines += "&cExpected: ".colored.append(expected.literal(NamedTextColor.YELLOW))
-    lines += "&cFound: ".colored.append(found.literal(NamedTextColor.YELLOW))
+    lines += errorMessage.literal(CatMocha.Red.textColor)
+    lines += "&${CatMocha.Red}Expected: ".colored
+        .append(expected.literal(CatMocha.Yellow.textColor))
+    lines += "&${CatMocha.Red}Found: ".colored
+        .append(found.literal(CatMocha.Yellow.textColor))
     availableEntries?.let { entries ->
-        lines += "&cAvailable Entries: ".colored.append(entries.availableEntriesComponent())
+        lines += "&${CatMocha.Red}Available Entries: ".colored
+            .append(entries.availableEntriesComponent())
     }
     return joinedLines(lines)
 }
 
 private fun SerializerValueDomain.availableEntriesComponent(): Component = when (this) {
     is SerializerValueDomain.Literal ->
-        values.joinToString(prefix = "{ ", postfix = " }").literal(NamedTextColor.YELLOW)
+        values.joinToString(prefix = "{ ", postfix = " }")
+            .literal(CatMocha.Yellow.textColor)
 
     is SerializerValueDomain.Enum ->
         if (values.size <= MAX_INLINE_AVAILABLE_ENTRIES) {
-            values.joinToString(prefix = "{ ", postfix = " }").literal(NamedTextColor.YELLOW)
+            values.joinToString(prefix = "{ ", postfix = " }")
+                .literal(CatMocha.Yellow.textColor)
         } else {
             clickableEntries("/inspectenum $key")
         }
@@ -240,9 +264,9 @@ private fun SerializerValueDomain.availableEntriesComponent(): Component = when 
 }
 
 private fun clickableEntries(command: String): Component =
-    "&7{ ... }".colored
+    "&${CatMocha.Overlay1}{ ... }".colored
         .clickEvent(ClickEvent.runCommand(command))
-        .hoverEvent("&7Click to view all entries.".colored)
+        .hoverEvent("&${CatMocha.Overlay1}Click to view all entries.".colored)
 
 private fun String.literal(color: TextColor): Component =
     Component.text(this, color).decoration(TextDecoration.ITALIC, false)
@@ -276,13 +300,13 @@ private class PlayerAttachmentCommandTarget(
 private class ItemAttachmentCommandTarget(
     private val item: CuTItemStack
 ) : AttachmentCommandTarget {
-    override val description: String = "held ${item.type.id}"
+    override val description: String = "held ${item.itemType.key}"
 
     override fun entries(): List<AttachmentCommandEntry> {
         val state = AttachmentPdcStorage.read(item.handle.itemMeta.persistentDataContainer)
         val overlay = state.attachments.filterIsInstance<ItemAttachment>()
         return itemAttachmentCommandEntries(
-            intrinsic = item.type.descriptor.attachments,
+            intrinsic = item.identity.getAllAttachments(),
             overlay = overlay,
             suppressed = state.suppressed
         )

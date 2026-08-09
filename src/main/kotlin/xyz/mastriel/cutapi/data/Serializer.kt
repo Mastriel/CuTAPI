@@ -234,6 +234,18 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
             )
         }
 
+        /** Creates a statically typed string-keyed map serializer. */
+        public fun <T> MapOf(serializer: Serializer<T>): Serializer<Map<String, T>> = serializer(
+            descriptor = SerializerDescriptor.map(serializer.descriptor),
+            serialize = { values ->
+                Variant.Map(values.mapValues { (_, value) -> serializer.serialize(value).getOrThrow() })
+            },
+            deserialize = { variant ->
+                val values = (variant as? Variant.Map)?.value ?: throw VariantTypeException("Map", variant)
+                values.mapValues { (_, value) -> serializer.deserialize(value).getOrThrow() }
+            }
+        )
+
         public fun <T : Resource> ResourceRef(): TaggedSerializer<ResourceRef<T>> = tagged(
             id = VariantKind.ResourceRef.id,
             descriptor = SerializerDescriptor.primitive(VariantKind.ResourceRef),
@@ -400,11 +412,10 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
             )
         }
 
-        public val Map: VariantSerializer<Map<Variant, Variant>> by deferredRegistry.register {
+        public val Map: VariantSerializer<Map<String, Variant>> by deferredRegistry.register {
             tagged(
                 id = VariantKind.Map.id,
                 descriptor = SerializerDescriptor.map(
-                    key = SerializerDescriptor.primitive(VariantKind.Any),
                     value = SerializerDescriptor.primitive(VariantKind.Any)
                 ),
                 serialize = { Variant.Map(it) },

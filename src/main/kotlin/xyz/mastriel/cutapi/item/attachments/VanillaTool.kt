@@ -59,14 +59,14 @@ public class VanillaTool(
         this.rules = optimize(materialData)
     }
 
-    public fun applyTo(item: CuTItemStack) {
+    internal fun applyTo(item: CuTItemStack) {
         val nmsItem = item.vanilla().nms()
 
         val tool = ToolComponent(
             rules.map { it.toRule() },
             defaultMiningSpeed.speed,
             itemDamage,
-            canDestroyBlocksInCreative(item.agnosticMaterial)
+            canDestroyBlocksInCreative(item.identity)
         )
 
         val patch = DataComponentPatch.builder().set(
@@ -82,21 +82,27 @@ public class VanillaTool(
 
     public companion object : Schema<VanillaTool> by schema(id(Plugin, "vanilla_tool_component"), {
         property(VanillaTool::tools, VariantSerializer.ListOf(Tool))
-        property(VanillaTool::defaultMiningSpeed, ToolSpeedSerializer)
-        property(VanillaTool::itemDamage, VariantSerializer.Int)
+        property(VanillaTool::defaultMiningSpeed, ToolSpeedSerializer, name = "default_mining_speed")
+        property(VanillaTool::itemDamage, VariantSerializer.Int, name = "item_damage")
     })
 }
 
 @OptIn(UsesNMS::class)
-internal object VanillaToolSystem : ItemSystem by attachmentItemSystem(VanillaTool) {
-
-    override fun onCreate(context: ItemCreateContext) {
-        context.attachment(VanillaTool).applyTo(context.item)
+internal val VanillaToolMaterializer: ItemAttachmentMaterializer<VanillaTool>
+    get() = itemAttachmentMaterializer(
+    id = VanillaTool.id / "materializer",
+    schema = VanillaTool,
+    revision = 1,
+    claims = setOf(ItemTraitClaim.Component(io.papermc.paper.datacomponent.DataComponentTypes.TOOL)),
+) { context, output ->
+    val attachment = context.attachments.single()
+    output.setUsing(io.papermc.paper.datacomponent.DataComponentTypes.TOOL) { stack ->
+        attachment.applyTo(CuTItemStack.wrap(stack))
     }
 }
 
-public fun canDestroyBlocksInCreative(material: AgnosticMaterial): Boolean {
-    return material.expectedVanillaMaterial in setOf(
+public fun canDestroyBlocksInCreative(item: ItemIdentity): Boolean {
+    return item.backingItem.asMaterial() in setOf(
         Material.STONE_SWORD,
         Material.IRON_SWORD,
         Material.GOLDEN_SWORD,

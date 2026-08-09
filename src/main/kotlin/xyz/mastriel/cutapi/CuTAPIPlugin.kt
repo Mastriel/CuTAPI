@@ -18,6 +18,7 @@ import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.item.bukkitevents.*
+import xyz.mastriel.cutapi.item.nativeitem.*
 import xyz.mastriel.cutapi.item.recipe.*
 import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.player.*
@@ -49,26 +50,26 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         saveDefaultConfig()
         CuTAPI.registerPlugin(this, "cutapi") {
             packFolder = "pack"
+            displayName = "CuTAPI"
         }
 
         CuTAPI.registerPlugin(MinecraftAssets, "minecraft") {
             isFromJar = false
+            displayName = "Minecraft"
         }
 
         registerBuiltInSchemas()
+        registerBuiltInItemAttachmentMaterializers()
         ItemSystem.registerBuiltins()
         registerCommands()
         registerEvents()
         registerPeriodics()
 
         CuTItemStack.registerType(
-            id = ItemStackUtility.DefaultItemStackTypeId,
+            id = id("cutapi:builtin"),
             kClass = CuTItemStack::class,
             constructor = CuTItemStack.CONSTRUCTOR
         )
-        CustomItem.modifyRegistry(RegistryPriority(Int.MAX_VALUE)) {
-            register(CustomItem.Unknown)
-        }
         TexturePostProcessor.registerBuiltins()
 
         TexturePostProcessor.modifyRegistry {
@@ -91,8 +92,16 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         CuTAPI.packetEventManager.registerPacketListener(PacketItemHandler)
         if (experimentalBlockSupport) CuTAPI.packetEventManager.registerPacketListener(CuTAPI.blockBreakManager)
 
+        NativeItemChannelInitializer.register()
+        NativeItemCodecInstrumentation.bind()
+
         CustomItem.DeferredRegistry.commitToRegistry()
 
+        if (CuTAPI.enableDebugItems) {
+            DebugItems.commitToRegistry();
+            DebugItems.Extensions.commitToRegistry();
+            info("Debug items are enabled!")
+        }
 
 
         CuTAPI.serverReady {
@@ -107,7 +116,21 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             ItemSystem.initialize()
             PlayerSystem.initialize()
 
-            CustomItem.initialize()
+            NativeItemLifecycle.state = NativeItemState.Installing
+            try {
+                CustomItem.initialize()
+                ItemIdentityExtension.initialize()
+                ItemAttachmentMaterializer.initialize()
+                NativeItemRegistry.installAll(CustomItem.getAllValues().map(CustomItem<*>::nativeSpecification))
+                CustomItem.getAllValues().forEach(CustomItem<*>::activate)
+                NativeItemLifecycle.state = NativeItemState.Active
+                ItemMaterializationManager.reconcileLoadedServerState()
+                NativeItemClientBridge.verifyRoundTrips(CustomItem.getAllValues())
+            } catch (failure: Throwable) {
+                NativeItemLifecycle.state = NativeItemState.Failed
+                server.shutdown()
+                throw failure
+            }
             CustomShapedRecipe.initialize()
             CustomShapelessRecipe.initialize()
             CustomFurnaceRecipe.initialize()
@@ -119,6 +142,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
             ToolCategory.initialize()
             ToolTier.initialize()
+            ItemMaterializationManager.verifyBuiltInRoundTrips()
         }
 
         registerResourceLoaders()
@@ -161,7 +185,10 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             register(VariantSerializer.Short.formatter())
             register(VariantSerializer.Float.formatter())
             register(VariantSerializer.Byte.debugFormatter {
-                "&${DebugFormatter.NumberColor}${value} &8(0x${value.toHexString(HexFormat.UpperCase)})".colored
+                (
+                    "&${DebugFormatter.NumberColor}${value} " +
+                        "&${CatMocha.Overlay1}(0x${value.toHexString(HexFormat.UpperCase)})"
+                    ).colored
             })
 
             register(VariantSerializer.Boolean.debugFormatter {
@@ -173,6 +200,10 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             })
             register(VariantSerializer.ResourceRef.debugFormatter {
                 "&${DebugFormatter.ResourceRefColor}${value}".colored
+            })
+
+            register(VariantSerializer.String.debugFormatter {
+                "&${CatMocha.Green}${value}".colored
             })
 
             register(ComponentSerializer.debugFormatter {
@@ -211,7 +242,6 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
     private fun registerPeriodics() {
         val periodicManager = CuTAPI.periodicManager
 
-        periodicManager.register(this, PacketItemHandler)
         if (experimentalBlockSupport) periodicManager.register(this, CuTAPI.blockBreakManager)
 
     }
@@ -239,14 +269,13 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         server.pluginManager.registerEvents(PlayerItemEvents, this)
 
         if (experimentalBlockSupport) server.pluginManager.registerEvents(CuTAPI.blockBreakManager, this)
-        server.pluginManager.registerEvents(PacketItemHandler, this)
         server.pluginManager.registerEvents(CraftingRecipeEvents(), this)
 
         server.pluginManager.registerEvents(UploaderJoinEvents(), this)
         server.pluginManager.registerEvents(CuTAPI.playerPacketManager, this)
 
         val serverReadyHandler = object : Listener {
-            @EventHandler
+            @EventHandler(priority = EventPriority.LOWEST)
             fun serverReady(event: ServerLoadEvent) {
                 if (event.type != ServerLoadEvent.LoadType.STARTUP) return
                 CuTAPI.serverReady.trigger(Unit)
@@ -277,6 +306,8 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
 
     override fun onDisable() {
+        NativeItemCodecInstrumentation.clear()
+        NativeItemChannelInitializer.unregister()
         CuTAPI.unregisterPlugin(this)
     }
 

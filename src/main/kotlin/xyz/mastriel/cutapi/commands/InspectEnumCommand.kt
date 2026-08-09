@@ -20,14 +20,19 @@ internal val InspectEnumCommand = command("inspectenum") {
         executes {
             val entries = EnumEntryCatalog.get(enumKey())
             if (entries == null) {
-                sender.sendMessage("&cUnknown enum '${enumKey()}'.".colored)
+                sender.sendMessage("&${CatMocha.Red}Unknown enum '${enumKey()}'.".colored)
                 BrigadierCommandReturn.Failure
             } else {
                 sender.sendMessage(
-                    "&eAvailable entries for ${entries.displayName} (${entries.values.size})".colored
+                    (
+                        "&${CatMocha.Mauve}Available entries for " +
+                            "${entries.displayName} (${entries.values.size})"
+                        ).colored
                 )
                 entries.values.chunked(ENUM_ENTRIES_PER_LINE).forEach { values ->
-                    sender.sendMessage("&7${values.joinToString(", ")}".colored)
+                    sender.sendMessage(
+                        "&${CatMocha.Subtext1}${values.joinToString(", ")}".colored
+                    )
                 }
                 BrigadierCommandReturn.Success
             }

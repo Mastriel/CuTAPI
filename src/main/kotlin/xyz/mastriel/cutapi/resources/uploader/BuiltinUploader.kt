@@ -14,7 +14,6 @@ import xyz.mastriel.cutapi.utils.*
 import java.io.*
 import java.net.*
 import kotlin.concurrent.*
-import kotlin.random.*
 
 public class BuiltinUploader : Uploader {
     override val id: Identifier = id(Plugin, "internal")
@@ -28,9 +27,7 @@ public class BuiltinUploader : Uploader {
     override suspend fun upload(file: File): String {
         val ip = inferIp()
 
-        // bug on some minecraft versions requires adding a random value
-        // to the end, otherwise you can never get new versions
-        val url = "http://$ip:$PackPort/${Random.nextInt(0, Int.MAX_VALUE)}"
+        val url = "http://$ip:$PackPort/"
         Plugin.info("Pack URL is: $url")
         return url
     }
@@ -52,7 +49,8 @@ public class BuiltinUploader : Uploader {
         thread = thread(name = "Resource Pack Server", isDaemon = true) {
             engine = embeddedServer(Netty, port = PackPort) {
                 routing {
-                    get("*") {
+                    get("/") {
+                        Plugin.info("Getting request for resource pack")
                         val packFile = CuTAPI.resourcePackManager.zipFile
                         if (packFile.exists()) call.respondFile(packFile)
                         else call.respond(HttpStatusCode.NotFound)

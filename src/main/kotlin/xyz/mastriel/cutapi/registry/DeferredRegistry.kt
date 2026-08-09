@@ -86,6 +86,7 @@ public open class BasicDeferredRegistry<T : Identifiable> internal constructor(
 
     override fun commitToRegistry() {
         if (!isOpen) error("Deferred registry is already closed")
+        check(registry.isOpen) { "Registry '${registry.id}' is already closed" }
         isOpen = false
 
         // Register all items in the registry

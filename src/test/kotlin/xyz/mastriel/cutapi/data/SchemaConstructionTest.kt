@@ -25,9 +25,9 @@ class SchemaConstructionTest {
         )
 
         val encoded = assertIs<Variant.Map>(PresenceData.serialize(decoded).getOrThrow())
-        assertEquals(Variant.Int(7), encoded[Variant.String("kotlinDefault")])
-        assertFalse(Variant.String("schemaDefault") in encoded.value)
-        assertEquals(Variant.Null, encoded[Variant.String("nullable")])
+        assertEquals(Variant.Int(7), encoded["kotlinDefault"])
+        assertFalse("schemaDefault" in encoded.value)
+        assertEquals(Variant.Null, encoded["nullable"])
 
         val missingNullable = assertIs<DeserializeResult.Failure>(
             PresenceData.deserialize(
@@ -292,9 +292,9 @@ private fun variantMap(
     schemaId: Identifier,
     vararg values: Pair<String, Variant>
 ): Variant.Map = Variant.Map(
-    linkedMapOf<Variant, Variant>(
-        Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to Variant.String(schemaId.toString())
+    linkedMapOf<String, Variant>(
+        SCHEMA_TYPE_DISCRIMINATOR to Variant.String(schemaId.toString())
     ).apply {
-        values.forEach { (name, value) -> put(Variant.String(name), value) }
+        values.forEach { (name, value) -> put(name, value) }
     }
 )

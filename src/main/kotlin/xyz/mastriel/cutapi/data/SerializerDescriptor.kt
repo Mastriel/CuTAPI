@@ -42,12 +42,11 @@ public data class SerializerDescriptor<out S : SerializerShape>(
         )
 
         public fun map(
-            key: SerializerDescriptor<*>,
             value: SerializerDescriptor<*>,
             id: Identifier = VariantKind.Map.id
         ): SerializerDescriptor<SerializerShape.Map> = SerializerDescriptor(
             id = id,
-            shape = SerializerShape.Map(key, value)
+            shape = SerializerShape.Map(value)
         )
 
         public fun `object`(
@@ -97,8 +96,8 @@ public sealed interface SerializerShape {
         public val element: SerializerDescriptor<*>
     ) : SerializerShape
 
+    /** A string-keyed map whose descriptor describes only its values. */
     public data class Map(
-        public val key: SerializerDescriptor<*>,
         public val value: SerializerDescriptor<*>
     ) : SerializerShape
 

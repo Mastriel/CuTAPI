@@ -7,12 +7,12 @@ import java.lang.ref.*
 private typealias HookFunction<T> = HookContext<T>.() -> Unit
 
 public enum class HookPriority(public val number: Byte) {
-    FIRST(0),
-    MIDDLE(1),
-    LAST(2),
+    First(0),
+    Middle(1),
+    Last(2),
 
     /** Don't make modifications at this level pretty please */
-    READONLY(3)
+    ReadOnly(3)
 }
 
 public data class HookContext<T : Identifiable>(

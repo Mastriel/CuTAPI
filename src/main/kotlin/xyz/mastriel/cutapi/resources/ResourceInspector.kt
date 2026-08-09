@@ -76,19 +76,19 @@ public class ResourceInspector {
         /**
          * The color used for the inspector title.
          */
-        public val InspectorTitle: Color = Color.of(0x77ffb8)
+        public val InspectorTitle: Color = CatMocha.Mauve
 
         /**
          * The color used for property keys in inspections.
          */
-        public val PropertyKey: Color = Color.of(0xc4ffb2)
+        public val PropertyKey: Color = CatMocha.Blue
 
         /**
          * The color used for property values in inspections.
          */
-        public val PropertyValue: Color = Color.of(0xf5ff97)
+        public val PropertyValue: Color = CatMocha.Text
 
-        public val ObjectType: Color = Color.of(0xffd176)
+        public val ObjectType: Color = CatMocha.Peach
     }
 }
 
@@ -100,7 +100,12 @@ public class ResourceInspector {
  * @param spaces The number of spaces to prepend to the text (default is 0).
  */
 private fun TextComponent.Builder.appendInspection(text: String, value: Any = "", spaces: Int = 0) {
-    appendLine((" ".repeat(spaces) + "&${ResourceInspector.PropertyKey}$text &8→ &${ResourceInspector.PropertyValue}$value").colored)
+    val line =
+        " ".repeat(spaces) +
+            "&${ResourceInspector.PropertyKey}$text " +
+            "&${CatMocha.Overlay1}→ " +
+            "&${ResourceInspector.PropertyValue}$value"
+    appendLine(line.colored)
 }
 
 /**
@@ -163,13 +168,16 @@ public sealed interface Inspection {
         override fun getInspectionComponent(): Component {
             return text {
                 if (values().isEmpty()) {
-                    appendInspection(name, "&7None")
+                    appendInspection(name, "&${CatMocha.Overlay1}None")
                     return@text
                 }
 
                 appendInspection(name)
                 for (value in values()) {
-                    appendLine("  &8- &${ResourceInspector.PropertyValue}$value".colored)
+                    val line =
+                        "  &${CatMocha.Overlay1}- " +
+                            "&${ResourceInspector.PropertyValue}$value"
+                    appendLine(line.colored)
                 }
             }
         }
@@ -194,13 +202,18 @@ public sealed interface Inspection {
         override fun getInspectionComponent(): Component {
             return text {
                 if (values().isEmpty()) {
-                    appendInspection(name, "&7None")
+                    appendInspection(name, "&${CatMocha.Overlay1}None")
                     return@text
                 }
 
                 appendInspection(name)
                 for ((key, value) in values()) {
-                    appendLine("  &8- &${ResourceInspector.PropertyKey}$key &8→ &${ResourceInspector.PropertyValue}$value".colored)
+                    val line =
+                        "  &${CatMocha.Overlay1}- " +
+                            "&${ResourceInspector.PropertyKey}$key " +
+                            "&${CatMocha.Overlay1}→ " +
+                            "&${ResourceInspector.PropertyValue}$value"
+                    appendLine(line.colored)
                 }
             }
         }

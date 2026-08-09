@@ -33,17 +33,13 @@ public data class Tool(val category: ToolCategory, val tier: ToolTier, val toolS
     public companion object : Schema<Tool> by schema(id(Plugin, "tool"), {
         property(Tool::category, VariantSerializer.Identifiable(ToolCategory))
         property(Tool::tier, VariantSerializer.Identifiable(ToolTier))
-        property(Tool::toolSpeed, ToolSpeedSerializer)
+        property(Tool::toolSpeed, ToolSpeedSerializer, name = "tool_speed")
     }) {
 
         public val Fists: Tool = Tool(ToolCategory.Fists, ToolTier.Nothing, ToolSpeed.Fists)
 
-        public fun from(itemStack: AgnosticItemStack): List<Tool> {
-            return when (itemStack) {
-                is AgnosticItemStack.Vanilla -> listOf(fromVanilla(itemStack.vanilla()))
-                is AgnosticItemStack.Custom -> fromCustom(itemStack.custom())
-            }
-        }
+        public fun from(itemStack: CuTItemStack): List<Tool> =
+            if (itemStack.isCustom) fromCustom(itemStack) else listOf(fromVanilla(itemStack.vanilla()))
 
         private fun fromCustom(itemStack: CuTItemStack): List<Tool> {
             val tools = itemStack.getAttachments(Tool)

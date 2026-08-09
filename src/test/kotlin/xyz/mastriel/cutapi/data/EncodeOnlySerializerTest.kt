@@ -24,9 +24,9 @@ class EncodeOnlySerializerTest {
         assertEquals(
             Variant.Map(
                 linkedMapOf(
-                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to
+                    SCHEMA_TYPE_DISCRIMINATOR to
                         Variant.String("test:partial_debug_value"),
-                    Variant.String("visible") to Variant.String("shown")
+                    "visible" to Variant.String("shown")
                 )
             ),
             representation.serialize(PartialDebugValue("shown", "hidden")).getOrThrow()
@@ -47,11 +47,11 @@ class EncodeOnlySerializerTest {
         assertEquals(
             Variant.Map(
                 linkedMapOf(
-                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to
+                    SCHEMA_TYPE_DISCRIMINATOR to
                         Variant.String("test:extended_debug_value"),
-                    Variant.String("first") to Variant.String("parent"),
-                    Variant.String("second") to Variant.Int(2),
-                    Variant.String("own") to Variant.Boolean(true)
+                    "first" to Variant.String("parent"),
+                    "second" to Variant.Int(2),
+                    "own" to Variant.Boolean(true)
                 )
             ),
             child.serialize(ExtendedDebugValue("parent", 2, true)).getOrThrow()
@@ -70,9 +70,9 @@ class EncodeOnlySerializerTest {
         assertEquals(
             Variant.Map(
                 linkedMapOf(
-                    Variant.String(SCHEMA_TYPE_DISCRIMINATOR) to
+                    SCHEMA_TYPE_DISCRIMINATOR to
                         Variant.String("test:excluded_debug_value"),
-                    Variant.String("own") to Variant.Boolean(true)
+                    "own" to Variant.Boolean(true)
                 )
             ),
             child.serialize(ExcludedDebugValue(true)).getOrThrow()
