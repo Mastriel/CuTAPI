@@ -1,0 +1,224 @@
+# Native custom blocks
+
+CuTAPI registers each custom block under its own ID in Minecraft's native block registry. A custom
+tile entity also receives a native `BlockEntityType`. The authoritative ID and typed state values are
+therefore stored in chunk palettes instead of a carrier block's persistent data.
+
+Definitions are bootstrap-only. Submit the already-configured definition from the consumer plugin's
+Paper `PluginBootstrap`; adding one after CuTAPI starts enabling is rejected and requires a restart.
+
+```kotlin
+object CopperLampStates {
+    val Lit = BlockStateType.Boolean("lit")
+    val Facing = BlockStateType.Enum(Direction::class, "facing")
+}
+
+object ExampleBlocks {
+    lateinit var CopperLamp: CustomTileEntity<CuTPlacedTileEntity>
+}
+
+class ExampleBootstrap : PluginBootstrap {
+    override fun bootstrap(context: BootstrapContext) {
+        ExampleBlocks.CopperLamp = NativeBlockBootstrap.submit(
+            customTileEntity(id("example:copper_lamp")) {
+                states {
+                    define(CopperLampStates.Lit) { false }
+                    define(CopperLampStates.Facing) { Direction.North }
+                }
+
+                settings {
+                    hardness = 3.0f
+                    explosionResistance = 6.0f
+                    effectiveTools = setOf(ToolCategory.Pickaxe)
+                    minimumToolTier = ToolTier.Stone
+                    requiresCorrectToolForDrops = true
+                }
+
+                visual(BlockVisualMethod.NoteBlock)
+                models { state ->
+                    val suffix = if (state[CopperLampStates.Lit]) "on" else "off"
+                    BlockModel.Model("example:block/copper_lamp_$suffix")
+                }
+
+                drops { context ->
+                    if (context.correctToolUsed) listOf(context.requirePlacementItem()) else emptyList()
+                }
+                experience { context -> if (context.correctToolUsed) 3 else 0 }
+                attach(CopperLampData(energy = 0))
+            },
+        )
+    }
+}
+```
+
+Each `define` call declares the property and creates its default atomically. CuTAPI invokes default
+producers independently and creates a real NMS state for every permutation. Every permutation must
+resolve to one client visual. Set `visualIdentity { ... }` when multiple permutations intentionally
+reuse the same finite carrier slot.
+
+## Client visual methods
+
+The server never sends the custom registry state ID to a vanilla client. One mapping drives both the
+generated resource pack and packet projection for chunk palettes, individual and section block
+updates, block particles, world events, carried states, and displays.
+
+### Vanilla
+
+```kotlin
+visual {
+    BlockVisualMethod.Vanilla(blockVisualData(Material.COPPER_BLOCK))
+}
+```
+
+This projects directly to an existing vanilla state and needs no generated blockstate resource.
+Definitions may freely reuse it, but it cannot provide a custom texture or model. The carrier controls
+client collision, outline, occlusion, particles, prediction, and F3 identity, so its shape should match
+the native state.
+
+The producer form is important during bootstrap: it delays Bukkit `BlockData` resolution until the
+vanilla registry is ready.
+
+### NoteBlock
+
+```kotlin
+visual(BlockVisualMethod.NoteBlock)
+model(BlockModel.Model("example:block/copper_lamp"))
+```
+
+This allocates a generated note-block model and is efficient for dense full-cube terrain. Minecraft
+1.21.11 exposes 1,150 note states; CuTAPI reserves one for real note blocks, leaving 1,149 global
+custom slots. Every distinct visual permutation consumes a slot. It requires the generated pack,
+conflicts with another owner of the note-block blockstate file, always predicts a full-cube shape, and
+appears as a note block without the pack.
+
+### Mushroom
+
+```kotlin
+visual(BlockVisualMethod.Mushroom)
+model(BlockModel.Model("example:block/copper_lamp"))
+```
+
+This allocates red-mushroom, brown-mushroom, and mushroom-stem states. Their 192 states leave 189
+global custom slots after one reserved state per carrier. CuTAPI canonicalizes real huge mushrooms to
+those reserved states, so vanilla mushrooms lose exact connected inner/outer faces. Like note blocks,
+this method is pack-dependent, full-cube-predicted, and conflicts with another owner of its carrier
+blockstate files. Without the pack, it appears as an unusual mushroom state.
+
+### DisplayEntity
+
+```kotlin
+visual {
+    BlockVisualMethod.DisplayEntity(
+        carrier = blockVisualData(Material.BARRIER),
+        transform = ItemDisplay.ItemDisplayTransform.FIXED,
+    )
+}
+model(BlockModel.Model("example:block/copper_lamp"))
+```
+
+This sends a packet-only `ItemDisplay` while keeping the chosen carrier in the chunk. It consumes no
+note or mushroom capacity and supports transforms, interpolation, oversized models, and animation.
+The block model is required and is connected to a deterministic generated item-model resource.
+It requires one visible virtual entity per block per player, making it unsuitable for dense terrain.
+Collision, selection, pathfinding, occlusion, and crack overlays belong to the carrier; lighting,
+shadows, ambient occlusion, and culling differ from chunk models. Without the pack, its item model is
+missing or falls back. Tracking, reconnects, teleports, pistons, and state changes are explicitly
+synchronized by CuTAPI.
+
+All finite allocation is deterministic by definition ID and canonical state values. Startup fails for
+missing visuals/models, finite-capacity exhaustion, incompatible models, duplicate assignments, or
+carrier resource ownership conflicts; CuTAPI never silently changes methods. The generated diagnostic
+manifest records Minecraft version, resource-pack hash, capacities, and assignments.
+
+Vanilla clients only know the projected carrier. CuTAPI therefore resolves middle-click from the
+server position. Only `Vanilla` renders correctly without a pack, and visual models never define
+hardness, collision, sounds, drops, redstone, or tile behavior. Packet libraries that bypass the
+normal connection pipeline can still leak unknown native state IDs.
+Because protocol block tags contain block IDs rather than states, a tagged custom definition expands
+to all of its carrier block IDs; client-only tag behavior can therefore also apply to real carrier
+blocks.
+
+## Block systems and tile systems
+
+A `BlockSystem` handles behavior common to regular blocks and tile entities. A `TileSystem` extends
+it, is type-gated to `CuTPlacedTileEntity`, and adds persisted-data, load, save, tick, attachment,
+unload, and removal callbacks.
+
+```kotlin
+data class CopperLampData(val energy: Int) : BlockAttachment {
+    companion object : Schema<CopperLampData> by schema(id("example:copper_lamp_data"), {
+        property(CopperLampData::energy, VariantSerializer.Int)
+    })
+}
+
+object CopperLampSystem : TileSystem {
+    override val id = id("example:copper_lamp_system")
+    override val priority = RegistryPriority.High
+
+    override fun tilePrerequisite(tile: CuTPlacedTileEntity): Boolean =
+        tile.hasAttachment(CopperLampData)
+
+    override fun onRightClick(context: BlockInteractContext) {
+        val data = context.attachment(CopperLampData)
+        (context.tile as CuTPlacedTileEntity).setAttachment(data.copy(energy = data.energy + 1))
+    }
+
+    override fun onTick(context: TileTickContext) {
+        val data = context.tileEntity.getAttachment(CopperLampData)
+        // Perform native block-entity work here.
+    }
+
+    override fun onBeforeSave(context: TileSaveContext) {
+        // Last chance to replace persisted attachment values before NBT is written.
+    }
+}
+
+fun registerExampleSystems() {
+    Schema.modifyRegistry { register(CopperLampData) }
+    BlockSystem.modifyRegistry { register(CopperLampSystem) }
+}
+```
+
+Both system types share one priority-ordered registry. Definitions expose immutable intrinsic
+attachments. Only a placed native tile entity can add, replace, suppress, or remove persisted overlay
+attachments with `setAttachment`, `addAttachment`, and `removeAttachment`; changes invoke
+`TileSystem.onAttachmentChanged`.
+
+`BlockSystem` also exposes placement, left/right interaction, neighbor change, state change,
+pre-break, drop, post-break, and explosion callbacks. The native block and block entity route these
+lifecycles; `TileSystem.onTick` runs from Minecraft's block-entity ticker.
+
+CraftBukkit does not have a public wrapper factory for third-party block-entity types. CuTAPI's native
+and system APIs operate normally, but direct calls such as `Block#getState()` or
+`Chunk#getTileEntities()` on a custom tile entity are not currently supported. Use
+`CustomBlockManager.getPlacedTile(...)` or the system context instead.
+
+## Mining runtime
+
+Custom mining is server-authoritative. CuTAPI intercepts only custom `START_DESTROY_BLOCK`, validates
+normal reach/protection/adventure rules, runs the Paper interaction path, and creates at most one
+session per player. Vanilla block packets and mining remain unchanged.
+
+Progress is recalculated every tick from all `Tool` attachments (or inferred vanilla tool data), the
+current item, haste/fatigue, real attributes, water, grounded state, hardness, and tool correctness.
+Negative hardness is unbreakable, zero is instant, and positive hardness accumulates fractional
+progress. Early or repeated client stop packets cannot complete the block faster.
+
+For the active miner, CuTAPI projects `BLOCK_BREAK_SPEED` as zero without modifying its authoritative
+server value. It preserves this projection through real attribute updates, restores the real snapshot
+on every exit path, and acknowledges every intercepted sequence. Progress becomes vanilla crack
+stages `0..9`; `ClientboundBlockDestructionPacket` is sent only when the stage changes to the miner and
+observers within 32 blocks, using the miner entity ID so concurrent overlays stay independent.
+
+Abort, replacement, invalidation, cancellation, completion, disconnect, death, teleport, world or
+game-mode changes, range loss, block changes, pistons, explosions, chunk unload, and timeout clear the
+crack with stage `-1`. The first successful concurrent miner invalidates the rest. Completion follows
+the Paper break event, block-system pre-break, native removal, durability, produced drops/experience,
+drop event, post-break, sound/particle, cleanup order and disables native automatic loot to prevent
+duplicates. Cancelled completion retains and resends the projected block.
+
+Mining visuals have up to one tick of latency and depend on explicit crack packets. `DisplayEntity`
+cracks cover only its carrier. Another plugin independently spoofing `BLOCK_BREAK_SPEED` cannot be
+merged with unknown client-only state. Commands, editing plugins, explosions, pistons, and API removal
+use their own removal contexts rather than a player mining session, and redundant start/abort traffic
+is rate-limited.

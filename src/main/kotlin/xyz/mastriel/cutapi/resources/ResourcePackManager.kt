@@ -8,6 +8,7 @@ import xyz.mastriel.cutapi.resources.generator.*
 import xyz.mastriel.cutapi.resources.pack.*
 import xyz.mastriel.cutapi.resources.process.*
 import xyz.mastriel.cutapi.resources.uploader.*
+import xyz.mastriel.cutapi.block.nativeblock.NativeBlockManifestWriter
 import xyz.mastriel.cutapi.utils.*
 import java.io.*
 import java.security.*
@@ -121,6 +122,7 @@ public class ResourcePackManager {
         val md = MessageDigest.getInstance("SHA-1")
         val packHash = byteArrayToHexString(md.digest(zipFile.readBytes()))
 
+        NativeBlockManifestWriter.write(packHash)
         return PackInfo(url, packHash).also { packInfo = it }
     }
 

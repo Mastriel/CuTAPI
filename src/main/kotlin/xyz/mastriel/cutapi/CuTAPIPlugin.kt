@@ -11,8 +11,8 @@ import org.bukkit.event.*
 import org.bukkit.event.server.*
 import org.bukkit.plugin.java.*
 import org.bukkit.scheduler.*
-import xyz.mastriel.cutapi.CuTAPI.experimentalBlockSupport
 import xyz.mastriel.cutapi.block.*
+import xyz.mastriel.cutapi.block.nativeblock.*
 import xyz.mastriel.cutapi.commands.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
@@ -46,6 +46,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
     override fun onEnable() {
         Plugin = this
         info("CuTAPI enabled!")
+        NativeBlockBootstrap.finishCollection()
 
         saveDefaultConfig()
         CuTAPI.registerPlugin(this, "cutapi") {
@@ -100,13 +101,13 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
 
         CuTAPI.packetEventManager.registerPacketListener(PacketItemHandler)
-        if (experimentalBlockSupport) CuTAPI.packetEventManager.registerPacketListener(CuTAPI.blockBreakManager)
+        CuTAPI.packetEventManager.registerPacketListener(NativeBlockPacketProjector)
+        CuTAPI.packetEventManager.registerPacketListener(CuTAPI.blockBreakManager)
 
         NativeItemChannelInitializer.register()
         NativeItemCodecInstrumentation.bind()
 
-        CustomBlock.DeferredRegistry.commitToRegistry()
-        CustomTileEntity.DeferredRegistry.commitToRegistry()
+        BlockSystem.DeferredRegistry.commitToRegistry()
         CustomItem.DeferredRegistry.commitToRegistry()
 
         if (CuTAPI.enableDebugItems) {
@@ -126,12 +127,15 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             TexturePostProcessor.initialize()
             Uploader.initialize()
             ItemSystem.initialize()
+            BlockSystem.initialize()
             PlayerSystem.initialize()
 
             try {
                 CustomBlock.initialize()
                 CustomTileEntity.initialize()
                 CustomTile.initialize()
+
+                NativeBlockBootstrap.validateRegisteredDefinitions(CustomTile.getAllValues())
 
                 NativeItemLifecycle.state = NativeItemState.Installing
                 CustomItem.initialize()
@@ -141,10 +145,19 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
                 NativeItemRegistry.installAll(CustomItem.getAllValues().map(CustomItem<*>::nativeSpecification))
                 CustomItem.getAllValues().forEach(CustomItem<*>::activate)
                 NativeItemLifecycle.state = NativeItemState.Active
+                NativeBlockClientBridge.bind(
+                    CustomTile.getAllValues(),
+                    server.minecraftVersion,
+                    resourcePackHash = "pending",
+                )
+                val verifiedChunks = NativeBlockClientBridge.verifyLoadedChunkSerialization()
+                info("Verified native block projection for $verifiedChunks loaded custom chunk(s).")
+                NativeBlockLifecycle.state = NativeBlockState.Active
                 ItemMaterializationManager.reconcileLoadedServerState()
                 NativeItemClientBridge.verifyRoundTrips(CustomItem.getAllValues())
             } catch (failure: Throwable) {
                 NativeItemLifecycle.state = NativeItemState.Failed
+                NativeBlockLifecycle.state = NativeBlockState.Failed
                 server.shutdown()
                 throw failure
             }
@@ -255,7 +268,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
     private fun registerPeriodics() {
         val periodicManager = CuTAPI.periodicManager
 
-        if (experimentalBlockSupport) periodicManager.register(this, CuTAPI.blockBreakManager)
+        periodicManager.register(this, CuTAPI.blockBreakManager)
 
     }
 
@@ -280,8 +293,10 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
     private fun registerEvents() {
         server.pluginManager.registerEvents(PlayerItemEvents, this)
+        server.pluginManager.registerEvents(NativeBlockDisplayManager, this)
+        server.pluginManager.registerEvents(BlockRuntimeEvents, this)
 
-        if (experimentalBlockSupport) server.pluginManager.registerEvents(CuTAPI.blockBreakManager, this)
+        server.pluginManager.registerEvents(CuTAPI.blockBreakManager, this)
         server.pluginManager.registerEvents(CraftingRecipeEvents(), this)
 
         server.pluginManager.registerEvents(UploaderJoinEvents(), this)
@@ -319,6 +334,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
 
     override fun onDisable() {
+        NativeBlockLifecycle.state = NativeBlockState.Stopped
         NativeItemCodecInstrumentation.clear()
         NativeItemChannelInitializer.unregister()
         CuTAPI.unregisterPlugin(this)

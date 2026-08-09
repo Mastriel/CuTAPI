@@ -133,8 +133,8 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
         val fallbackItem = requireNotNull(fallback.descriptor.itemPolicy.prepare(fallback.descriptor, fallback)).item
         val explicitItem = requireNotNull(explicit.descriptor.itemPolicy.prepare(explicit.descriptor, explicit)).item
 
-        assertEquals(Material.COPPER_BLOCK.asItemType(), vanillaItem.backingItem)
-        assertEquals(ItemType.STONE, fallbackItem.backingItem)
+        assertEquals(ItemType.PAPER, vanillaItem.backingItem)
+        assertEquals(ItemType.PAPER, fallbackItem.backingItem)
         assertEquals(ItemType.DIAMOND, explicitItem.backingItem)
         assertEquals(vanilla.id / "item", vanillaItem.id)
     }

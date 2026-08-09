@@ -19,6 +19,12 @@ import xyz.mastriel.cutapi.item.nativeitem.advice.ItemStackDecodeAdvice;
 import xyz.mastriel.cutapi.item.nativeitem.advice.ItemStackEncodeAdvice;
 import xyz.mastriel.cutapi.item.nativeitem.advice.ItemTagPayloadAdvice;
 import xyz.mastriel.cutapi.item.nativeitem.advice.RegistryCodecEncodeAdvice;
+import xyz.mastriel.cutapi.item.nativeitem.advice.BlockStateIdAdvice;
+import xyz.mastriel.cutapi.item.nativeitem.advice.BlockPaletteSizeAdvice;
+import xyz.mastriel.cutapi.item.nativeitem.advice.ChunkBlockStateProjectionAdvice;
+import xyz.mastriel.cutapi.item.nativeitem.advice.FixedSizeLongArrayAdvice;
+import xyz.mastriel.cutapi.item.nativeitem.advice.GlobalBlockPaletteWriteAdvice;
+import xyz.mastriel.cutapi.block.nativeblock.NativeBlockClientBridge;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.matcher.ElementMatchers.takesArgument;
@@ -40,7 +46,11 @@ public final class NativeItemCodecInstrumentation {
         "net.minecraft.world.item.ItemStack$2",
         "net.minecraft.network.chat.ComponentSerialization$1",
         "net.minecraft.network.codec.ByteBufCodecs$34",
-        "net.minecraft.tags.TagNetworkSerialization"
+        "net.minecraft.tags.TagNetworkSerialization",
+        "net.minecraft.core.IdMapper",
+        "net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData",
+        "net.minecraft.world.level.chunk.PalettedContainer$Data",
+        "net.minecraft.network.FriendlyByteBuf"
     );
     private static final Set<String> transformedTypes = ConcurrentHashMap.newKeySet();
     private static final Map<String, Throwable> transformationErrors = new ConcurrentHashMap<>();
@@ -60,6 +70,18 @@ public final class NativeItemCodecInstrumentation {
             installed = true;
             return;
         }
+
+        // Loading an as-yet undefined target while a retransformation-capable transformer is being
+        // installed can make Paper's shared URLClassLoader attempt to define that target twice.
+        // Resolve every target first, then let installOn retransform this stable loaded set.
+        for (String typeName : EXPECTED_TYPES) {
+            try {
+                Class.forName(typeName, false, ItemStack.class.getClassLoader());
+            } catch (ClassNotFoundException exception) {
+                throw new IllegalStateException("Required native item codec type is missing: " + typeName, exception);
+            }
+        }
+
         new AgentBuilder.Default()
             .disableClassFormatChanges()
             .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
@@ -107,15 +129,38 @@ public final class NativeItemCodecInstrumentation {
             .transform((builder, type, classLoader, module, protectionDomain) -> builder
                 .visit(Advice.to(ItemTagPayloadAdvice.class).on(
                     named("serializeToNetwork").and(takesArguments(net.minecraft.core.Registry.class)))))
+            .type(named("net.minecraft.core.IdMapper"))
+            .transform((builder, type, classLoader, module, protectionDomain) -> builder
+                .visit(Advice.to(BlockStateIdAdvice.class).on(
+                    named("getId").and(takesArguments(Object.class)))))
+            .type(named("net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData"))
+            .transform((builder, type, classLoader, module, protectionDomain) -> builder
+                .visit(Advice.to(ChunkBlockStateProjectionAdvice.class).on(
+                    named("calculateChunkSize").and(takesArguments(
+                        net.minecraft.world.level.chunk.LevelChunk.class
+                    ))))
+                .visit(Advice.to(ChunkBlockStateProjectionAdvice.class).on(
+                    named("extractChunkData").and(takesArguments(
+                        net.minecraft.network.FriendlyByteBuf.class,
+                        net.minecraft.world.level.chunk.LevelChunk.class,
+                        io.papermc.paper.antixray.ChunkPacketInfo.class
+                    )))))
+            .type(named("net.minecraft.world.level.chunk.PalettedContainer$Data"))
+            .transform((builder, type, classLoader, module, protectionDomain) -> builder
+                .visit(Advice.to(BlockPaletteSizeAdvice.class).on(
+                    named("getSerializedSize").and(takesArguments(net.minecraft.core.IdMap.class))))
+                .visit(Advice.to(GlobalBlockPaletteWriteAdvice.class).on(
+                    named("write").and(takesArguments(
+                        net.minecraft.network.FriendlyByteBuf.class,
+                        net.minecraft.core.IdMap.class,
+                        io.papermc.paper.antixray.ChunkPacketInfo.class,
+                        int.class
+                    )))))
+            .type(named("net.minecraft.network.FriendlyByteBuf"))
+            .transform((builder, type, classLoader, module, protectionDomain) -> builder
+                .visit(Advice.to(FixedSizeLongArrayAdvice.class).on(
+                    named("writeFixedSizeLongArray").and(takesArguments(long[].class)))))
             .installOn(instrumentation);
-
-        for (String typeName : EXPECTED_TYPES) {
-            try {
-                Class.forName(typeName, false, ItemStack.class.getClassLoader());
-            } catch (ClassNotFoundException exception) {
-                throw new IllegalStateException("Required native item codec type is missing: " + typeName, exception);
-            }
-        }
 
         if (!transformationErrors.isEmpty()) {
             var first = transformationErrors.entrySet().iterator().next();
@@ -137,15 +182,21 @@ public final class NativeItemCodecInstrumentation {
         BiConsumer<Registry<?>, TagNetworkSerialization.NetworkPayload> tags = NativeItemClientBridge::projectTags;
         BiFunction<RegistryFriendlyByteBuf, net.minecraft.network.chat.Component, net.minecraft.network.chat.Component>
             components = NativeItemClientBridge::encodeComponent;
+        Function<Object, Object> blockStates = NativeBlockClientBridge::encodeState;
+        Function<Object, Object> projectedBlockStates = NativeBlockClientBridge::projectValue;
+        int vanillaBlockStateCount = xyz.mastriel.cutapi.block.nativeblock.NativeBlockRegistry.INSTANCE.getVanillaBlockStateCount$CuTAPI();
         invoke(
             hookClass,
             "bind",
-            new Class<?>[]{Function.class, Function.class, Function.class, BiConsumer.class, BiFunction.class},
+            new Class<?>[]{Function.class, Function.class, Function.class, BiConsumer.class, BiFunction.class, Function.class, Function.class, int.class},
             encoder,
             decoder,
             holder,
             tags,
-            components
+            components,
+            blockStates,
+            projectedBlockStates,
+            vanillaBlockStateCount
         );
     }
 

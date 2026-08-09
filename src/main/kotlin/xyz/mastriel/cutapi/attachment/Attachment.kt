@@ -29,6 +29,9 @@ public interface ItemAttachment : Attachment
 /** Passive data that can be attached to players. */
 public interface PlayerAttachment : Attachment
 
+/** Passive data attached intrinsically to blocks or persisted on native tile entities. */
+public interface BlockAttachment : Attachment
+
 @Target(AnnotationTarget.CLASS)
 @MustBeDocumented
 public annotation class RepeatableAttachment

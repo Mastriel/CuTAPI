@@ -3,16 +3,16 @@ package xyz.mastriel.cutapi.block
 import org.bukkit.*
 import org.bukkit.block.*
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.behavior.*
-import xyz.mastriel.cutapi.block.CustomBlockManager.Companion.tags
 import xyz.mastriel.cutapi.block.behaviors.*
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
-import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
 import kotlin.reflect.*
 
 
-public sealed interface CustomTile<T : CuTPlacedTile> : Identifiable {
+public sealed interface CustomTile<T : CuTPlacedTile> : Identifiable, AttachmentHolder<BlockAttachment> {
     public val descriptor: TileDescriptor
     public val placedBlockTypeClass: KClass<out T>
 
@@ -23,13 +23,23 @@ public sealed interface CustomTile<T : CuTPlacedTile> : Identifiable {
 
     public fun setAt(block: Block) {
         CuTAPI.blockManager.placeTile(block.location, this)
-        when (val strategy = descriptor.blockStrategy) {
-            is BlockStrategy.FakeEntity -> block.type = Material.BARRIER
-            is BlockStrategy.Mushroom -> block.type = Material.RED_MUSHROOM
-            is BlockStrategy.NoteBlock -> block.type = Material.NOTE_BLOCK
-            is BlockStrategy.Vanilla -> block.type = strategy.material
-        }
     }
+
+    public fun placementItemOrNull(): CustomItem<*>?
+
+    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out BlockAttachment>): Boolean =
+        descriptor.hasAttachment(schema)
+
+    override fun <A : BlockAttachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<A>): A =
+        descriptor.getAttachment(schema)
+
+    override fun <A : BlockAttachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<A>): A? =
+        descriptor.getAttachmentOrNull(schema)
+
+    override fun <A : BlockAttachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<A>): List<A> =
+        descriptor.getAttachments(schema)
+
+    override fun getAllAttachments(): List<BlockAttachment> = descriptor.getAllAttachments()
 
     public companion object : IdentifierRegistry<CustomTile<*>>(id("cutapi:registry/custom_tile")) {
 
@@ -51,6 +61,7 @@ public class CustomBlock<T : CuTPlacedBlock> @Deprecated(
 
     internal fun prepareDefinition(contributeItem: (CustomItem<*>) -> Unit = ::contributeGeneratedItem) {
         check(!definitionPrepared) { "Custom block $id was prepared more than once." }
+        descriptor.attachments.forEach { it.schema().requireRegistered() }
         preparedItem = descriptor.itemPolicy.prepare(descriptor, this).also { prepared ->
             if (prepared?.contributeToRegistry == true) contributeItem(prepared.item)
         }
@@ -63,6 +74,8 @@ public class CustomBlock<T : CuTPlacedBlock> @Deprecated(
     ) {
         validatePreparedItem(this, definitionPrepared, preparedItem, findItem)
     }
+
+    override fun placementItemOrNull(): CustomItem<*>? = preparedItem?.item
 
     private val behaviorHolder by lazy { blockBehaviorHolder(this) }
     override fun hasBehavior(behavior: KClass<out BlockBehavior>): Boolean = behaviorHolder.hasBehavior(behavior)
@@ -79,13 +92,11 @@ public class CustomBlock<T : CuTPlacedBlock> @Deprecated(
 
 
     public companion object : IdentifierRegistry<CustomBlock<*>>(id("cutapi:registry/custom_block")) {
-        internal val DeferredRegistry: DeferredRegistry<CustomBlock<*>> = defer(RegistryPriority(Int.MAX_VALUE))
-
-        public val Unknown: CustomBlock<CuTPlacedBlock> by DeferredRegistry.registerCustomBlock(
-            id("cutapi:unknown_block")
-        ) {
-            blockStrategy = BlockStrategy.Vanilla(Material.BARRIER)
-            itemPolicy = BlockItemPolicy.Generate()
+        public val Unknown: CustomBlock<CuTPlacedBlock> by lazy {
+            customBlock(id("cutapi:unknown_block")) {
+                blockStrategy = BlockStrategy.Vanilla(Material.BARRIER)
+                itemPolicy = BlockItemPolicy.Generate()
+            }
         }
 
         init {
@@ -112,6 +123,7 @@ public class CustomTileEntity<T : CuTPlacedTileEntity> @Deprecated(
 
     internal fun prepareDefinition(contributeItem: (CustomItem<*>) -> Unit = ::contributeGeneratedItem) {
         check(!definitionPrepared) { "Custom tile entity $id was prepared more than once." }
+        descriptor.attachments.forEach { it.schema().requireRegistered() }
         preparedItem = descriptor.itemPolicy.prepare(descriptor, this).also { prepared ->
             if (prepared?.contributeToRegistry == true) contributeItem(prepared.item)
         }
@@ -124,6 +136,8 @@ public class CustomTileEntity<T : CuTPlacedTileEntity> @Deprecated(
     ) {
         validatePreparedItem(this, definitionPrepared, preparedItem, findItem)
     }
+
+    override fun placementItemOrNull(): CustomItem<*>? = preparedItem?.item
 
     private val behaviorHolder by lazy { tileEntityBehaviorHolder(this) }
     override fun hasBehavior(behavior: KClass<out TileEntityBehavior>): Boolean = behaviorHolder.hasBehavior(behavior)
@@ -141,13 +155,15 @@ public class CustomTileEntity<T : CuTPlacedTileEntity> @Deprecated(
     override fun <T : TileEntityBehavior> getBehavior(behavior: KClass<T>): T = behaviorHolder.getBehavior(behavior)
 
     public companion object : IdentifierRegistry<CustomTileEntity<*>>(id("cutapi:registry/custom_tile_entity")) {
-        internal val DeferredRegistry: DeferredRegistry<CustomTileEntity<*>> = defer(RegistryPriority(Int.MAX_VALUE))
+        public val Unknown: CustomTileEntity<CuTPlacedTileEntity> by lazy {
+            customTileEntity(id("cutapi:unknown_tile_entity")) {
+                visual { BlockVisualMethod.Vanilla(Material.BARRIER.createBlockData()) }
 
-        public val Unknown: CustomTileEntity<CuTPlacedTileEntity> by DeferredRegistry.registerCustomTileEntity(
-            id("cutapi:unknown_tile_entity")
-        ) {
-            blockStrategy = BlockStrategy.Vanilla(Material.BARRIER)
-            itemPolicy = BlockItemPolicy.Generate()
+                settings {
+                    hardness = 1.0f;
+                }
+                itemPolicy = BlockItemPolicy.Generate()
+            }
         }
 
         init {

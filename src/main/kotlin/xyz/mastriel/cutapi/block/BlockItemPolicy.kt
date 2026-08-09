@@ -52,7 +52,7 @@ public sealed class BlockItemPolicy {
             tileDescriptor: TileDescriptor,
             customTile: CustomTile<*>,
         ): PreparedBlockItem {
-            val resolvedBackingItem = backingItem ?: defaultBackingItem(customTile)
+            val resolvedBackingItem = backingItem ?: defaultBackingItem()
             val placement = BlockPlaceAttachment(customTile)
             val baseDescriptor = ItemDescriptor(
                 display = {
@@ -79,14 +79,11 @@ public sealed class BlockItemPolicy {
                 descriptor: () -> ItemDescriptor = ::defaultItemDescriptor,
             ): Generate = Generate(backingItem, descriptor)
 
-            private fun defaultBackingItem(customTile: CustomTile<*>): ItemType {
-                val material = when (val strategy = customTile.descriptor.blockStrategy) {
-                    is BlockStrategy.Vanilla -> strategy.material
-                    else -> Material.STONE
-                }
-                return material.asItemType()
-                    ?: error("Custom tile ${customTile.id} uses $material, which cannot back an item.")
-            }
+            /**
+             * Placement is supplied by [BlockPlaceAttachment], so the native item must not inherit a
+             * vanilla BlockItem's identity-bound placement behavior. The generated model controls visuals.
+             */
+            private fun defaultBackingItem(): ItemType = ItemType.PAPER
 
             private fun mergeGeneratedDescriptor(
                 base: ItemDescriptor,

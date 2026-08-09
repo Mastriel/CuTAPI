@@ -39,6 +39,8 @@ import xyz.mastriel.cutapi.item.attachments.DisplayAs
 import xyz.mastriel.cutapi.item.attachments.Durability
 import xyz.mastriel.cutapi.item.attachments.HideTooltip
 import xyz.mastriel.cutapi.item.getAttachmentOrNull
+import xyz.mastriel.cutapi.block.nativeblock.NativeBlockClientBridge
+import xyz.mastriel.cutapi.block.nativeblock.NativeBlockLifecycle
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicLong
 import javax.crypto.Mac
@@ -480,11 +482,12 @@ public object NativeItemClientBridge {
         return item.backing.builtInRegistryHolder()
     }
 
-    /** Rewrites item tag IDs to the registry IDs known by an unmodified client. */
+    /** Rewrites item and block tag IDs to registry IDs known by an unmodified client. */
     @JvmStatic
     public fun projectTags(registry: Registry<*>, payload: TagNetworkSerialization.NetworkPayload) {
-        if (registry.key() != Registries.ITEM) return
-        NativeItemLifecycle.requireActive()
+        if (registry.key() !in setOf(Registries.ITEM, Registries.BLOCK)) return
+        if (registry.key() == Registries.ITEM) NativeItemLifecycle.requireActive()
+        else NativeBlockLifecycle.requireActive()
 
         val tagsField = TagNetworkSerialization.NetworkPayload::class.java.getDeclaredField("tags")
         tagsField.isAccessible = true
@@ -492,13 +495,22 @@ public object NativeItemClientBridge {
         val tags = tagsField.get(payload) as MutableMap<net.minecraft.resources.Identifier, IntList>
 
         for (entry in tags.entries) {
-            val projected = entry.value.intStream()
-                .map { numericId ->
-                    val item = BuiltInRegistries.ITEM.byId(numericId)
-                    if (item is NativeCustomItem) BuiltInRegistries.ITEM.getId(item.backing) else numericId
+            val projected = if (registry.key() == Registries.ITEM) {
+                entry.value.intStream()
+                    .map { numericId ->
+                        val item = BuiltInRegistries.ITEM.byId(numericId)
+                        if (item is NativeCustomItem) BuiltInRegistries.ITEM.getId(item.backing) else numericId
+                    }
+                    .distinct()
+                    .toArray()
+            } else {
+                entry.value.toIntArray().flatMap { numericId ->
+                    val block = BuiltInRegistries.BLOCK.byId(numericId)
+                    NativeBlockClientBridge.projectTagBlock(block).map(BuiltInRegistries.BLOCK::getId)
                 }
-                .distinct()
-                .toArray()
+                    .distinct()
+                    .toIntArray()
+            }
             entry.setValue(IntArrayList(projected))
         }
     }

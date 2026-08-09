@@ -1,114 +1,155 @@
 package xyz.mastriel.cutapi.block
 
-import net.kyori.adventure.text.*
-import net.kyori.adventure.text.format.*
-import xyz.mastriel.cutapi.utils.*
+import kotlin.reflect.KClass
 
-public abstract class BlockStateDeclaration {
-
-    public abstract fun getPermutations(): List<BlockStateValue>
-    public abstract fun getPermutationsCount(): Int;
-
-    public abstract val stateName: String;
-
-    public class Boolean(override val stateName: String) : BlockStateDeclaration() {
-        override fun getPermutations(): List<BlockStateValue.Boolean> {
-            return listOf(BlockStateValue.Boolean.True, BlockStateValue.Boolean.False)
+/** A typed property that contributes to a custom block's native state definition. */
+public sealed class BlockStateType<T : Any>(
+    public val name: String,
+) {
+    init {
+        require(Name.matches(name)) {
+            "Block state name '$name' must contain only lower-case letters, digits, and underscores."
         }
+    }
 
-        override fun getPermutationsCount(): Int {
-            return 2
-        }
+    public abstract val values: List<T>
+
+    public abstract fun canonicalValue(value: T): String
+
+    internal fun requireValue(value: Any): T {
+        @Suppress("UNCHECKED_CAST")
+        val typed = value as? T
+            ?: error("Value $value is not valid for block state '$name'.")
+        require(typed in values) { "Value $value is not valid for block state '$name'." }
+        return typed
+    }
+
+    public class Boolean(name: String) : BlockStateType<kotlin.Boolean>(name) {
+        override val values: List<kotlin.Boolean> = listOf(false, true)
+
+        override fun canonicalValue(value: kotlin.Boolean): String = value.toString()
     }
 
     public class Enum<T : kotlin.Enum<T>>(
-        public val enumClass: kotlin.reflect.KClass<T>,
-        override val stateName: String
-    ) :
-        BlockStateDeclaration() {
+        public val enumClass: KClass<T>,
+        name: String,
+    ) : BlockStateType<T>(name) {
+        override val values: List<T> = enumClass.java.enumConstants.toList()
 
-        private var _cachedPermutations: List<BlockStateValue.Enum<T>>? = null
-
-        override fun getPermutations(): List<BlockStateValue.Enum<T>> {
-            if (_cachedPermutations == null) {
-                _cachedPermutations = enumClass.java.enumConstants
-                    .map { BlockStateValue.Enum(it) }
-            }
-            return _cachedPermutations!!
+        init {
+            require(values.isNotEmpty()) { "Block state enum ${enumClass.qualifiedName} has no values." }
         }
 
-        override fun getPermutationsCount(): Int {
-            return enumClass.java.enumConstants.size
-        }
+        override fun canonicalValue(value: T): String = value.name.lowercase()
     }
 
     public companion object {
-        public inline fun <reified T : kotlin.Enum<T>> Enum(name: String): Enum<T> {
-            return Enum(T::class, name)
-        }
+        private val Name: Regex = Regex("[a-z0-9_]+")
+
+        public inline fun <reified T : kotlin.Enum<T>> Enum(name: String): Enum<T> = Enum(T::class, name)
     }
 }
 
-public class BlockStates {
-    private val stateDeclarations: MutableList<BlockStateDeclaration> = mutableListOf()
+/** One canonical native custom-block state. */
+public class CustomBlockState internal constructor(
+    values: Map<BlockStateType<*>, Any>,
+) {
+    private val stateValues: Map<BlockStateType<*>, Any> = values.toMap()
 
-    public fun add(state: BlockStateDeclaration) {
-        stateDeclarations += state
+    public operator fun <T : Any> get(type: BlockStateType<T>): T =
+        type.requireValue(stateValues[type] ?: error("Block state '${type.name}' is not defined."))
+
+    public fun contains(type: BlockStateType<*>): Boolean = type in stateValues
+
+    public fun asMap(): Map<BlockStateType<*>, Any> = stateValues.toMap()
+
+    public fun canonicalValues(): String = stateValues.entries
+        .sortedBy { it.key.name }
+        .joinToString(",") { (type, value) ->
+            @Suppress("UNCHECKED_CAST")
+            val untyped = type as BlockStateType<Any>
+            "${type.name}=${untyped.canonicalValue(value)}"
+        }
+
+    override fun equals(other: Any?): kotlin.Boolean =
+        other is CustomBlockState && stateValues == other.stateValues
+
+    override fun hashCode(): Int = stateValues.hashCode()
+
+    override fun toString(): String = "CustomBlockState(${canonicalValues()})"
+}
+
+/** Immutable state schema and its complete native-state permutation set. */
+public class BlockStateDefinition internal constructor(
+    declarations: List<BlockStateType<*>>,
+    defaults: Map<BlockStateType<*>, Any>,
+) {
+    public val declarations: List<BlockStateType<*>> = declarations.toList()
+    private val defaultValues: Map<BlockStateType<*>, Any> = defaults.toMap()
+
+    public val defaultState: CustomBlockState = CustomBlockState(defaultValues)
+
+    public val permutations: List<CustomBlockState> = createPermutations()
+
+    public val permutationCount: Int get() = permutations.size
+
+    public fun <T : Any> default(type: BlockStateType<T>): T = defaultState[type]
+
+    public fun state(values: Map<BlockStateType<*>, Any>): CustomBlockState {
+        val unknown = values.keys - declarations.toSet()
+        require(unknown.isEmpty()) { "State contains undefined properties: ${unknown.joinToString { it.name }}." }
+        val resolved = defaultValues.toMutableMap()
+        values.forEach { (type, value) -> resolved[type] = type.requireValue(value) }
+        return CustomBlockState(resolved)
     }
 
-    public fun getStates(): List<BlockStateDeclaration> {
-        return stateDeclarations.toList()
-    }
+    private fun createPermutations(): List<CustomBlockState> {
+        if (declarations.isEmpty()) return listOf(CustomBlockState(emptyMap()))
+        val permutations = mutableListOf<CustomBlockState>()
 
-    public fun getTotalPermutationsCount(): Int {
-        return stateDeclarations.fold(1) { acc, state -> acc * state.getPermutationsCount() }
-    }
-
-    public fun createPermutations(): List<Map<BlockStateDeclaration, BlockStateValue>> {
-        val permutations = mutableListOf<Map<BlockStateDeclaration, BlockStateValue>>()
-
-        fun backtrack(
-            index: Int,
-            currentPermutation: MutableMap<BlockStateDeclaration, BlockStateValue>
-        ) {
-            if (index == stateDeclarations.size) {
-                permutations.add(currentPermutation.toMap())
+        fun visit(index: Int, values: MutableMap<BlockStateType<*>, Any>) {
+            if (index == declarations.size) {
+                permutations += CustomBlockState(values)
                 return
             }
-
-            val stateDeclaration = stateDeclarations[index]
-            for (value in stateDeclaration.getPermutations()) {
-                currentPermutation[stateDeclaration] = value
-                backtrack(index + 1, currentPermutation)
-                currentPermutation.remove(stateDeclaration)
+            val declaration = declarations[index]
+            declaration.values.forEach { value ->
+                values[declaration] = value
+                visit(index + 1, values)
             }
+            values.remove(declaration)
         }
 
-        backtrack(0, mutableMapOf())
+        visit(0, linkedMapOf())
         return permutations
     }
+
+    public companion object {
+        public val Empty: BlockStateDefinition = BlockStateDefinition(emptyList(), emptyMap())
+    }
 }
 
-public interface BlockStateValue {
+/** DSL that atomically defines each state property and its default producer. */
+public class BlockStates {
+    private val declarations: MutableList<BlockStateType<*>> = mutableListOf()
+    private val defaults: MutableMap<BlockStateType<*>, Any> = linkedMapOf()
 
-    public val displayName: Component
-
-    public class Boolean private constructor(bool: kotlin.Boolean) : BlockStateValue {
-        override val displayName: Component =
-            bool.toString().colored.color(if (bool) NamedTextColor.GREEN else NamedTextColor.RED)
-
-        public companion object {
-            public val True: Boolean = Boolean(true)
-            public val False: Boolean = Boolean(false)
-
-            public fun from(value: kotlin.Boolean): Boolean {
-                return if (value) True else False
-            }
+    public fun <T : Any> define(type: BlockStateType<T>, default: () -> T) {
+        require(declarations.none { it.name == type.name }) {
+            "Block state '${type.name}' is already defined."
         }
+        val value = default()
+        type.requireValue(value)
+        declarations += type
+        defaults[type] = value
     }
 
-    public class Enum<T : kotlin.Enum<T>> public constructor(public val value: T) : BlockStateValue {
-        override val displayName: Component =
-            value.name.colored.color(NamedTextColor.AQUA)
-    }
+    public fun build(): BlockStateDefinition = BlockStateDefinition(declarations, defaults)
+
+    public fun getTotalPermutationsCount(): Int = build().permutationCount
+
+    public fun createPermutations(): List<CustomBlockState> = build().permutations
 }
+
+public fun blockStates(configure: BlockStates.() -> Unit = {}): BlockStateDefinition =
+    BlockStates().apply(configure).build()

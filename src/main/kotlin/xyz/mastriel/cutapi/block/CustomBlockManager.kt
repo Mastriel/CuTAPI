@@ -2,6 +2,10 @@ package xyz.mastriel.cutapi.block
 
 import org.bukkit.*
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.block.nativeblock.*
+import org.bukkit.craftbukkit.*
+import org.bukkit.craftbukkit.block.*
+import net.minecraft.world.level.chunk.status.*
 import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.utils.*
@@ -25,26 +29,16 @@ public class CustomBlockManager {
     private val types = mutableMapOf<Identifier, CustomTileType<*>>()
 
     public fun getPlacedTile(block: BukkitBlock): CuTPlacedTile {
-        val type = types[block.customId] ?: error("Block ${block.customId} is not a custom block!")
+        val type = types[block.customTypeId] ?: error("Block ${block.customId} has no registered placed wrapper type!")
         return type.constructor(block)
     }
 
-    /**
-     * Returns a list of the custom placed tiles in a chunk, represented as vanilla blocks.
-     */
-    private fun chunkVanillaBlocks(chunk: Chunk) =
-        chunk.persistentDataContainer.keys
-            .filter { it.key.startsWith("customBlockData") }
-            .mapNotNull { namespacedKey ->
-                val (_, x, y, z) = namespacedKey.key.split("/").map { it.toIntOrNull() }
-
-                if (x == null || y == null || z == null) return@mapNotNull null
-
-                val block = chunk.getBlock(x, y, z)
-                if (block.tags.getIdentifier(CUT_ID_KEY) == null) return@mapNotNull null
-
-                block
-            }
+    private fun chunkNativeTileBlocks(chunk: Chunk): List<BukkitBlock> {
+        val handle = (chunk as CraftChunk).getHandle(ChunkStatus.FULL)
+        return handle.blockEntities.entries
+            .filter { it.value is NativeCustomBlockEntity }
+            .map { (pos, _) -> chunk.world.getBlockAt(pos.x, pos.y, pos.z) }
+    }
 
     public fun getType(id: Identifier): KClass<out CuTPlacedTile>? {
         return types[id]?.kClass
@@ -61,12 +55,7 @@ public class CustomBlockManager {
                 "${tile.placedBlockTypeClass.qualifiedName}. Register it with registerPlacedTileType first."
         }
 
-        block.tags.setIdentifier(CUT_ID_KEY, tile.id)
-        block.tags.setIdentifier(CUT_TYPE_KEY, typeId)
-
-        return requireNotNull(types[typeId]?.constructor?.invoke(block)) {
-            "Placed wrapper type $typeId disappeared while placing custom tile ${tile.id}."
-        }
+        return NativeBlockTypes.setAt(block, tile, tile.descriptor.states.defaultState)
     }
 
 
@@ -74,7 +63,7 @@ public class CustomBlockManager {
      * Returns a list of the custom placed tiles in a chunk.
      */
     private inline fun <reified T : CuTPlacedTile> chunkCustomTiles(chunk: Chunk) =
-        chunkVanillaBlocks(chunk)
+        chunkNativeTileBlocks(chunk)
             .mapNotNull { it.wrap<T>() }
 
 
@@ -131,21 +120,16 @@ public class CustomBlockManager {
 
 
         public val BukkitBlock.isCustom: Boolean
-            get() = this.tags.getIdentifier(CUT_ID_KEY) != null
+            get() = NativeBlockTypes.definition(this) != null
 
         public val BukkitBlock.customId: Identifier
-            get() = this.tags.getIdentifier(CUT_ID_KEY) ?: unknownID()
+            get() = NativeBlockTypes.definition(this)?.id ?: unknownID()
 
         public val BukkitBlock.customTypeId: Identifier
             get() {
-                val id = this.tags.getIdentifier(CUT_TYPE_KEY)
-                if (id != null) return id
                 val manager = CuTAPI.blockManager
-                return when (customTileOrNull) {
-                    is CustomBlock -> manager.blockTypeId
-                    is CustomTileEntity -> manager.tileEntityTypeId
-                    else -> unknownID()
-                }
+                val definition = customTileOrNull ?: return unknownID()
+                return manager.getType(definition.placedBlockTypeClass) ?: unknownID()
             }
 
 

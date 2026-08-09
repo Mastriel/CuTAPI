@@ -15,12 +15,14 @@ import net.minecraft.nbt.NbtAccounter
 import net.minecraft.nbt.NbtIo
 import net.minecraft.nbt.NbtOps
 import net.minecraft.server.MinecraftServer
+import net.minecraft.world.level.chunk.status.ChunkStatus
 import org.bukkit.Bukkit
 import org.bukkit.Chunk
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.attribute.Attribute
 import org.bukkit.block.Container
+import org.bukkit.craftbukkit.CraftChunk
 import org.bukkit.craftbukkit.inventory.CraftItemStack
 import org.bukkit.entity.Item
 import org.bukkit.entity.LivingEntity
@@ -31,6 +33,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataContainer
 import org.bukkit.persistence.PersistentDataType
 import xyz.mastriel.cutapi.attachment.ItemAttachment
+import xyz.mastriel.cutapi.block.nativeblock.NativeCustomBlockEntity
 import xyz.mastriel.cutapi.attachment.schema
 import xyz.mastriel.cutapi.data.Variant
 import xyz.mastriel.cutapi.item.attachments.Durability
@@ -353,7 +356,10 @@ public object ItemMaterializationManager {
                 is LivingEntity -> changed = reconcileEquipment(entity) || changed
             }
         }
-        for (state in chunk.tileEntities) {
+        val handle = (chunk as CraftChunk).getHandle(ChunkStatus.FULL)
+        for ((pos, blockEntity) in handle.blockEntities) {
+            if (blockEntity is NativeCustomBlockEntity) continue
+            val state = chunk.world.getBlockAt(pos.x, pos.y, pos.z).state
             val container = state as? Container ?: continue
             changed = reconcileInventory(container.inventory) || changed
         }
