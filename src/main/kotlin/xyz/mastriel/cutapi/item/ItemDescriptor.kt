@@ -21,9 +21,11 @@ public annotation class ItemDescriptorDsl
  */
 public class ItemDescriptor internal constructor(
     public val display: (ItemDisplayBuilder.() -> Unit)? = null,
-    public val attachments: List<ItemAttachment> = mutableListOf(),
-    public val onRegister: EventHandlerList<ItemRegisterEvent> = EventHandlerList()
+    attachments: List<ItemAttachment> = emptyList(),
+    public val onRegister: EventHandlerList<ItemRegisterEvent> = EventHandlerList(),
 ) : AttachmentHolder<ItemAttachment> {
+
+    public val attachments: List<ItemAttachment> = attachments.toList()
 
     override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out ItemAttachment>): Boolean =
         attachments.any { it.schema().id == schema.id }
@@ -104,8 +106,8 @@ public class ItemDescriptorBuilder {
 
         return ItemDescriptor(
             display = display,
-            attachments = _attachments,
-            onRegister = onRegister
+            attachments = _attachments.toList(),
+            onRegister = onRegister,
         )
     }
 

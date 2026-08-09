@@ -18,7 +18,7 @@ public data class BlockPlaceAttachment(
 
     public val tile: CustomTile<*> get() = CustomTile.get(tileId)
 
-    public companion object : Schema<BlockPlaceAttachment> by schema(id(Plugin, "block_place"), {
+    public companion object : Schema<BlockPlaceAttachment> by schema(id("cutapi:block_place"), {
         property(BlockPlaceAttachment::tileId, VariantSerializer.Id, name = "tile_id")
         property(BlockPlaceAttachment::consumesItem, VariantSerializer.Boolean, name = "consumes_item")
     })

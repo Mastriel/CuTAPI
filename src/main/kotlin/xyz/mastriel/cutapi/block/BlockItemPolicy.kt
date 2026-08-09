@@ -1,72 +1,175 @@
+@file:Suppress("UnstableApiUsage")
+
 package xyz.mastriel.cutapi.block
 
 import org.bukkit.*
+import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.item.attachments.*
+import xyz.mastriel.cutapi.registry.*
 
-/**
- * Defines how a block has a relationship to items.
- * This will only do things when the block is registered.
- *
- * In simpler terms, this determines if the block should:
- * a. modify an existing item to make it place the block
- * b. create a new item based on the block
- * c. do nothing, you can figure it out manually
- */
+internal data class PreparedBlockItem(
+    val item: CustomItem<*>,
+    val contributeToRegistry: Boolean,
+)
+
+/** Defines the relationship between a custom tile definition and its placeable item. */
 public sealed class BlockItemPolicy {
 
-    internal abstract fun tileCreate(tileDescriptor: TileDescriptor, customTile: CustomTile<*>): CustomItem<*>?
+    internal abstract fun prepare(
+        tileDescriptor: TileDescriptor,
+        customTile: CustomTile<*>,
+    ): PreparedBlockItem?
 
-    /**
-     * Generate a new item and register it. You can supply your own item descriptor which will be combined
-     * with a pre-generated one.
-     */
-    public data class Generate(val descriptor: ItemDescriptor? = null) : BlockItemPolicy() {
-        public constructor(descriptor: ItemDescriptorBuilder.() -> Unit) :
-            this(ItemDescriptorBuilder().apply(descriptor).build())
+    /** Generates and contributes a new custom item when the tile definition is registered. */
+    public class Generate private constructor(
+        public val backingItem: ItemType?,
+        private val descriptorProducer: (() -> ItemDescriptor)?,
+    ) : BlockItemPolicy() {
 
-        override fun tileCreate(tileDescriptor: TileDescriptor, customTile: CustomTile<*>): CustomItem<*> {
-            val material = when (val strategy = customTile.descriptor.blockStrategy) {
-                is BlockStrategy.Vanilla -> strategy.material
-                else -> Material.STONE
+        @Deprecated(
+            message = "Use Generate.fromDescriptor and keep the descriptor producer at the call site.",
+            level = DeprecationLevel.WARNING,
+        )
+        public val descriptor: ItemDescriptor? get() = descriptorProducer?.invoke()
+
+        public constructor(backingItem: ItemType? = null) : this(backingItem, null)
+
+        public constructor(
+            backingItem: ItemType? = null,
+            configure: ItemDescriptorBuilder.() -> Unit,
+        ) : this(backingItem, descriptorProducer = { ItemDescriptorBuilder().apply(configure).build() })
+
+        @Deprecated(
+            message = "Pass a descriptor producer to Generate.fromDescriptor instead.",
+            replaceWith = ReplaceWith("BlockItemPolicy.Generate.fromDescriptor { descriptor ?: defaultItemDescriptor() }"),
+            level = DeprecationLevel.WARNING,
+        )
+        public constructor(descriptor: ItemDescriptor?) : this(null, descriptorProducer = descriptor?.let { { it } })
+
+        override fun prepare(
+            tileDescriptor: TileDescriptor,
+            customTile: CustomTile<*>,
+        ): PreparedBlockItem {
+            val resolvedBackingItem = backingItem ?: defaultBackingItem(customTile)
+            val placement = BlockPlaceAttachment(customTile)
+            val baseDescriptor = ItemDescriptor(
+                display = {
+                    if (viewer != null) name = tileDescriptor.name?.withViewer(viewer)
+                },
+                attachments = listOf(placement),
+            )
+            val configuredDescriptor = descriptorProducer?.invoke()
+            val combinedDescriptor = if (configuredDescriptor == null) {
+                baseDescriptor
+            } else {
+                mergeGeneratedDescriptor(baseDescriptor, configuredDescriptor, placement)
             }
-            val backingItem = material.asItemType()
-                ?: error("Block material $material cannot back an item.")
-            if (descriptor != null) {
-                return customItemFromDescriptor(customTile.id / "item", backingItem) { descriptor }
+            val generatedItem = customItemFromDescriptor(customTile.id / "item", resolvedBackingItem) {
+                combinedDescriptor
             }
-            return customItem(customTile.id / "item", backingItem) {
-                attach(BlockPlaceAttachment(customTile))
+            return PreparedBlockItem(generatedItem, contributeToRegistry = true)
+        }
 
-                display {
-                    if (viewer == null) return@display
-                    name = tileDescriptor.name?.withViewer(viewer)
+        public companion object {
+            /** Creates a generated-item policy whose descriptor is produced per tile definition. */
+            public fun fromDescriptor(
+                backingItem: ItemType? = null,
+                descriptor: () -> ItemDescriptor = ::defaultItemDescriptor,
+            ): Generate = Generate(backingItem, descriptor)
+
+            private fun defaultBackingItem(customTile: CustomTile<*>): ItemType {
+                val material = when (val strategy = customTile.descriptor.blockStrategy) {
+                    is BlockStrategy.Vanilla -> strategy.material
+                    else -> Material.STONE
                 }
+                return material.asItemType()
+                    ?: error("Custom tile ${customTile.id} uses $material, which cannot back an item.")
+            }
+
+            private fun mergeGeneratedDescriptor(
+                base: ItemDescriptor,
+                configured: ItemDescriptor,
+                placement: BlockPlaceAttachment,
+            ): ItemDescriptor {
+                val mergedAttachments = mergeAttachments(base.attachments, configured.attachments)
+                    .filterNot { it.schema().id == BlockPlaceAttachment.id } + placement
+                return ItemDescriptor(
+                    display = configured.display ?: base.display,
+                    attachments = mergedAttachments,
+                    onRegister = configured.onRegister,
+                )
             }
         }
     }
 
-    /**
-     * Using this will modify the attachments of [item] to include a [BlockPlaceAttachment].
-     * If it does already have one, a warning will be printed. You shouldn't use this with an item that has one!
-     */
-    public data class Item(val item: CustomItem<*>, val consumesItem: Boolean = true) : BlockItemPolicy() {
-        override fun tileCreate(tileDescriptor: TileDescriptor, customTile: CustomTile<*>): CustomItem<*> {
-            val attachments = item.descriptor.attachments as? MutableList<ItemAttachment>
-                ?: error("${item.id} does not have its attachments as a MutableList!")
+    /** Uses an existing custom item and prepares it to place this tile before item registration. */
+    public class Item(
+        public val consumesItem: Boolean = true,
+        item: () -> CustomItem<*>,
+    ) : BlockItemPolicy() {
+        private val itemProducer: SingleProducer<CustomItem<*>> = SingleProducer(item)
 
-            attachments.add(BlockPlaceAttachment(customTile, consumesItem))
+        public val item: CustomItem<*> get() = itemProducer.produce()
 
-            return item
+        @Deprecated(
+            message = "Pass an item producer so deferred items are resolved during tile registration.",
+            replaceWith = ReplaceWith("BlockItemPolicy.Item(consumesItem) { item }"),
+            level = DeprecationLevel.WARNING,
+        )
+        public constructor(item: CustomItem<*>, consumesItem: Boolean = true) : this(consumesItem, { item })
+
+        override fun prepare(
+            tileDescriptor: TileDescriptor,
+            customTile: CustomTile<*>,
+        ): PreparedBlockItem {
+            val resolvedItem = itemProducer.produce()
+            val placement = BlockPlaceAttachment(customTile, consumesItem)
+            resolvedItem.prepareDescriptor { current ->
+                prepareBlockPlacementDescriptor(current, resolvedItem.id, placement)
+            }
+            return PreparedBlockItem(resolvedItem, contributeToRegistry = false)
         }
     }
 
-    /**
-     * This does nothing to create relationships between your block and any items.
-     */
+    /** Creates no automatic item relationship for this tile. */
     public data object None : BlockItemPolicy() {
-        override fun tileCreate(tileDescriptor: TileDescriptor, customTile: CustomTile<*>) = null
+        override fun prepare(
+            tileDescriptor: TileDescriptor,
+            customTile: CustomTile<*>,
+        ): PreparedBlockItem? = null
     }
+}
 
+private fun mergeAttachments(
+    base: List<ItemAttachment>,
+    configured: List<ItemAttachment>,
+): List<ItemAttachment> {
+    val merged = base.toMutableList()
+    for (attachment in configured) {
+        if (!attachment.isRepeatableAttachment()) {
+            merged.removeIf { it.schema().id == attachment.schema().id }
+        }
+        merged += attachment
+    }
+    return merged.toList()
+}
+
+internal fun prepareBlockPlacementDescriptor(
+    current: ItemDescriptor,
+    itemId: Identifier,
+    placement: BlockPlaceAttachment,
+): ItemDescriptor {
+    val existing = current.attachments.filter { it.schema().id == BlockPlaceAttachment.id }
+    require(existing.isEmpty() || existing == listOf(placement)) {
+        "Custom item $itemId is already associated with a different block placement policy; " +
+            "it cannot also place ${placement.tileId}."
+    }
+    if (existing.isNotEmpty()) return current
+    return ItemDescriptor(
+        display = current.display,
+        attachments = current.attachments + placement,
+        onRegister = current.onRegister,
+    )
 }

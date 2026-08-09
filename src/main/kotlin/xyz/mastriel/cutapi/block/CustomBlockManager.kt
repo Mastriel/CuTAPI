@@ -20,8 +20,8 @@ private sealed class CustomTileType<T : CuTPlacedTile>(val kClass: KClass<out T>
 
 public class CustomBlockManager {
 
-    public val tileEntityTypeId: Identifier = id(Plugin, "builtin_tile_entity")
-    public val blockTypeId: Identifier = id(Plugin, "builtin_block")
+    public val tileEntityTypeId: Identifier = id("cutapi:builtin_tile_entity")
+    public val blockTypeId: Identifier = id("cutapi:builtin_block")
     private val types = mutableMapOf<Identifier, CustomTileType<*>>()
 
     public fun getPlacedTile(block: BukkitBlock): CuTPlacedTile {
@@ -56,14 +56,17 @@ public class CustomBlockManager {
 
     public fun <T : CuTPlacedTile> placeTile(location: Location, tile: CustomTile<T>): CuTPlacedTile {
         val block = location.block
+        val typeId = requireNotNull(getType(tile.placedBlockTypeClass)) {
+            "Custom tile ${tile.id} uses unregistered placed wrapper type " +
+                "${tile.placedBlockTypeClass.qualifiedName}. Register it with registerPlacedTileType first."
+        }
 
         block.tags.setIdentifier(CUT_ID_KEY, tile.id)
-
-        val typeId = getType(tile.placedBlockTypeClass)
         block.tags.setIdentifier(CUT_TYPE_KEY, typeId)
 
-        val wrapped = block.wrap<CuTPlacedTile>()
-        return wrapped!!
+        return requireNotNull(types[typeId]?.constructor?.invoke(block)) {
+            "Placed wrapper type $typeId disappeared while placing custom tile ${tile.id}."
+        }
     }
 
 
@@ -123,8 +126,8 @@ public class CustomBlockManager {
     ): Unit = registerPlacedTileType(id, T::class, constructor)
 
     public companion object {
-        public val CUT_ID_KEY: Identifier = id(Plugin, "id")
-        public val CUT_TYPE_KEY: Identifier = id(Plugin, "type")
+        public val CUT_ID_KEY: Identifier = id("cutapi:id")
+        public val CUT_TYPE_KEY: Identifier = id("cutapi:type")
 
 
         public val BukkitBlock.isCustom: Boolean

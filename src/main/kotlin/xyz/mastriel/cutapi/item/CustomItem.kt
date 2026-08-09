@@ -22,8 +22,12 @@ public open class CustomItem<TStack : CuTItemStack> @PublishedApi internal const
     override val id: Identifier,
     public val backingItem: ItemType,
     public val stackTypeClass: KClass<out TStack>,
-    public open val descriptor: ItemDescriptor,
+    descriptor: ItemDescriptor,
 ) : Identifiable, Listener, AttachmentHolder<ItemAttachment> {
+
+    private var preparedDescriptor: ItemDescriptor = descriptor
+
+    public open val descriptor: ItemDescriptor get() = preparedDescriptor
 
     public val itemType: ItemType
         get() {
@@ -36,6 +40,14 @@ public open class CustomItem<TStack : CuTItemStack> @PublishedApi internal const
     public fun createItemStack(quantity: Int = 1): TStack = CuTItemStack.create<TStack>(this, quantity)
 
     internal fun nativeSpecification(): NativeItemSpecification = NativeItemSpecification(this)
+
+    internal fun prepareDescriptor(transform: (ItemDescriptor) -> ItemDescriptor) {
+        check(NativeItemLifecycle.state == NativeItemState.Collecting) {
+            "Custom item $id cannot be prepared while native items are ${NativeItemLifecycle.state}."
+        }
+        check(CustomItem.isOpen) { "Custom item $id cannot be prepared after its registry has closed." }
+        preparedDescriptor = transform(preparedDescriptor)
+    }
 
     internal fun activate() {
         descriptor.attachments.forEach { it.schema().requireRegistered() }

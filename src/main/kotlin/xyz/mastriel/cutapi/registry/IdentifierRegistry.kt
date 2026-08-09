@@ -146,7 +146,9 @@ public open class IdentifierRegistry<T : Identifiable> private constructor(
             usedRegistries += WeakReference(this)
         }
 
-        if (values.containsKey(item.id)) error("Two Identifiables cannot have the same ID in the same registry.")
+        if (values.containsKey(item.id)) {
+            error("Identifier ${item.id} is already registered in registry $id.")
+        }
         values[item.id] = item
 
         for ((hook) in hooks.sortedBy { it.second.number }) {

@@ -16,17 +16,19 @@ public sealed interface TileDescriptor {
 }
 
 public class BlockDescriptor(
-    override val behaviors: List<BlockBehavior> = mutableListOf(),
+    override val behaviors: List<BlockBehavior> = emptyList(),
     override val blockStrategy: BlockStrategy,
     override val name: Personalized<Component>?,
-    override val itemPolicy: BlockItemPolicy
+    override val itemPolicy: BlockItemPolicy,
+    public val onRegister: EventHandlerList<CustomBlock<*>> = EventHandlerList(),
 ) : TileDescriptor
 
 public class TileEntityDescriptor(
-    override val behaviors: List<TileEntityBehavior> = mutableListOf(),
+    override val behaviors: List<TileEntityBehavior> = emptyList(),
     override val blockStrategy: BlockStrategy,
     override val name: Personalized<Component>?,
-    override val itemPolicy: BlockItemPolicy
+    override val itemPolicy: BlockItemPolicy,
+    public val onRegister: EventHandlerList<CustomTileEntity<*>> = EventHandlerList(),
 ) : TileDescriptor
 
 public abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor, C : CustomTile<*>> {
@@ -36,9 +38,7 @@ public abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor
     public open val onRegister: EventHandlerList<C> = EventHandlerList<C>()
 
     public open var blockStrategy: BlockStrategy = BlockStrategy.Mushroom
-    public open var itemPolicy: BlockItemPolicy = BlockItemPolicy.Generate {
-
-    }
+    public open var itemPolicy: BlockItemPolicy = BlockItemPolicy.Generate()
 
     public open var name: Personalized<Component>? = null
 
@@ -64,7 +64,7 @@ public abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor
 
 public class BlockDescriptorBuilder : TileDescriptorBuilder<BlockBehavior, BlockDescriptor, CustomBlock<*>>() {
     override fun build(): BlockDescriptor {
-        return BlockDescriptor(behaviors, blockStrategy, name, itemPolicy)
+        return BlockDescriptor(behaviors.toList(), blockStrategy, name, itemPolicy, onRegister)
     }
 }
 
@@ -103,14 +103,16 @@ public class TileEntityDescriptorBuilder :
     }
 
     override fun build(): TileEntityDescriptor {
-        return TileEntityDescriptor(behaviors, blockStrategy, name, itemPolicy)
+        return TileEntityDescriptor(behaviors.toList(), blockStrategy, name, itemPolicy, onRegister)
     }
 }
 
-public fun blockDescriptor(block: BlockDescriptorBuilder.() -> Unit): BlockDescriptor {
-    return BlockDescriptorBuilder().apply(block).build()
-}
+public fun blockDescriptor(configure: BlockDescriptorBuilder.() -> Unit = {}): BlockDescriptor =
+    BlockDescriptorBuilder().apply(configure).build()
 
-public fun tileEntityDescriptor(block: TileEntityDescriptorBuilder.() -> Unit): TileEntityDescriptor {
-    return TileEntityDescriptorBuilder().apply(block).build()
-}
+public fun defaultBlockDescriptor(): BlockDescriptor = BlockDescriptorBuilder().build()
+
+public fun tileEntityDescriptor(configure: TileEntityDescriptorBuilder.() -> Unit = {}): TileEntityDescriptor =
+    TileEntityDescriptorBuilder().apply(configure).build()
+
+public fun defaultTileEntityDescriptor(): TileEntityDescriptor = TileEntityDescriptorBuilder().build()

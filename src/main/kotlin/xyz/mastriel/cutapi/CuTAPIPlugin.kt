@@ -70,6 +70,16 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             kClass = CuTItemStack::class,
             constructor = CuTItemStack.CONSTRUCTOR
         )
+        CuTAPI.blockManager.registerPlacedTileType(
+            id = CuTAPI.blockManager.blockTypeId,
+            kClass = CuTPlacedBlock::class,
+            constructor = ::CuTPlacedBlock,
+        )
+        CuTAPI.blockManager.registerPlacedTileType(
+            id = CuTAPI.blockManager.tileEntityTypeId,
+            kClass = CuTPlacedTileEntity::class,
+            constructor = ::CuTPlacedTileEntity,
+        )
         TexturePostProcessor.registerBuiltins()
 
         TexturePostProcessor.modifyRegistry {
@@ -95,6 +105,8 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         NativeItemChannelInitializer.register()
         NativeItemCodecInstrumentation.bind()
 
+        CustomBlock.DeferredRegistry.commitToRegistry()
+        CustomTileEntity.DeferredRegistry.commitToRegistry()
         CustomItem.DeferredRegistry.commitToRegistry()
 
         if (CuTAPI.enableDebugItems) {
@@ -116,9 +128,14 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             ItemSystem.initialize()
             PlayerSystem.initialize()
 
-            NativeItemLifecycle.state = NativeItemState.Installing
             try {
+                CustomBlock.initialize()
+                CustomTileEntity.initialize()
+                CustomTile.initialize()
+
+                NativeItemLifecycle.state = NativeItemState.Installing
                 CustomItem.initialize()
+                validatePreparedTileItems()
                 ItemIdentityExtension.initialize()
                 ItemAttachmentMaterializer.initialize()
                 NativeItemRegistry.installAll(CustomItem.getAllValues().map(CustomItem<*>::nativeSpecification))
@@ -135,10 +152,6 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             CustomShapelessRecipe.initialize()
             CustomFurnaceRecipe.initialize()
             CustomSmithingTableRecipe.initialize()
-
-            CustomBlock.initialize()
-            CustomTileEntity.initialize()
-            CustomTile.initialize()
 
             ToolCategory.initialize()
             ToolTier.initialize()
