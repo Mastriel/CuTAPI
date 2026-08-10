@@ -22,7 +22,8 @@ public class BlockStateVisualApiTest : MockBukkitTest() {
     @Test
     public fun `state definition atomically captures typed defaults and every permutation`() {
         val lit = BlockStateType.Boolean("lit")
-        val facing = BlockStateType.Enum(TestFacing::class, "facing")
+        val facing = BlockStateType.Enum<TestFacing>("facing")
+        val explicitFacing = BlockStateType.Enum(TestFacing::class, "explicit_facing")
         var defaults = 0
         val definition = blockStates {
             define(lit) { defaults++; false }
@@ -30,6 +31,8 @@ public class BlockStateVisualApiTest : MockBukkitTest() {
         }
 
         assertEquals(2, defaults)
+        assertEquals(TestFacing::class, facing.enumClass)
+        assertEquals(TestFacing::class, explicitFacing.enumClass)
         assertEquals(6, definition.permutationCount)
         assertFalse(definition.defaultState[lit])
         assertEquals(TestFacing.North, definition.defaultState[facing])

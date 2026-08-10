@@ -30,7 +30,7 @@ public sealed class BlockStateType<T : Any>(
         override fun canonicalValue(value: kotlin.Boolean): String = value.toString()
     }
 
-    public class Enum<T : kotlin.Enum<T>>(
+    public class EnumType<T : kotlin.Enum<T>>(
         public val enumClass: KClass<T>,
         name: String,
     ) : BlockStateType<T>(name) {
@@ -46,7 +46,13 @@ public sealed class BlockStateType<T : Any>(
     public companion object {
         private val Name: Regex = Regex("[a-z0-9_]+")
 
-        public inline fun <reified T : kotlin.Enum<T>> Enum(name: String): Enum<T> = Enum(T::class, name)
+        /** Preferred enum-state factory; the enum class is inferred from the reified type. */
+        public inline fun <reified T : kotlin.Enum<T>> Enum(name: String): EnumType<T> =
+            Enum(T::class, name)
+
+        /** Explicit enum-state factory for call sites that already hold a [KClass]. */
+        public fun <T : kotlin.Enum<T>> Enum(enumClass: KClass<T>, name: String): EnumType<T> =
+            EnumType(enumClass, name)
     }
 }
 

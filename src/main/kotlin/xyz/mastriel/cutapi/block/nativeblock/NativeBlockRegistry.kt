@@ -152,7 +152,10 @@ internal object NativeBlockRegistry {
         }
         val wasFrozen = isFrozen(blockEntityRegistry)
         val tags = if (wasFrozen && areTagsBound(blockEntityRegistry)) snapshotTags(blockEntityRegistry) else null
-        if (wasFrozen) unfreeze(blockEntityRegistry, intrusive = false)
+        // BlockEntityType constructs an intrusive holder before it is registered. Bootstrap-time
+        // registration used the registry's original map; STARTUP registration must recreate it
+        // while the frozen registry is temporarily open.
+        if (wasFrozen) unfreeze(blockEntityRegistry, intrusive = true)
         try {
             for ((definition, block) in tileBlocks) {
                 val tile = definition as CustomTileEntity<*>
@@ -174,9 +177,7 @@ internal object NativeBlockRegistry {
         val supplierClass = Class.forName(
             "net.minecraft.world.level.block.entity.BlockEntityType\$BlockEntitySupplier",
         )
-        val constructor = BlockEntityType::class.java.declaredConstructors
-            .single { it.parameterCount == 2 }
-            .apply { isAccessible = true }
+        val constructor = resolveBlockEntityTypeConstructor()
         val supplier = Proxy.newProxyInstance(
             supplierClass.classLoader,
             arrayOf(supplierClass),
@@ -192,9 +193,23 @@ internal object NativeBlockRegistry {
     }
 
     private fun validate(definitions: Collection<CustomTile<*>>) {
+        check(blockRegistry.getKey(Blocks.AIR)?.namespace == "minecraft") {
+            "Vanilla blocks were not initialized before native custom block registration."
+        }
+        if (definitions.any { it is CustomTileEntity<*> }) {
+            check(blockEntityRegistry.getKey(BlockEntityType.FURNACE)?.namespace == "minecraft") {
+                "Vanilla block entity types were not initialized before native custom type registration."
+            }
+            resolveBlockEntityTypeConstructor()
+        }
+
         val ids = mutableSetOf<Identifier>()
         definitions.forEach { definition ->
             check(ids.add(definition.id)) { "Duplicate native block definition ${definition.id}." }
+            val schema = NativeBlockStateSchema(definition.descriptor.states)
+            check(schema.definition.permutationCount > 0) {
+                "Native custom block ${definition.id} has no block-state permutations."
+            }
             check(!blockRegistry.containsKey(definition.id.minecraftLocation())) {
                 "Minecraft block ${definition.id} is already registered."
             }
@@ -205,6 +220,11 @@ internal object NativeBlockRegistry {
             }
         }
     }
+
+    private fun resolveBlockEntityTypeConstructor(): java.lang.reflect.Constructor<*> =
+        BlockEntityType::class.java.declaredConstructors
+            .single { it.parameterCount == 2 }
+            .apply { isAccessible = true }
 
     @Suppress("UNCHECKED_CAST")
     internal fun installBukkitMappings(definitions: Collection<CustomTile<*>>) {

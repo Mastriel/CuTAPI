@@ -4,52 +4,107 @@ CuTAPI registers each custom block under its own ID in Minecraft's native block 
 tile entity also receives a native `BlockEntityType`. The authoritative ID and typed state values are
 therefore stored in chunk palettes instead of a carrier block's persistent data.
 
-Definitions are bootstrap-only. Submit the already-configured definition from the consumer plugin's
-Paper `PluginBootstrap`; adding one after CuTAPI starts enabling is rejected and requires a restart.
+Definitions are restart-only, but they use the same `DeferredRegistry` API as custom items. A provider
+must load in Paper's `STARTUP` phase and commit each block registry synchronously from `onEnable()`.
+CuTAPI installs each committed batch immediately, then closes native registration after every STARTUP
+plugin has enabled and before Paper loads worlds.
 
 ```kotlin
 object CopperLampStates {
     val Lit = BlockStateType.Boolean("lit")
-    val Facing = BlockStateType.Enum(Direction::class, "facing")
+    val Facing = BlockStateType.Enum<Direction>("facing")
 }
 
-object ExampleBlocks {
-    lateinit var CopperLamp: CustomTileEntity<CuTPlacedTileEntity>
+object ExampleTileEntities :
+    DeferredRegistry<CustomTileEntity<*>> by CustomTileEntity.defer() {
+
+    val CopperLamp by registerCustomTileEntity(
+        id("example:copper_lamp"),
+    ) {
+        states {
+            define(CopperLampStates.Lit) { false }
+            define(CopperLampStates.Facing) { Direction.North }
+        }
+
+        settings {
+            hardness = 3.0f
+            explosionResistance = 6.0f
+            effectiveTools = setOf(ToolCategory.Pickaxe)
+            minimumToolTier = ToolTier.Stone
+            requiresCorrectToolForDrops = true
+        }
+
+        visual(BlockVisualMethod.NoteBlock)
+        models { state ->
+            val suffix = if (state[CopperLampStates.Lit]) "on" else "off"
+            BlockModel.Model("example:block/copper_lamp_$suffix")
+        }
+
+        drops { context ->
+            if (context.correctToolUsed) listOf(context.requirePlacementItem()) else emptyList()
+        }
+        experience { context -> if (context.correctToolUsed) 3 else 0 }
+        attach(CopperLampData(energy = 0))
+    }
 }
 
-class ExampleBootstrap : PluginBootstrap {
-    override fun bootstrap(context: BootstrapContext) {
-        ExampleBlocks.CopperLamp = NativeBlockBootstrap.submit(
-            customTileEntity(id("example:copper_lamp")) {
-                states {
-                    define(CopperLampStates.Lit) { false }
-                    define(CopperLampStates.Facing) { Direction.North }
-                }
+class ExamplePlugin : JavaPlugin() {
+    override fun onEnable() {
+        CuTAPI.registerPlugin(this, "example")
+        registerExampleSystems()
+        ExampleTileEntities.commitToRegistry()
 
-                settings {
-                    hardness = 3.0f
-                    explosionResistance = 6.0f
-                    effectiveTools = setOf(ToolCategory.Pickaxe)
-                    minimumToolTier = ToolTier.Stone
-                    requiresCorrectToolForDrops = true
-                }
-
-                visual(BlockVisualMethod.NoteBlock)
-                models { state ->
-                    val suffix = if (state[CopperLampStates.Lit]) "on" else "off"
-                    BlockModel.Model("example:block/copper_lamp_$suffix")
-                }
-
-                drops { context ->
-                    if (context.correctToolUsed) listOf(context.requirePlacementItem()) else emptyList()
-                }
-                experience { context -> if (context.correctToolUsed) 3 else 0 }
-                attach(CopperLampData(energy = 0))
-            },
-        )
+        // Deferred references, including ExampleTileEntities.CopperLamp, are available here.
     }
 }
 ```
+
+The reified form is preferred. When the enum type is only available as a `KClass`, use
+`BlockStateType.Enum(Direction::class, "facing")` instead.
+
+The provider's `paper-plugin.yml` must put it after CuTAPI within the same STARTUP phase:
+
+```yaml
+name: Example
+main: example.ExamplePlugin
+api-version: '1.21'
+load: STARTUP
+dependencies:
+  server:
+    CuTAPI:
+      load: BEFORE
+      required: true
+      join-classpath: true
+```
+
+`commitToRegistry()` materializes every producer once. The exact returned object is installed in the
+Minecraft registry and later contributed to the priority-ordered CuTAPI identifier registry. Early
+access through a delegated property or `Deferred.get()` materializes that same object without
+installing a second instance. An uncommitted non-empty block registry, an asynchronous or POSTWORLD
+commit, and any commit after the STARTUP boundary fail server startup.
+
+### Migration from bootstrap submission
+
+Replace bootstrap-time submission:
+
+```kotlin
+val Lamp = NativeBlockBootstrap.submit(customBlock(id("example:lamp")) { /* ... */ })
+```
+
+with a standard deferred registry and a STARTUP `onEnable()` commit:
+
+```kotlin
+object ExampleBlocks : DeferredRegistry<CustomBlock<*>> by CustomBlock.defer() {
+    val Lamp by registerCustomBlock(id("example:lamp")) { /* ... */ }
+}
+
+override fun onEnable() {
+    ExampleBlocks.commitToRegistry()
+}
+```
+
+There is no compatibility bridge for bootstrap submission. Update the provider metadata, remove its
+block `PluginBootstrap`, and restart the server.
 
 Each `define` call declares the property and creates its default atomically. CuTAPI invokes default
 producers independently and creates a real NMS state for every permutation. Every permutation must
@@ -75,7 +130,7 @@ Definitions may freely reuse it, but it cannot provide a custom texture or model
 client collision, outline, occlusion, particles, prediction, and F3 identity, so its shape should match
 the native state.
 
-The producer form is important during bootstrap: it delays Bukkit `BlockData` resolution until the
+The producer form delays Bukkit `BlockData` resolution until the STARTUP `onEnable()` commit, when the
 vanilla registry is ready.
 
 ### NoteBlock

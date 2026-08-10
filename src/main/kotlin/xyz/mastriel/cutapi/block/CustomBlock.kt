@@ -6,6 +6,7 @@ import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.behavior.*
 import xyz.mastriel.cutapi.block.behaviors.*
+import xyz.mastriel.cutapi.block.nativeblock.NativeBlockRegistration
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.registry.*
@@ -92,11 +93,14 @@ public class CustomBlock<T : CuTPlacedBlock> @Deprecated(
 
 
     public companion object : IdentifierRegistry<CustomBlock<*>>(id("cutapi:registry/custom_block")) {
-        public val Unknown: CustomBlock<CuTPlacedBlock> by lazy {
-            customBlock(id("cutapi:unknown_block")) {
-                blockStrategy = BlockStrategy.Vanilla(Material.BARRIER)
-                itemPolicy = BlockItemPolicy.Generate()
-            }
+        internal val DeferredRegistry: DeferredRegistry<CustomBlock<*>> =
+            defer(RegistryPriority(Int.MAX_VALUE))
+
+        public val Unknown: CustomBlock<CuTPlacedBlock> by DeferredRegistry.registerCustomBlock(
+            id("cutapi:unknown_block"),
+        ) {
+            visual { BlockVisualMethod.Vanilla(Material.BARRIER.createBlockData()) }
+            itemPolicy = BlockItemPolicy.Generate()
         }
 
         init {
@@ -105,6 +109,9 @@ public class CustomBlock<T : CuTPlacedBlock> @Deprecated(
                 item.prepareDefinition()
             }
         }
+
+        override fun defer(priority: RegistryPriority): DeferredRegistry<CustomBlock<*>> =
+            NativeBlockRegistration.createDeferredRegistry(this, priority)
     }
 }
 
@@ -155,15 +162,18 @@ public class CustomTileEntity<T : CuTPlacedTileEntity> @Deprecated(
     override fun <T : TileEntityBehavior> getBehavior(behavior: KClass<T>): T = behaviorHolder.getBehavior(behavior)
 
     public companion object : IdentifierRegistry<CustomTileEntity<*>>(id("cutapi:registry/custom_tile_entity")) {
-        public val Unknown: CustomTileEntity<CuTPlacedTileEntity> by lazy {
-            customTileEntity(id("cutapi:unknown_tile_entity")) {
-                visual { BlockVisualMethod.Vanilla(Material.BARRIER.createBlockData()) }
+        internal val DeferredRegistry: DeferredRegistry<CustomTileEntity<*>> =
+            defer(RegistryPriority(Int.MAX_VALUE))
 
-                settings {
-                    hardness = 1.0f;
-                }
-                itemPolicy = BlockItemPolicy.Generate()
+        public val Unknown: CustomTileEntity<CuTPlacedTileEntity> by DeferredRegistry.registerCustomTileEntity(
+            id("cutapi:unknown_tile_entity"),
+        ) {
+            visual { BlockVisualMethod.Vanilla(Material.BARRIER.createBlockData()) }
+
+            settings {
+                hardness = 1.0f
             }
+            itemPolicy = BlockItemPolicy.Generate()
         }
 
         init {
@@ -172,6 +182,9 @@ public class CustomTileEntity<T : CuTPlacedTileEntity> @Deprecated(
                 item.prepareDefinition()
             }
         }
+
+        override fun defer(priority: RegistryPriority): DeferredRegistry<CustomTileEntity<*>> =
+            NativeBlockRegistration.createDeferredRegistry(this, priority)
     }
 }
 

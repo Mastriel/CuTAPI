@@ -34,6 +34,8 @@ public final class NativeItemCodecHooks implements IdMap<Object> {
     private static volatile Function<Object, Object> blockStateEncoder;
     private static volatile Function<Object, Object> blockStateProjector;
     private static volatile int clientBlockStateCount = -1;
+    private static volatile Runnable startupPluginFinalizer;
+    private static boolean startupPluginsFinalized;
     private static final ThreadLocal<Integer> blockPacketProjectionDepth = ThreadLocal.withInitial(() -> 0);
     private static final ThreadLocal<Boolean> rawBlockStateIdLookup = ThreadLocal.withInitial(() -> false);
     private static final ThreadLocal<long[]> globalBlockPaletteProjection = new ThreadLocal<>();
@@ -70,6 +72,37 @@ public final class NativeItemCodecHooks implements IdMap<Object> {
         clientBlockStateCount = vanillaBlockStateCount;
     }
 
+    public static synchronized void bindStartupPluginFinalizer(Runnable finalizer) {
+        if (startupPluginsFinalized) {
+            throw new IllegalStateException(
+                "Native custom block startup already finalized; server reload registration is unsupported"
+            );
+        }
+        if (startupPluginFinalizer != null) {
+            throw new IllegalStateException("Native custom block startup finalizer was bound more than once");
+        }
+        startupPluginFinalizer = finalizer;
+    }
+
+    /** Invoked from CraftServer.enablePlugins(STARTUP) before Paper begins loading worlds. */
+    public static synchronized void finishStartupPluginLoading(Object loadOrder) {
+        if (!(loadOrder instanceof Enum<?> order) || !"STARTUP".equals(order.name())) {
+            return;
+        }
+        if (startupPluginsFinalized) {
+            throw new IllegalStateException("STARTUP plugin loading was finalized more than once");
+        }
+        Runnable finalizer = startupPluginFinalizer;
+        if (finalizer == null) {
+            throw new IllegalStateException(
+                "CuTAPI did not initialize its native custom block startup finalizer"
+            );
+        }
+        finalizer.run();
+        startupPluginsFinalized = true;
+        startupPluginFinalizer = null;
+    }
+
     public static void clear() {
         stackEncoder = null;
         stackDecoder = null;
@@ -79,6 +112,7 @@ public final class NativeItemCodecHooks implements IdMap<Object> {
         blockStateEncoder = null;
         blockStateProjector = null;
         clientBlockStateCount = -1;
+        startupPluginFinalizer = null;
         blockPacketProjectionDepth.remove();
         rawBlockStateIdLookup.remove();
         globalBlockPaletteProjection.remove();

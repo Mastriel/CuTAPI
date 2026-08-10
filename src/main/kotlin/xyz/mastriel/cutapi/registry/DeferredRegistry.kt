@@ -1,5 +1,6 @@
 package xyz.mastriel.cutapi.registry
 
+import java.util.IdentityHashMap
 import kotlin.reflect.*
 
 
@@ -13,10 +14,19 @@ public interface Deferred<T : Identifiable> {
 
 
 public class SingleProducer<T>(private val producer: () -> T) {
-    private var value: T? = null
+    private var value: Any? = null
+    @Volatile
+    public var hasProduced: Boolean = false
+        private set
+
+    @Synchronized
+    @Suppress("UNCHECKED_CAST")
     public fun produce(): T {
-        if (value == null) value = producer()
-        return value!!;
+        if (!hasProduced) {
+            value = producer()
+            hasProduced = true
+        }
+        return value as T
     }
 }
 
@@ -33,6 +43,8 @@ public class DeferredDelegate<T : Identifiable, V : T> internal constructor(
     public override fun get(): V {
         return producer.produce()
     }
+
+    public override fun hasEarlyInit(): Boolean = producer.hasProduced
 }
 
 
@@ -49,16 +61,17 @@ public interface DeferredRegistry<T : Identifiable> {
 }
 
 public open class BasicDeferredRegistry<T : Identifiable> internal constructor(
-    private val registry: IdentifierRegistry<T>,
-    private val priority: RegistryPriority
+    protected val registry: IdentifierRegistry<T>,
+    protected val priority: RegistryPriority
 ) : DeferredRegistry<T> {
     protected data class DeferredItem<T : Identifiable, V : T>(
         val producer: SingleProducer<V>,
-        val delegate: DeferredDelegate<T, V>
+        val delegate: DeferredDelegate<T, V>,
+        var declaredId: Identifier? = null,
     )
 
-    private val items: MutableList<DeferredItem<T, *>> = mutableListOf()
-    private val producersToIds = mutableMapOf<SingleProducer<T>, Identifier>()
+    protected val items: MutableList<DeferredItem<T, *>> = mutableListOf()
+    private val producersToItems: IdentityHashMap<Any, DeferredItem<T, *>> = IdentityHashMap()
     final override var isOpen: Boolean = true
         protected set
 
@@ -69,34 +82,43 @@ public open class BasicDeferredRegistry<T : Identifiable> internal constructor(
         if (!isOpen) error("Deferred registry is already closed")
         val single = SingleProducer(producer)
         return DeferredDelegate(registry, this, single).also {
-            items += DeferredItem(single, it)
+            val item = DeferredItem(single, it)
+            items += item
+            producersToItems[producer] = item
         }
     }
 
     override fun getByProducer(producer: () -> T): Identifier {
-        val single = SingleProducer(producer)
-        return producersToIds[single] ?: error("Producer not registered")
+        val item = producersToItems[producer] ?: error("Producer not registered")
+        return item.declaredId ?: item.producer.produce().id
     }
 
     override fun associateId(producer: () -> T, id: Identifier) {
-        val single = SingleProducer(producer)
-        producersToIds[single] = id
+        check(isOpen) { "Deferred registry is already closed" }
+        val item = producersToItems[producer] ?: error("Producer not registered")
+        check(item.declaredId == null || item.declaredId == id) {
+            "Producer is already associated with ${item.declaredId}; cannot associate it with $id."
+        }
+        item.declaredId = id
     }
 
 
     override fun commitToRegistry() {
-        if (!isOpen) error("Deferred registry is already closed")
-        check(registry.isOpen) { "Registry '${registry.id}' is already closed" }
+        requireCanCommit()
         isOpen = false
 
         // Register all items in the registry
         registry.modifyRegistry(priority) {
-            for ((producer, delegate) in items) {
-
-                val item = producer.produce()
-                delegate.id = item.id
+            for (entry in items) {
+                val item = entry.producer.produce()
+                entry.delegate.id = item.id
                 register(item)
             }
         }
+    }
+
+    protected fun requireCanCommit() {
+        check(isOpen) { "Deferred registry is already closed" }
+        check(registry.isOpen) { "Registry '${registry.id}' is already closed" }
     }
 }

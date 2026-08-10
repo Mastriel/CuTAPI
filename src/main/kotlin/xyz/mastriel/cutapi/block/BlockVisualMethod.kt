@@ -49,8 +49,9 @@ public sealed interface BlockVisualMethod {
 }
 
 /**
- * Creates carrier data without Bukkit's server singleton. In bootstrap definitions, evaluate this
- * through `visual { ... }` or `visuals { ... }` after vanilla block registration has completed.
+ * Creates carrier data without Bukkit's server singleton. In deferred definitions, evaluate this
+ * through `visual { ... }` or `visuals { ... }`; their producers run during the STARTUP commit after
+ * vanilla block registration has completed.
  */
 @UsesNMS
 public fun blockVisualData(material: Material): BlockData =
@@ -59,7 +60,7 @@ public fun blockVisualData(material: Material): BlockData =
             BuiltInRegistries.BLOCK.getOptional(
                 MinecraftIdentifier.fromNamespaceAndPath(material.key.namespace, material.key.key),
             ).orElse(null),
-        ) { "Minecraft block ${material.key} is not registered during bootstrap." }.defaultBlockState(),
+        ) { "Minecraft block ${material.key} is not registered during STARTUP." }.defaultBlockState(),
     )
 
 /** Packet-only display payload paired with a projected carrier block state. */

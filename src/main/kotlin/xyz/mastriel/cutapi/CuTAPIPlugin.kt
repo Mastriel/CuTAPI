@@ -46,7 +46,6 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
     override fun onEnable() {
         Plugin = this
         info("CuTAPI enabled!")
-        NativeBlockBootstrap.finishCollection()
 
         saveDefaultConfig()
         CuTAPI.registerPlugin(this, "cutapi") {
@@ -60,6 +59,8 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         }
 
         registerBuiltInSchemas()
+        CustomBlock.DeferredRegistry.commitToRegistry()
+        CustomTileEntity.DeferredRegistry.commitToRegistry()
         registerBuiltInItemAttachmentMaterializers()
         ItemSystem.registerBuiltins()
         registerCommands()
@@ -105,7 +106,6 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         CuTAPI.packetEventManager.registerPacketListener(CuTAPI.blockBreakManager)
 
         NativeItemChannelInitializer.register()
-        NativeItemCodecInstrumentation.bind()
 
         BlockSystem.DeferredRegistry.commitToRegistry()
         CustomItem.DeferredRegistry.commitToRegistry()
@@ -135,7 +135,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
                 CustomTileEntity.initialize()
                 CustomTile.initialize()
 
-                NativeBlockBootstrap.validateRegisteredDefinitions(CustomTile.getAllValues())
+                NativeBlockRegistration.validateRegisteredDefinitions(CustomTile.getAllValues())
 
                 NativeItemLifecycle.state = NativeItemState.Installing
                 CustomItem.initialize()
@@ -174,6 +174,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         registerResourceLoaders()
 
         generateResourcePackWhenReady()
+        NativeItemCodecInstrumentation.bindStartupFinalizer(NativeBlockRegistration::finishStartupPluginLoading)
     }
 
     private fun registerBuiltInSchemas() {

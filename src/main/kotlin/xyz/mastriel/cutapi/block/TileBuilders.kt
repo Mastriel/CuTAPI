@@ -45,23 +45,35 @@ public fun <T : CuTPlacedBlock> typedCustomBlockFromDescriptor(
 public inline fun <reified T : CuTPlacedBlock> DeferredRegistry<CustomBlock<*>>.registerCustomBlock(
     id: Identifier,
     noinline configure: BlockDescriptorBuilder.() -> Unit = {},
-): Deferred<CustomBlock<T>> = register { customBlock<T>(id, configure) }
+): Deferred<CustomBlock<T>> {
+    val producer: () -> CustomBlock<T> = { customBlock<T>(id, configure) }
+    return register(producer).also { associateId(producer, id) }
+}
 
 @JvmName("registerCustomBlockFromDescriptorWithPlacedType")
 public inline fun <reified T : CuTPlacedBlock> DeferredRegistry<CustomBlock<*>>.registerCustomBlockFromDescriptor(
     id: Identifier,
     noinline descriptor: () -> BlockDescriptor = ::defaultBlockDescriptor,
-): Deferred<CustomBlock<T>> = register { customBlockFromDescriptor<T>(id, descriptor) }
+): Deferred<CustomBlock<T>> {
+    val producer: () -> CustomBlock<T> = { customBlockFromDescriptor<T>(id, descriptor) }
+    return register(producer).also { associateId(producer, id) }
+}
 
 public fun DeferredRegistry<CustomBlock<*>>.registerCustomBlock(
     id: Identifier,
     configure: BlockDescriptorBuilder.() -> Unit = {},
-): Deferred<CustomBlock<CuTPlacedBlock>> = register { customBlock(id, configure) }
+): Deferred<CustomBlock<CuTPlacedBlock>> {
+    val producer: () -> CustomBlock<CuTPlacedBlock> = { customBlock(id, configure) }
+    return register(producer).also { associateId(producer, id) }
+}
 
 public fun DeferredRegistry<CustomBlock<*>>.registerCustomBlockFromDescriptor(
     id: Identifier,
     descriptor: () -> BlockDescriptor = ::defaultBlockDescriptor,
-): Deferred<CustomBlock<CuTPlacedBlock>> = register { customBlockFromDescriptor(id, descriptor) }
+): Deferred<CustomBlock<CuTPlacedBlock>> {
+    val producer: () -> CustomBlock<CuTPlacedBlock> = { customBlockFromDescriptor(id, descriptor) }
+    return register(producer).also { associateId(producer, id) }
+}
 
 
 public fun customTileEntity(
@@ -104,20 +116,32 @@ public fun <T : CuTPlacedTileEntity> typedCustomTileEntityFromDescriptor(
 public inline fun <reified T : CuTPlacedTileEntity> DeferredRegistry<CustomTileEntity<*>>.registerCustomTileEntity(
     id: Identifier,
     noinline configure: TileEntityDescriptorBuilder.() -> Unit = {},
-): Deferred<CustomTileEntity<T>> = register { customTileEntity<T>(id, configure) }
+): Deferred<CustomTileEntity<T>> {
+    val producer: () -> CustomTileEntity<T> = { customTileEntity<T>(id, configure) }
+    return register(producer).also { associateId(producer, id) }
+}
 
 @JvmName("registerCustomTileEntityFromDescriptorWithPlacedType")
 public inline fun <reified T : CuTPlacedTileEntity> DeferredRegistry<CustomTileEntity<*>>.registerCustomTileEntityFromDescriptor(
     id: Identifier,
     noinline descriptor: () -> TileEntityDescriptor = ::defaultTileEntityDescriptor,
-): Deferred<CustomTileEntity<T>> = register { customTileEntityFromDescriptor<T>(id, descriptor) }
+): Deferred<CustomTileEntity<T>> {
+    val producer: () -> CustomTileEntity<T> = { customTileEntityFromDescriptor<T>(id, descriptor) }
+    return register(producer).also { associateId(producer, id) }
+}
 
 public fun DeferredRegistry<CustomTileEntity<*>>.registerCustomTileEntity(
     id: Identifier,
     configure: TileEntityDescriptorBuilder.() -> Unit = {},
-): Deferred<CustomTileEntity<CuTPlacedTileEntity>> = register { customTileEntity(id, configure) }
+): Deferred<CustomTileEntity<CuTPlacedTileEntity>> {
+    val producer: () -> CustomTileEntity<CuTPlacedTileEntity> = { customTileEntity(id, configure) }
+    return register(producer).also { associateId(producer, id) }
+}
 
 public fun DeferredRegistry<CustomTileEntity<*>>.registerCustomTileEntityFromDescriptor(
     id: Identifier,
     descriptor: () -> TileEntityDescriptor = ::defaultTileEntityDescriptor,
-): Deferred<CustomTileEntity<CuTPlacedTileEntity>> = register { customTileEntityFromDescriptor(id, descriptor) }
+): Deferred<CustomTileEntity<CuTPlacedTileEntity>> {
+    val producer: () -> CustomTileEntity<CuTPlacedTileEntity> = { customTileEntityFromDescriptor(id, descriptor) }
+    return register(producer).also { associateId(producer, id) }
+}

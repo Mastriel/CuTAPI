@@ -26,7 +26,7 @@ internal class NativeBlockStateSchema(public val definition: BlockStateDefinitio
         definition.declarations.forEach { type ->
             val value: Any = when (type) {
                 is BlockStateType.Boolean -> propertyValue<kotlin.Boolean>(state, properties.getValue(type))
-                is BlockStateType.Enum<*> -> {
+                is BlockStateType.EnumType<*> -> {
                     val index = if (type.values.size == 1) 0 else propertyValue<Int>(state, properties.getValue(type))
                     type.values[index]
                 }
@@ -43,7 +43,7 @@ internal class NativeBlockStateSchema(public val definition: BlockStateDefinitio
             val customValue = custom.asMap().getValue(type)
             state = when (type) {
                 is BlockStateType.Boolean -> setProperty(state, property, customValue as kotlin.Boolean)
-                is BlockStateType.Enum<*> -> {
+                is BlockStateType.EnumType<*> -> {
                     @Suppress("UNCHECKED_CAST")
                     val values = type.values as List<Any>
                     setProperty(state, property, values.indexOf(customValue))
@@ -55,7 +55,7 @@ internal class NativeBlockStateSchema(public val definition: BlockStateDefinitio
 
     private fun createProperty(type: BlockStateType<*>): Property<*>? = when (type) {
         is BlockStateType.Boolean -> BooleanProperty.create(type.name)
-        is BlockStateType.Enum<*> -> if (type.values.size == 1) {
+        is BlockStateType.EnumType<*> -> if (type.values.size == 1) {
             null
         } else {
             IntegerProperty.create(type.name, 0, type.values.lastIndex)

@@ -24,6 +24,7 @@ import xyz.mastriel.cutapi.item.nativeitem.advice.BlockPaletteSizeAdvice;
 import xyz.mastriel.cutapi.item.nativeitem.advice.ChunkBlockStateProjectionAdvice;
 import xyz.mastriel.cutapi.item.nativeitem.advice.FixedSizeLongArrayAdvice;
 import xyz.mastriel.cutapi.item.nativeitem.advice.GlobalBlockPaletteWriteAdvice;
+import xyz.mastriel.cutapi.item.nativeitem.advice.StartupPluginFinalizerAdvice;
 import xyz.mastriel.cutapi.block.nativeblock.NativeBlockClientBridge;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
@@ -50,7 +51,8 @@ public final class NativeItemCodecInstrumentation {
         "net.minecraft.core.IdMapper",
         "net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData",
         "net.minecraft.world.level.chunk.PalettedContainer$Data",
-        "net.minecraft.network.FriendlyByteBuf"
+        "net.minecraft.network.FriendlyByteBuf",
+        "org.bukkit.craftbukkit.CraftServer"
     );
     private static final Set<String> transformedTypes = ConcurrentHashMap.newKeySet();
     private static final Map<String, Throwable> transformationErrors = new ConcurrentHashMap<>();
@@ -160,6 +162,10 @@ public final class NativeItemCodecInstrumentation {
             .transform((builder, type, classLoader, module, protectionDomain) -> builder
                 .visit(Advice.to(FixedSizeLongArrayAdvice.class).on(
                     named("writeFixedSizeLongArray").and(takesArguments(long[].class)))))
+            .type(named("org.bukkit.craftbukkit.CraftServer"))
+            .transform((builder, type, classLoader, module, protectionDomain) -> builder
+                .visit(Advice.to(StartupPluginFinalizerAdvice.class).on(
+                    named("enablePlugins").and(takesArguments(1)))))
             .installOn(instrumentation);
 
         if (!transformationErrors.isEmpty()) {
@@ -172,6 +178,15 @@ public final class NativeItemCodecInstrumentation {
         }
 
         installed = true;
+    }
+
+    public static synchronized void bindStartupFinalizer(Runnable finalizer) {
+        invoke(
+            loadHookClass(),
+            "bindStartupPluginFinalizer",
+            new Class<?>[]{Runnable.class},
+            finalizer
+        );
     }
 
     public static synchronized void bind() {
