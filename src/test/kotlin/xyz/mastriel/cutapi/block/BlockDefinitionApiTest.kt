@@ -6,16 +6,22 @@ import org.bukkit.*
 import org.bukkit.block.*
 import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.attachment.*
-import xyz.mastriel.cutapi.block.behaviors.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.testing.*
 import xyz.mastriel.cutapi.utils.*
+import kotlin.reflect.full.*
 import kotlin.test.*
 
 public class BlockDefinitionApiTest : MockBukkitTest() {
+
+    @Test
+    public fun `custom tile definition companions provide concrete debug views`() {
+        assertTrue(CustomBlock::class.companionObject!!.isSubclassOf(DebugViewProvider::class))
+        assertTrue(CustomTileEntity::class.companionObject!!.isSubclassOf(DebugViewProvider::class))
+    }
 
     @Test
     public fun `block factories preserve descriptor and placed wrapper types`() {
@@ -24,7 +30,6 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
         val typed = typedCustomBlock(id("test:typed_block"), TestPlacedBlock::class)
         val descriptor = blockDescriptor {
             blockStrategy = BlockStrategy.Vanilla(Material.COPPER_BLOCK)
-            behavior(FirstBehavior)
         }
         val fromDescriptor = typedCustomBlockFromDescriptor(
             id("test:descriptor_block"),
@@ -36,7 +41,6 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
         assertEquals(TestPlacedBlock::class, typed.placedBlockTypeClass)
         assertSame(descriptor, fromDescriptor.descriptor)
         assertEquals(BlockStrategy.Vanilla(Material.COPPER_BLOCK), fromDescriptor.descriptor.blockStrategy)
-        assertEquals(listOf(FirstBehavior), fromDescriptor.descriptor.behaviors)
     }
 
     @Test
@@ -46,7 +50,6 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
         val typed = typedCustomTileEntity(id("test:typed_tile_entity"), TestPlacedTileEntity::class)
         val descriptor = tileEntityDescriptor {
             blockStrategy = BlockStrategy.NoteBlock
-            behavior(TileEntityTestBehavior)
         }
         val fromDescriptor = typedCustomTileEntityFromDescriptor(
             id("test:descriptor_tile_entity"),
@@ -58,7 +61,6 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
         assertEquals(TestPlacedTileEntity::class, typed.placedBlockTypeClass)
         assertSame(descriptor, fromDescriptor.descriptor)
         assertEquals(BlockStrategy.NoteBlock, fromDescriptor.descriptor.blockStrategy)
-        assertEquals(listOf(TileEntityTestBehavior), fromDescriptor.descriptor.behaviors)
     }
 
     @Test
@@ -72,14 +74,14 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
         val second = customBlockFromDescriptor(id("test:second_produced_block"), blockProducer)
 
         val builder = BlockDescriptorBuilder()
-        builder.behavior(FirstBehavior)
+        builder.attach(DefinitionBlockAttachment(1))
         val snapshot = builder.build()
-        builder.behavior(SecondBehavior)
+        builder.attach(DefinitionBlockAttachment(2))
 
         assertEquals(2, blockDescriptorInvocations)
         assertNotSame(first.descriptor, second.descriptor)
-        assertEquals(listOf(FirstBehavior), snapshot.behaviors)
-        assertEquals(listOf(FirstBehavior, SecondBehavior), builder.behaviors)
+        assertEquals(listOf(DefinitionBlockAttachment(1)), snapshot.attachments)
+        assertEquals(listOf(DefinitionBlockAttachment(1), DefinitionBlockAttachment(2)), builder.attachments)
     }
 
     @Test
@@ -95,10 +97,11 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
         val tileRegistry = IdentifierRegistry<CustomTileEntity<*>>(id("test:registry/deferred_tile_entities"))
         val deferredTiles = tileRegistry.defer()
         var tileBuilds = 0
-        val deferredTile = deferredTiles.registerCustomTileEntity<TestPlacedTileEntity>(id("test:deferred_tile_entity")) {
-            tileBuilds++
-            itemPolicy = BlockItemPolicy.None
-        }
+        val deferredTile =
+            deferredTiles.registerCustomTileEntity<TestPlacedTileEntity>(id("test:deferred_tile_entity")) {
+                tileBuilds++
+                itemPolicy = BlockItemPolicy.None
+            }
 
         deferredBlocks.commitToRegistry()
         deferredTiles.commitToRegistry()
@@ -117,26 +120,31 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
     }
 
     @Test
-    public fun `generated item policy derives and overrides backing items`() {
+    public fun `generated block items use a pig spawn egg projection and their generated model id`() {
         val vanilla = customBlock(id("test:vanilla_backing")) {
             blockStrategy = BlockStrategy.Vanilla(Material.COPPER_BLOCK)
         }
         val fallback = customBlock(id("test:fallback_backing")) {
             blockStrategy = BlockStrategy.FakeEntity
         }
-        val explicit = customBlock(id("test:explicit_backing")) {
-            blockStrategy = BlockStrategy.FakeEntity
-            itemPolicy = BlockItemPolicy.Generate(ItemType.DIAMOND)
-        }
 
         val vanillaItem = requireNotNull(vanilla.descriptor.itemPolicy.prepare(vanilla.descriptor, vanilla)).item
         val fallbackItem = requireNotNull(fallback.descriptor.itemPolicy.prepare(fallback.descriptor, fallback)).item
-        val explicitItem = requireNotNull(explicit.descriptor.itemPolicy.prepare(explicit.descriptor, explicit)).item
 
-        assertEquals(ItemType.PAPER, vanillaItem.backingItem)
-        assertEquals(ItemType.PAPER, fallbackItem.backingItem)
-        assertEquals(ItemType.DIAMOND, explicitItem.backingItem)
+        assertEquals(ItemType.GLISTERING_MELON_SLICE, vanillaItem.backingItem)
+        assertEquals(ItemType.GLISTERING_MELON_SLICE, fallbackItem.backingItem)
+        assertEquals(
+            ItemType.PIG_SPAWN_EGG,
+            vanillaItem.descriptor.attachments.filterIsInstance<DisplayAs>().single().itemType,
+        )
+        assertEquals(
+            ItemType.PIG_SPAWN_EGG,
+            fallbackItem.descriptor.attachments.filterIsInstance<DisplayAs>().single().itemType,
+        )
+        assertEquals(vanilla.id / "item", vanillaItem.descriptor.forcedItemModelId)
+        assertEquals(fallback.id / "item", fallbackItem.descriptor.forcedItemModelId)
         assertEquals(vanilla.id / "item", vanillaItem.id)
+        assertFailsWith<IllegalArgumentException> { BlockItemPolicy.Generate(ItemType.DIAMOND) }
     }
 
     @Test
@@ -145,7 +153,7 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
             itemPolicy = BlockItemPolicy.None
         }
         var invocations = 0
-        val policy = BlockItemPolicy.Generate.fromDescriptor(ItemType.EMERALD) {
+        val policy = BlockItemPolicy.Generate.fromDescriptor {
             invocations++
             itemDescriptor {
                 noDisplay()
@@ -165,6 +173,18 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
         assertNotSame(firstItem.descriptor, secondItem.descriptor)
         assertEquals(listOf(BlockPlaceAttachment(first)), firstPlacements)
         assertEquals(listOf(BlockPlaceAttachment(second)), secondPlacements)
+        assertEquals(first.id / "item", firstItem.descriptor.forcedItemModelId)
+        assertEquals(second.id / "item", secondItem.descriptor.forcedItemModelId)
+        assertEquals(ItemType.GLISTERING_MELON_SLICE, firstItem.backingItem)
+        assertEquals(ItemType.GLISTERING_MELON_SLICE, secondItem.backingItem)
+        assertEquals(
+            ItemType.PIG_SPAWN_EGG,
+            firstItem.descriptor.attachments.filterIsInstance<DisplayAs>().single().itemType,
+        )
+        assertEquals(
+            ItemType.PIG_SPAWN_EGG,
+            secondItem.descriptor.attachments.filterIsInstance<DisplayAs>().single().itemType,
+        )
         assertTrue(firstItem.descriptor.attachments.contains(GeneratedBlockAttachment()))
     }
 
@@ -252,11 +272,12 @@ private class TestPlacedBlock(handle: Block) : CuTPlacedBlock(handle)
 
 private class TestPlacedTileEntity(handle: Block) : CuTPlacedTileEntity(handle)
 
-private data object FirstBehavior : BlockBehavior(id("test:behavior/first"))
-
-private data object SecondBehavior : BlockBehavior(id("test:behavior/second"))
-
-private data object TileEntityTestBehavior : TileEntityBehavior(id("test:behavior/tile_entity"))
+@RepeatableAttachment
+private data class DefinitionBlockAttachment(val value: Int) : BlockAttachment {
+    companion object : Schema<DefinitionBlockAttachment> by schema(id("test:attachment/definition_block"), {
+        property(DefinitionBlockAttachment::value, VariantSerializer.Int)
+    })
+}
 
 private data class GeneratedBlockAttachment(val value: Int = 0) : ItemAttachment {
     companion object : Schema<GeneratedBlockAttachment> by schema(id("test:attachment/generated_block"), {

@@ -3,12 +3,30 @@ package xyz.mastriel.cutapi.pdc.tags
 import org.bukkit.persistence.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.item.internal.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.testing.*
 import kotlin.test.*
 
 public class SchemaPdcCodecTest : MockBukkitTest() {
+    @Test
+    public fun `evil machine data uses PDC-safe serialized property names`() {
+        val value = EvilMachineData(progressTicks = 12, totalTicks = 100)
+
+        val encoded = SchemaPdcCodec.encode(context(), EvilMachineData, value)
+
+        assertEquals(
+            12,
+            encoded.get(id("cutapi:progress_ticks").toNamespacedKey(), PersistentDataType.INTEGER)
+        )
+        assertEquals(
+            100,
+            encoded.get(id("cutapi:total_ticks").toNamespacedKey(), PersistentDataType.INTEGER)
+        )
+        assertEquals(value, SchemaPdcCodec.decode(EvilMachineData, encoded))
+    }
+
     @Test
     public fun `schema primitives use native PDC types`() {
         val value = NativePrimitives(
@@ -198,16 +216,30 @@ public class SchemaPdcCodecTest : MockBukkitTest() {
     }
 
     @Test
-    public fun `non native schema property names fail only at the PDC boundary`() {
+    public fun `camel case schema property names use snake case PDC keys`() {
         val variant = InvalidNativeName.serialize(InvalidNativeName(3)).getOrThrow()
-        assertIs<Variant.Map>(variant)
+        assertEquals(Variant.Int(3), assertIs<Variant.Map>(variant).value["badName"])
 
+        val encoded = SchemaPdcCodec.encode(context(), InvalidNativeName, InvalidNativeName(3))
+
+        assertEquals(3, encoded.get(key("bad_name"), PersistentDataType.INTEGER))
+        assertFalse(encoded.has(key("badName")))
+        assertEquals(InvalidNativeName(3), SchemaPdcCodec.decode(InvalidNativeName, encoded))
+    }
+
+    @Test
+    public fun `schema property PDC normalization collisions fail with both names`() {
         val error = assertFailsWith<DataSerializationException> {
-            SchemaPdcCodec.encode(context(), InvalidNativeName, InvalidNativeName(3))
+            SchemaPdcCodec.encode(
+                context(),
+                CollidingNativeNames,
+                CollidingNativeNames(camelValue = 3, snakeValue = 4)
+            )
         }
 
-        assertContains(error.message.orEmpty(), "badName")
-        assertContains(error.message.orEmpty(), "not PDC-safe")
+        assertContains(error.message.orEmpty(), "camelValue")
+        assertContains(error.message.orEmpty(), "camel_value")
+        assertContains(error.message.orEmpty(), "normalize to the same PDC key")
     }
 
     @Test
@@ -390,6 +422,16 @@ private data class NativeDrawing(val shape: NativeShape) {
 private data class InvalidNativeName(val badName: Int) {
     companion object : Schema<InvalidNativeName> by schema(id("test:invalid_native_name"), {
         property(InvalidNativeName::badName, VariantSerializer.Int)
+    })
+}
+
+private data class CollidingNativeNames(
+    val camelValue: Int,
+    val snakeValue: Int
+) {
+    companion object : Schema<CollidingNativeNames> by schema(id("test:colliding_native_names"), {
+        property(CollidingNativeNames::camelValue, VariantSerializer.Int)
+        property(CollidingNativeNames::snakeValue, VariantSerializer.Int, name = "camel_value")
     })
 }
 

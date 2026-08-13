@@ -2,12 +2,13 @@ package xyz.mastriel.cutapi.utils
 
 import net.kyori.adventure.text.*
 import net.kyori.adventure.text.format.*
+import net.kyori.adventure.text.minimessage.*
 import net.kyori.adventure.text.serializer.legacy.*
 import org.bukkit.inventory.*
 import org.bukkit.inventory.meta.*
 import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.nms.*
-import java.time.*
+import java.time.Instant
 import kotlin.math.*
 import kotlin.time.Duration
 
@@ -16,6 +17,9 @@ public val String.colored: Component
         Component.empty()
             .decoration(TextDecoration.ITALIC, false)
             .append(LegacyComponentSerializer.legacyAmpersand().deserialize(this))
+
+public val String.miniMessage: Component
+    get() = MiniMessage.miniMessage().deserialize(this)
 
 @OptIn(UsesNMS::class)
 public val ItemStack.chatTooltip: Component

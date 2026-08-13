@@ -23,6 +23,7 @@ public class ItemDescriptor internal constructor(
     public val display: (ItemDisplayBuilder.() -> Unit)? = null,
     attachments: List<ItemAttachment> = emptyList(),
     public val onRegister: EventHandlerList<ItemRegisterEvent> = EventHandlerList(),
+    internal val forcedItemModelId: Identifier? = null,
 ) : AttachmentHolder<ItemAttachment> {
 
     public val attachments: List<ItemAttachment> = attachments.toList()
@@ -52,6 +53,7 @@ public class ItemDescriptor internal constructor(
     public operator fun plus(other: ItemDescriptor): ItemDescriptor {
         return itemDescriptor {
             display = other.display ?: this@ItemDescriptor.display
+            forcedItemModelId = other.forcedItemModelId ?: this@ItemDescriptor.forcedItemModelId
 
             val attachments = this@ItemDescriptor.attachments.toMutableList()
 
@@ -88,6 +90,7 @@ public class ItemDescriptorBuilder {
     public val attachments: List<ItemAttachment> get() = _attachments
 
     public val onRegister: EventHandlerList<ItemRegisterEvent> = EventHandlerList()
+    internal var forcedItemModelId: Identifier? = null
 
     public fun attach(vararg attachments: ItemAttachment) {
         for (attachment in attachments) {
@@ -108,6 +111,7 @@ public class ItemDescriptorBuilder {
             display = display,
             attachments = _attachments.toList(),
             onRegister = onRegister,
+            forcedItemModelId = forcedItemModelId,
         )
     }
 

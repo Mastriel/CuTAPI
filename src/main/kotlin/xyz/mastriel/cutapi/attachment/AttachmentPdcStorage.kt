@@ -52,6 +52,23 @@ internal object AttachmentPdcStorage {
         return PersistentAttachmentState(attachments, suppressed)
     }
 
+    fun <T : Attachment> readOne(
+        container: PersistentDataContainer,
+        schema: Schema<T>,
+    ): Result<T?> = runCatching {
+        val root = container.get(AttachmentsKey, PersistentDataType.TAG_CONTAINER)
+            ?: return@runCatching null
+        require(root.get(FormatVersionKey, PersistentDataType.INTEGER) == FormatVersion) {
+            "Unsupported attachment container format version."
+        }
+        val schemaContainer = root.get(schema.id.toNamespacedKey(), PersistentDataType.TAG_CONTAINER)
+            ?: return@runCatching null
+        val values = schemaContainer.get(ValuesKey, PersistentDataType.LIST.dataContainers()).orEmpty()
+        if (values.isEmpty()) return@runCatching null
+        require(values.size == 1) { "Non-repeatable attachment ${schema.id} has ${values.size} stored values." }
+        SchemaPdcCodec.decode(schema, values.single())
+    }
+
     fun write(
         container: PersistentDataContainer,
         attachments: List<Attachment>,

@@ -142,6 +142,9 @@ public interface SchemaBuilder<R : Any> {
     /** When true, this schema omits the reserved `$type` field and accepts only untagged maps. */
     public var untagged: Boolean
 
+    /** When true, unknown serialized properties are rejected. Defaults to true. */
+    public var strict: Boolean
+
     /** Inherits properties from a parent schema. May be called more than once. */
     public fun <P : Any> extends(
         parent: () -> Schema<P>
@@ -188,12 +191,14 @@ public interface Schema<T : Any> : TaggedSerializer<T>, DebugView<T> {
     override val type: KClass<T>
     public val properties: List<SchemaProperty<T, *>>
     public val untagged: Boolean
+    public val strict: Boolean
 
     override val descriptor: SerializerDescriptor<SerializerShape.ObjectLike>
         get() = SerializerDescriptor.`object`(
             id = id,
             type = type,
             tagged = !untagged,
+            strict = strict,
             properties = properties
         )
 
@@ -210,6 +215,7 @@ public interface Schema<T : Any> : TaggedSerializer<T>, DebugView<T> {
                 it.type.qualifiedName ?: "<anonymous class>"
             }
             property(Schema<*>::untagged, VariantSerializer.Boolean)
+            property(Schema<*>::strict, VariantSerializer.Boolean)
             property("properties", VariantSerializer.Map) { schema ->
                 schema.properties.associate { property ->
                     property.name to
@@ -248,7 +254,8 @@ internal fun <T : Any> Schema<T>.requireRegistered(): Schema<T> {
 internal open class SchemaBuilderImpl<R : Any>(
     fixedType: KClass<R>? = null,
     initialProperties: List<SchemaProperty<R, *>> = emptyList(),
-    initialUntagged: Boolean = false
+    initialUntagged: Boolean = false,
+    initialStrict: Boolean = true
 ) : SchemaBuilder<R> {
     private val mutableProperties: MutableList<SchemaProperty<R, *>> = initialProperties.toMutableList()
     private val state = StructuredRepresentationBuilderState(
@@ -258,9 +265,12 @@ internal open class SchemaBuilderImpl<R : Any>(
     )
 
     private var untaggedValue: Boolean = initialUntagged
+    private var strictValue: Boolean = initialStrict
     private val parentExtensions: MutableList<SchemaExtension<*>> = mutableListOf()
     private var constructionFactoryValue: (SchemaConstructionContext<R>.() -> R)? = null
     internal var hasExplicitUntagged: Boolean = false
+        private set
+    internal var hasExplicitStrict: Boolean = false
         private set
 
     final override var untagged: Boolean
@@ -268,6 +278,13 @@ internal open class SchemaBuilderImpl<R : Any>(
         set(value) {
             untaggedValue = value
             hasExplicitUntagged = true
+        }
+
+    final override var strict: Boolean
+        get() = strictValue
+        set(value) {
+            strictValue = value
+            hasExplicitStrict = true
         }
 
     val properties: List<SchemaProperty<R, *>> get() = mutableProperties.toList()
@@ -381,7 +398,8 @@ internal abstract class BaseSchema<T : Any>(
     final override val type: KClass<T>,
     final override val id: Identifier,
     final override val properties: List<SchemaProperty<T, *>>,
-    final override val untagged: Boolean
+    final override val untagged: Boolean,
+    final override val strict: Boolean
 ) : Schema<T> {
     private val structuredProperties = properties.map { it.structuredProperty }
 
@@ -428,9 +446,11 @@ internal abstract class BaseSchema<T : Any>(
         val values = variant.stringValues()
         validateType(values.remove(SCHEMA_TYPE_DISCRIMINATOR))
 
-        val unknownNames = values.keys - properties.mapTo(mutableSetOf()) { it.name }
-        require(unknownNames.isEmpty()) {
-            "Unknown properties for ${type.qualifiedName}: ${unknownNames.joinToString()}"
+        if (strict) {
+            val unknownNames = values.keys - properties.mapTo(mutableSetOf()) { it.name }
+            require(unknownNames.isEmpty()) {
+                "Unknown properties for ${type.qualifiedName}: ${unknownNames.joinToString()}"
+            }
         }
         return values
     }
@@ -440,9 +460,9 @@ internal abstract class BaseSchema<T : Any>(
         variant: Variant
     ): Any? = when (val result = property.deserializeToValue(variant)) {
         is DeserializeResult.Success -> result.value
-        is DeserializeResult.Failure -> throw DataSerializationException(
-            "Failed to deserialize '${property.name}' for ${type.qualifiedName}",
-            result.error
+        is DeserializeResult.Failure -> throw result.error.withPathPrefix(
+            property.name,
+            "Failed to deserialize '${property.name}' for ${type.qualifiedName}"
         )
     }
 
@@ -488,13 +508,15 @@ internal class SchemaImpl<T : Any>(
     id: Identifier,
     declaredProperties: List<SchemaProperty<T, *>>,
     untagged: Boolean,
+    strict: Boolean,
     private val constructionFactory: (SchemaConstructionContext<T>.() -> T)?,
     allowMissingConstructor: Boolean
 ) : BaseSchema<T>(
     type,
     id,
     declaredProperties.map { it.bindConstructor(type) },
-    untagged
+    untagged,
+    strict
 ) {
     private data class Binding<R : Any>(
         val property: SchemaProperty<R, *>,
@@ -667,12 +689,14 @@ internal class SingletonSchemaImpl<T : Any>(
     type: KClass<T>,
     id: Identifier,
     declaredProperties: List<SchemaProperty<T, *>>,
-    untagged: Boolean
+    untagged: Boolean,
+    strict: Boolean
 ) : BaseSchema<T>(
     type,
     id,
     declaredProperties.map { it.bindConstructor(type) },
-    untagged
+    untagged,
+    strict
 ) {
     private val instance: T
         get() = type.singletonObjectInstance()
@@ -713,6 +737,7 @@ private class DeferredSchema<T : Any>(
 
     override val properties: List<SchemaProperty<T, *>> get() = resolved.properties
     override val untagged: Boolean get() = resolved.untagged
+    override val strict: Boolean get() = resolved.strict
 
     override fun serialize(value: T): SerializeResult = resolved.serialize(value)
 
@@ -766,12 +791,13 @@ internal fun <T : Any> SchemaBuilderImpl<T>.build(
     id: Identifier,
     allowMissingConstructor: Boolean = false
 ): Schema<T> {
-    return buildSchema(id) { type, schemaId, schemaProperties, schemaUntagged ->
+    return buildSchema(id) { type, schemaId, schemaProperties, schemaUntagged, schemaStrict ->
         SchemaImpl(
             type,
             schemaId,
             schemaProperties,
             schemaUntagged,
+            schemaStrict,
             constructionFactory,
             allowMissingConstructor
         )
@@ -782,17 +808,17 @@ internal fun <T : Any> SchemaBuilderImpl<T>.buildSingleton(id: Identifier): Sche
     require(constructionFactory == null) {
         "Singleton schema $id uses its Kotlin object instance and cannot configure constructs { ... }"
     }
-    return buildSchema(id) { type, schemaId, schemaProperties, schemaUntagged ->
-        SingletonSchemaImpl(type, schemaId, schemaProperties, schemaUntagged)
+    return buildSchema(id) { type, schemaId, schemaProperties, schemaUntagged, schemaStrict ->
+        SingletonSchemaImpl(type, schemaId, schemaProperties, schemaUntagged, schemaStrict)
     }
 }
 
 private fun <T : Any> SchemaBuilderImpl<T>.buildSchema(
     id: Identifier,
-    create: (KClass<T>, Identifier, List<SchemaProperty<T, *>>, Boolean) -> Schema<T>
+    create: (KClass<T>, Identifier, List<SchemaProperty<T, *>>, Boolean, Boolean) -> Schema<T>
 ): Schema<T> {
     val childType = targetType()
-    if (parents.isEmpty()) return create(childType, id, properties, untagged)
+    if (parents.isEmpty()) return create(childType, id, properties, untagged, strict)
 
     return DeferredSchema(childType, id) {
         val parentSchemas = resolveStructuredParents(
@@ -825,7 +851,12 @@ private fun <T : Any> SchemaBuilderImpl<T>.buildSchema(
         } else {
             parentSchemas.all { it.untagged }
         }
-        create(childType, id, combinedProperties, childUntagged)
+        val childStrict = if (hasExplicitStrict) {
+            strict
+        } else {
+            parentSchemas.all { it.strict }
+        }
+        create(childType, id, combinedProperties, childUntagged, childStrict)
     }
 }
 

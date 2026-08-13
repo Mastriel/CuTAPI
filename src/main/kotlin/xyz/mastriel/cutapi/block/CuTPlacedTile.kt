@@ -167,6 +167,10 @@ private fun CuTPlacedTileEntity.writeBlockAttachmentOverlay(overlay: BlockAttach
     entity.setChanged()
 }
 
+internal fun <T : BlockAttachment> CuTPlacedTileEntity.readDynamicAttachment(schema: Schema<T>): Result<T?> =
+    runCatching { nativeEntity().persistentDataContainer }
+        .mapCatching { container -> AttachmentPdcStorage.readOne(container, schema).getOrThrow() }
+
 public fun CuTPlacedTileEntity.setAttachment(attachment: BlockAttachment) {
     @Suppress("UNCHECKED_CAST")
     val schema = attachment.schema().requireRegistered() as Schema<BlockAttachment>

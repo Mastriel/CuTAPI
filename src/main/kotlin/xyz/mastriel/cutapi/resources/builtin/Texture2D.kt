@@ -2,6 +2,7 @@ package xyz.mastriel.cutapi.resources.builtin
 
 import kotlinx.serialization.json.*
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.data.*
@@ -29,10 +30,9 @@ public open class Texture2D(
 
     public fun toMinecraftLocator(): String = ref.toMinecraftLocator()
 
-    @ResourceMetadata(id = "cutapi:texture2d")
     public open class Metadata(
         public val extendPostProcess: List<ResourceRef<PostProcessDefinitionsResource>> = emptyList(),
-        public val postProcess: List<TaggedResourceConfig> = emptyList(),
+        public val postProcess: List<TexturePostprocessTable<*>> = emptyList(),
         public val materials: List<String> = listOf(),
         public val animation: Animation? = null,
         public val itemModelData: ItemModelData? =
@@ -60,9 +60,9 @@ public open class Texture2D(
         /**
          * Warning! This is not available until all resources are loaded
          */
-        public val postProcessors: List<TexturePostprocessTable>
+        public val postProcessors: List<TexturePostprocessTable<*>>
             get() {
-                val list = mutableListOf<TexturePostprocessTable>()
+                val list = mutableListOf<TexturePostprocessTable<*>>()
                 for (extension in extendPostProcess) {
                     val processors = extension.getResource()?.metadata?.postProcessors
                     if (processors == null) {
@@ -70,9 +70,40 @@ public open class Texture2D(
                     }
                     list.addAll(processors ?: emptyList())
                 }
-                list.addAll(postProcess.map(TexturePostprocessTable::fromConfig))
+                list.addAll(postProcess)
                 return list
             }
+
+        public companion object : Schema<Metadata> by schema(id("cutapi:texture2d"), {
+            extends { CuTMeta }
+            property(
+                Metadata::extendPostProcess,
+                VariantSerializer.ListOf(VariantSerializer.ResourceRef<PostProcessDefinitionsResource>())
+            ) {
+                optional(omitDefaults = true) { emptyList() }
+            }
+            property(Metadata::postProcess, VariantSerializer.ListOf(TexturePostprocessTableSerializer)) {
+                optional(omitDefaults = true) { emptyList() }
+            }
+            property(Metadata::materials, VariantSerializer.ListOf(VariantSerializer.String)) {
+                optional(omitDefaults = true) { emptyList() }
+            }
+            property(Metadata::animation, Animation.nullable()) {
+                optional(omitDefaults = true) { null }
+            }
+            property(Metadata::itemModelData, ItemModelData.nullable()) {
+                optional(omitDefaults = true) { ItemModelData(parent = "minecraft:item/handheld") }
+            }
+            property(Metadata::modelFile, VariantSerializer.ResourceRef<JsonResource>().nullable()) {
+                optional(omitDefaults = true) { null }
+            }
+            property(Metadata::fontSettings, FontSettings) {
+                optional(omitDefaults = true) { FontSettings() }
+            }
+            property(Metadata::transient, VariantSerializer.Boolean) {
+                optional(omitDefaults = true) { false }
+            }
+        })
     }
 
     override val materials: List<String>
@@ -169,25 +200,49 @@ public fun ResourceRef<Texture2D>.getGlyphOrNull(): String? {
 public val Texture2DResourceLoader: ResourceFileLoader<Texture2D> = resourceLoader(
     extensions = listOf("png"),
     dependencies = listOf(PostProcessDefinitionsResource.Loader),
-    metadataClass = Texture2D.Metadata::class
+    metadataSchema = Texture2D.Metadata
 ) {
     val bis = ByteArrayInputStream(data)
     val image = ImageIO.read(bis)
     success(Texture2D(ref, image, metadata ?: Texture2D.Metadata()))
 }
 
-public data class TexturePostprocessTable(
-    public val postProcessId: Identifier,
-    public val options: ResourceConfigMap
+public data class TexturePostprocessTable<O : Any>(
+    public val processor: TexturePostProcessor<O>,
+    public val options: O
 ) {
-    public companion object {
-        public fun fromConfig(config: TaggedResourceConfig): TexturePostprocessTable =
-            TexturePostprocessTable(config.id, config.value.asConfigMap())
-    }
-
-    public val processor: TexturePostProcessor get() = TexturePostProcessor.get(postProcessId)
+    public val postProcessId: Identifier get() = processor.id
 }
 
+public object TexturePostprocessTableSerializer : Serializer<TexturePostprocessTable<*>> {
+    override val descriptor: SerializerDescriptor<*> =
+        SerializerDescriptor.opaque(id("cutapi:resource/texture_post_process"))
+
+    override fun serialize(value: TexturePostprocessTable<*>): SerializeResult = try {
+        @Suppress("UNCHECKED_CAST")
+        val processor = value.processor as TexturePostProcessor<Any>
+        SerializeResult.Success(processor.optionsSchema.serialize(value.options).getOrThrow())
+    } catch (exception: Exception) {
+        SerializeResult.Failure(exception)
+    }
+
+    override fun deserialize(variant: Variant): DeserializeResult<TexturePostprocessTable<*>> = try {
+        val root = variant.requireMap()
+        val type = (root[SCHEMA_TYPE_DISCRIMINATOR] as? Variant.String)?.value
+            ?: throw VariantNormalizationException(
+                "Texture post-processor declaration must have a YAML tag.",
+                DataPath().child(SCHEMA_TYPE_DISCRIMINATOR)
+            )
+        val processor = TexturePostProcessor.getOrNull(id(type))
+            ?: throw VariantNormalizationException(
+                "No texture post-processor is registered as $type.",
+                DataPath().child(SCHEMA_TYPE_DISCRIMINATOR)
+            )
+        DeserializeResult.Success(processor.decodeTable(root))
+    } catch (exception: Exception) {
+        DeserializeResult.Failure(exception)
+    }
+}
 
 public open class FontSettings(
     public val enabled: Boolean = true,
@@ -195,8 +250,21 @@ public open class FontSettings(
     public val height: Int? = null,
     public val advance: Int? = null,
 ) {
-
-    public companion object {
+    public companion object : Schema<FontSettings> by schema(id("cutapi:resource/font_settings"), {
+        untagged = true
+        property(FontSettings::enabled, VariantSerializer.Boolean) {
+            optional(omitDefaults = true) { true }
+        }
+        property(FontSettings::ascent, VariantSerializer.Int.nullable()) {
+            optional(omitDefaults = true) { null }
+        }
+        property(FontSettings::height, VariantSerializer.Int.nullable()) {
+            optional(omitDefaults = true) { null }
+        }
+        property(FontSettings::advance, VariantSerializer.Int.nullable()) {
+            optional(omitDefaults = true) { null }
+        }
+    }) {
         public val Disabled: FontSettings = FontSettings(enabled = false)
     }
 }

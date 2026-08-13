@@ -4,9 +4,7 @@ import org.bukkit.*
 import org.bukkit.block.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.attachment.*
-import xyz.mastriel.cutapi.behavior.*
-import xyz.mastriel.cutapi.block.behaviors.*
-import xyz.mastriel.cutapi.block.nativeblock.NativeBlockRegistration
+import xyz.mastriel.cutapi.block.nativeblock.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.registry.*
@@ -42,7 +40,19 @@ public sealed interface CustomTile<T : CuTPlacedTile> : Identifiable, Attachment
 
     override fun getAllAttachments(): List<BlockAttachment> = descriptor.getAllAttachments()
 
-    public companion object : IdentifierRegistry<CustomTile<*>>(id("cutapi:registry/custom_tile")) {
+    public companion object : IdentifierRegistry<CustomTile<*>>(id("cutapi:registry/custom_tile")),
+        DebugViewProvider<CustomTile<*>> by debugView(id("cutapi:custom_tile"), {
+            extends { Identifiable }
+            property("placedBlockTypeClass", VariantSerializer.String) {
+                it.placedBlockTypeClass.qualifiedName ?: "<anonymous class>"
+            }
+            property(CustomTile<*>::descriptor, TileDescriptor)
+            property("intrinsicAttachments", VariantSerializer.List) { item ->
+                item.getAllAttachments().map { attachment ->
+                    attachment.schema().serialize(attachment).getOrThrow()
+                }
+            }
+        }) {
 
     }
 }
@@ -55,7 +65,7 @@ public class CustomBlock<T : CuTPlacedBlock> @Deprecated(
     override val id: Identifier,
     override val descriptor: BlockDescriptor,
     override val placedBlockTypeClass: KClass<out T>
-) : CustomTile<T>, BehaviorHolder<BlockBehavior> {
+) : CustomTile<T> {
 
     private var definitionPrepared: Boolean = false
     private var preparedItem: PreparedBlockItem? = null
@@ -78,21 +88,13 @@ public class CustomBlock<T : CuTPlacedBlock> @Deprecated(
 
     override fun placementItemOrNull(): CustomItem<*>? = preparedItem?.item
 
-    private val behaviorHolder by lazy { blockBehaviorHolder(this) }
-    override fun hasBehavior(behavior: KClass<out BlockBehavior>): Boolean = behaviorHolder.hasBehavior(behavior)
-    override fun hasBehavior(behaviorId: Identifier): Boolean = behaviorHolder.hasBehavior(behaviorId)
-    override fun getAllBehaviors(): Set<BlockBehavior> = behaviorHolder.getAllBehaviors()
-    override fun <T : BlockBehavior> getBehaviorOrNull(behaviorId: Identifier): T? =
-        behaviorHolder.getBehaviorOrNull(behaviorId)
+    override val debugView: EncodeOnlySerializer<*> get() = Companion.provideDebugView()
 
-    override fun <T : BlockBehavior> getBehaviorOrNull(behavior: KClass<T>): T? =
-        behaviorHolder.getBehaviorOrNull(behavior)
-
-    override fun <T : BlockBehavior> getBehavior(behaviorId: Identifier): T = behaviorHolder.getBehavior(behaviorId)
-    override fun <T : BlockBehavior> getBehavior(behavior: KClass<T>): T = behaviorHolder.getBehavior(behavior)
-
-
-    public companion object : IdentifierRegistry<CustomBlock<*>>(id("cutapi:registry/custom_block")) {
+    public companion object :
+        IdentifierRegistry<CustomBlock<*>>(id("cutapi:registry/custom_block")),
+        DebugViewProvider<CustomBlock<*>> by debugView(id("cutapi:custom_block"), {
+            extends { CustomTile }
+        }) {
         internal val DeferredRegistry: DeferredRegistry<CustomBlock<*>> =
             defer(RegistryPriority(Int.MAX_VALUE))
 
@@ -123,7 +125,7 @@ public class CustomTileEntity<T : CuTPlacedTileEntity> @Deprecated(
     override val id: Identifier,
     override val descriptor: TileEntityDescriptor,
     override val placedBlockTypeClass: KClass<out T>
-) : CustomTile<T>, BehaviorHolder<TileEntityBehavior> {
+) : CustomTile<T> {
 
     private var definitionPrepared: Boolean = false
     private var preparedItem: PreparedBlockItem? = null
@@ -146,22 +148,13 @@ public class CustomTileEntity<T : CuTPlacedTileEntity> @Deprecated(
 
     override fun placementItemOrNull(): CustomItem<*>? = preparedItem?.item
 
-    private val behaviorHolder by lazy { tileEntityBehaviorHolder(this) }
-    override fun hasBehavior(behavior: KClass<out TileEntityBehavior>): Boolean = behaviorHolder.hasBehavior(behavior)
-    override fun hasBehavior(behaviorId: Identifier): Boolean = behaviorHolder.hasBehavior(behaviorId)
-    override fun getAllBehaviors(): Set<TileEntityBehavior> = behaviorHolder.getAllBehaviors()
-    override fun <T : TileEntityBehavior> getBehaviorOrNull(behaviorId: Identifier): T? =
-        behaviorHolder.getBehaviorOrNull(behaviorId)
+    override val debugView: EncodeOnlySerializer<*> get() = Companion.provideDebugView()
 
-    override fun <T : TileEntityBehavior> getBehaviorOrNull(behavior: KClass<T>): T? =
-        behaviorHolder.getBehaviorOrNull(behavior)
-
-    override fun <T : TileEntityBehavior> getBehavior(behaviorId: Identifier): T =
-        behaviorHolder.getBehavior(behaviorId)
-
-    override fun <T : TileEntityBehavior> getBehavior(behavior: KClass<T>): T = behaviorHolder.getBehavior(behavior)
-
-    public companion object : IdentifierRegistry<CustomTileEntity<*>>(id("cutapi:registry/custom_tile_entity")) {
+    public companion object :
+        IdentifierRegistry<CustomTileEntity<*>>(id("cutapi:registry/custom_tile_entity")),
+        DebugViewProvider<CustomTileEntity<*>> by debugView(id("cutapi:custom_tile_entity"), {
+            extends { CustomTile }
+        }) {
         internal val DeferredRegistry: DeferredRegistry<CustomTileEntity<*>> =
             defer(RegistryPriority(Int.MAX_VALUE))
 

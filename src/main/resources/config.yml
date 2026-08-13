@@ -59,7 +59,9 @@ uploader:
   # Default: 32120
   port: 32120
 
-  # The IP address of the internal server (if that's the uploader being used)
+  # The advertised host of the internal server (if that's the uploader being used).
+  # 0.0.0.0 uses the same host each player used to connect to Minecraft. Set this
+  # explicitly when the pack server is exposed through a different public host.
   #
   # Type: string
   # Default: 0.0.0.0 (which will automatically infer your IP)

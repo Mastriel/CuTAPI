@@ -1,17 +1,12 @@
 package xyz.mastriel.cutapi.block
 
-import org.bukkit.entity.Player
-import org.bukkit.event.block.BlockBreakEvent
-import org.bukkit.event.block.BlockExplodeEvent
-import org.bukkit.event.block.BlockPlaceEvent
-import org.bukkit.event.player.PlayerInteractEvent
-import xyz.mastriel.cutapi.attachment.BlockAttachment
-import xyz.mastriel.cutapi.data.Schema
-import xyz.mastriel.cutapi.registry.Identifier
-import xyz.mastriel.cutapi.registry.IdentifierRegistry
-import xyz.mastriel.cutapi.registry.RegistryPriority
-import xyz.mastriel.cutapi.registry.id
-import xyz.mastriel.cutapi.system.CuTSystem
+import org.bukkit.entity.*
+import org.bukkit.event.block.*
+import org.bukkit.event.player.*
+import xyz.mastriel.cutapi.attachment.*
+import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.system.*
 
 public open class BlockSystemContext(public val tile: CuTPlacedTile) {
     public fun <T : BlockAttachment> attachment(schema: Schema<T>): T = tile.getAttachment(schema)
@@ -69,6 +64,7 @@ public class TileAttachmentChangeContext(
     tileEntity: CuTPlacedTileEntity,
     public val schema: Schema<out BlockAttachment>,
 ) : TileSystemContext(tileEntity)
+
 public class TileUnloadContext(tileEntity: CuTPlacedTileEntity) : TileSystemContext(tileEntity)
 public class TileRemoveContext(tileEntity: CuTPlacedTileEntity) : TileSystemContext(tileEntity)
 
@@ -130,6 +126,25 @@ public fun attachmentBlockSystem(
     id: Identifier = attachment.id / "system",
     priority: RegistryPriority = RegistryPriority.Medium,
 ): BlockSystem = object : BlockSystem {
+    override val id: Identifier = id
+    override val priority: RegistryPriority = priority
+    override fun prerequisite(target: CuTPlacedTile): Boolean = target.hasAttachment(attachment)
+}
+
+public fun generalTileSystem(
+    id: Identifier,
+    priority: RegistryPriority = RegistryPriority.Medium,
+): TileSystem = object : TileSystem {
+    override val id: Identifier = id
+    override val priority: RegistryPriority = priority
+    override fun prerequisite(target: CuTPlacedTile): Boolean = true
+}
+
+public fun attachmentTileSystem(
+    attachment: Schema<out BlockAttachment>,
+    id: Identifier = attachment.id / "system",
+    priority: RegistryPriority = RegistryPriority.Medium,
+): TileSystem = object : TileSystem {
     override val id: Identifier = id
     override val priority: RegistryPriority = priority
     override fun prerequisite(target: CuTPlacedTile): Boolean = target.hasAttachment(attachment)

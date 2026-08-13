@@ -3,12 +3,15 @@
 package xyz.mastriel.cutapi.resources.builtin
 
 import kotlinx.serialization.*
+import kotlinx.serialization.Serializable as KotlinSerializable
 import kotlinx.serialization.builtins.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
 import kotlinx.serialization.json.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.block.*
+import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.data.*
 
@@ -24,12 +27,28 @@ public open class Model3D(
         inspector.map("Textures") { metadata.textures.mapValues { (_, v) -> v.toString() } }
     }
 
-    @ResourceMetadata(id = "cutapi:model3d")
     public data class Metadata(
         val blockStrategies: List<AllowedBlockStrategy> = AllowedBlockStrategy.entries.toList(),
         val materials: List<String> = listOf(),
         val textures: Map<String, ResourceRef<Texture2D>> = mapOf(),
-    ) : CuTMeta()
+        val oversizedInGui: Boolean = false,
+    ) : CuTMeta() {
+        public companion object : Schema<Metadata> by schema(id("cutapi:model3d"), {
+            extends { CuTMeta }
+            property(Metadata::blockStrategies, VariantSerializer.ListOf(VariantSerializer.Enum<AllowedBlockStrategy>())) {
+                optional(omitDefaults = true) { AllowedBlockStrategy.entries.toList() }
+            }
+            property(Metadata::materials, VariantSerializer.ListOf(VariantSerializer.String)) {
+                optional(omitDefaults = true) { emptyList() }
+            }
+            property(Metadata::textures, VariantSerializer.MapOf(VariantSerializer.ResourceRef<Texture2D>())) {
+                optional(omitDefaults = true) { emptyMap() }
+            }
+            property(Metadata::oversizedInGui, VariantSerializer.Boolean) {
+                optional(omitDefaults = true) { false }
+            }
+        })
+    }
 
 
     override fun createItemModelData(): JsonObject = modelJson.toJsonObject()
@@ -49,6 +68,9 @@ public open class Model3D(
     override val materials: List<String>
         get() = metadata.materials
 
+    override val oversizedInGui: Boolean
+        get() = metadata.oversizedInGui
+
     override val resource: Resource
         get() = this
 
@@ -60,7 +82,7 @@ public open class Model3D(
 
 public val Model3DResourceLoader: ResourceFileLoader<Model3D> = resourceLoader(
     extensions = listOf("model3d.json"),
-    metadataClass = Model3D.Metadata::class,
+    metadataSchema = Model3D.Metadata,
     // we need to know how to remap the textures.
     dependencies = listOf(Texture2DResourceLoader),
 ) {
@@ -83,7 +105,7 @@ public val Model3DResourceLoader: ResourceFileLoader<Model3D> = resourceLoader(
     }
 }
 
-@Serializable
+@KotlinSerializable
 public enum class Model3DDisplayType {
     @SerialName("thirdperson_righthand")
     ThirdPersonRightHand,
@@ -110,7 +132,7 @@ public enum class Model3DDisplayType {
     Fixed
 }
 
-@Serializable
+@KotlinSerializable
 public data class Model3DDisplay(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val scale: VoxelVector? = null,
@@ -120,7 +142,7 @@ public data class Model3DDisplay(
     val translation: VoxelVector? = null,
 )
 
-@Serializable
+@KotlinSerializable
 public data class Model3DJsonStructure(
     public val textures: Map<String, String>,
     public val elements: List<Model3DElement> = listOf(),
@@ -134,7 +156,7 @@ public data class Model3DJsonStructure(
     }
 }
 
-@Serializable
+@KotlinSerializable
 public data class Model3DCubeFaces(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     public val north: Model3DElementFace? = null,
@@ -150,14 +172,14 @@ public data class Model3DCubeFaces(
     public val down: Model3DElementFace? = null
 )
 
-@Serializable
+@KotlinSerializable
 public data class Model3DElementFace(
     public val uv: List<Float>,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     public val texture: JsonPrimitive? = null
 )
 
-@Serializable
+@KotlinSerializable
 public data class Model3DElement(
     public val from: VoxelVector,
     public val to: VoxelVector,
@@ -168,7 +190,7 @@ public data class Model3DElement(
     public val name: String? = null
 )
 
-@Serializable
+@KotlinSerializable
 public enum class Model3DRotationAxis {
     @SerialName("x")
     X,
@@ -180,7 +202,7 @@ public enum class Model3DRotationAxis {
     Z
 }
 
-@Serializable
+@KotlinSerializable
 public data class Model3DRotation(
     public val origin: VoxelVector,
     public val axis: Model3DRotationAxis,
@@ -188,7 +210,7 @@ public data class Model3DRotation(
 )
 
 
-@Serializable(with = VoxelVector.Serializer::class)
+@KotlinSerializable(with = VoxelVector.Serializer::class)
 public data class VoxelVector(
     public val x: Float,
     public val y: Float,

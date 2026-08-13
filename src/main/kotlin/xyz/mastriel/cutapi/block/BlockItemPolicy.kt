@@ -2,7 +2,6 @@
 
 package xyz.mastriel.cutapi.block
 
-import org.bukkit.*
 import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.item.*
@@ -24,9 +23,18 @@ public sealed class BlockItemPolicy {
 
     /** Generates and contributes a new custom item when the tile definition is registered. */
     public class Generate private constructor(
-        public val backingItem: ItemType?,
+        requestedBackingItem: ItemType?,
         private val descriptorProducer: (() -> ItemDescriptor)?,
     ) : BlockItemPolicy() {
+
+        /** Generated block items use a behaviorless glistering melon slice as their server backing. */
+        public val backingItem: ItemType = defaultBackingItem()
+
+        init {
+            require(requestedBackingItem == null || requestedBackingItem == backingItem) {
+                "Generated block items must use ${backingItem.key}; use BlockItemPolicy.Item for a custom backing item."
+            }
+        }
 
         @Deprecated(
             message = "Use Generate.fromDescriptor and keep the descriptor producer at the call site.",
@@ -34,10 +42,25 @@ public sealed class BlockItemPolicy {
         )
         public val descriptor: ItemDescriptor? get() = descriptorProducer?.invoke()
 
-        public constructor(backingItem: ItemType? = null) : this(backingItem, null)
+        public constructor() : this(null, null)
 
+        public constructor(configure: ItemDescriptorBuilder.() -> Unit) :
+            this(null, descriptorProducer = { ItemDescriptorBuilder().apply(configure).build() })
+
+        @Deprecated(
+            message = "Generated block items are glistering-melon-backed; use BlockItemPolicy.Item for a custom backing item.",
+            replaceWith = ReplaceWith("BlockItemPolicy.Generate()"),
+            level = DeprecationLevel.WARNING,
+        )
+        public constructor(backingItem: ItemType) : this(backingItem, null)
+
+        @Deprecated(
+            message = "Generated block items are glistering-melon-backed; use BlockItemPolicy.Item for a custom backing item.",
+            replaceWith = ReplaceWith("BlockItemPolicy.Generate(configure)"),
+            level = DeprecationLevel.WARNING,
+        )
         public constructor(
-            backingItem: ItemType? = null,
+            backingItem: ItemType,
             configure: ItemDescriptorBuilder.() -> Unit,
         ) : this(backingItem, descriptorProducer = { ItemDescriptorBuilder().apply(configure).build() })
 
@@ -52,13 +75,16 @@ public sealed class BlockItemPolicy {
             tileDescriptor: TileDescriptor,
             customTile: CustomTile<*>,
         ): PreparedBlockItem {
-            val resolvedBackingItem = backingItem ?: defaultBackingItem()
             val placement = BlockPlaceAttachment(customTile)
             val baseDescriptor = ItemDescriptor(
                 display = {
                     if (viewer != null) name = tileDescriptor.name?.withViewer(viewer)
                 },
-                attachments = listOf(placement),
+                attachments = listOf(
+                    placement,
+                    DisplayAs(defaultClientItem()),
+                ),
+                forcedItemModelId = generatedBlockItemModelId(customTile),
             )
             val configuredDescriptor = descriptorProducer?.invoke()
             val combinedDescriptor = if (configuredDescriptor == null) {
@@ -66,7 +92,7 @@ public sealed class BlockItemPolicy {
             } else {
                 mergeGeneratedDescriptor(baseDescriptor, configuredDescriptor, placement)
             }
-            val generatedItem = customItemFromDescriptor(customTile.id / "item", resolvedBackingItem) {
+            val generatedItem = customItemFromDescriptor(customTile.id / "item", backingItem) {
                 combinedDescriptor
             }
             return PreparedBlockItem(generatedItem, contributeToRegistry = true)
@@ -75,15 +101,28 @@ public sealed class BlockItemPolicy {
         public companion object {
             /** Creates a generated-item policy whose descriptor is produced per tile definition. */
             public fun fromDescriptor(
-                backingItem: ItemType? = null,
+                descriptor: () -> ItemDescriptor = ::defaultItemDescriptor,
+            ): Generate = Generate(null, descriptor)
+
+            @Deprecated(
+                message = "Generated block items are glistering-melon-backed; use BlockItemPolicy.Item for a custom backing item.",
+                replaceWith = ReplaceWith("BlockItemPolicy.Generate.fromDescriptor(descriptor)"),
+                level = DeprecationLevel.WARNING,
+            )
+            public fun fromDescriptor(
+                backingItem: ItemType,
                 descriptor: () -> ItemDescriptor = ::defaultItemDescriptor,
             ): Generate = Generate(backingItem, descriptor)
 
             /**
-             * Placement is supplied by [BlockPlaceAttachment], so the native item must not inherit a
-             * vanilla BlockItem's identity-bound placement behavior. The generated model controls visuals.
+             * Placement is supplied by [BlockPlaceAttachment], so the authoritative native item uses a
+             * plain glistering melon slice with no use-on-block behavior. Client copies project as a spawn
+             * egg, which produces the expected use-on-block hand swing without predicting a temporary
+             * block. The generated item model controls the held and inventory visuals.
              */
-            private fun defaultBackingItem(): ItemType = ItemType.PAPER
+            internal fun defaultBackingItem(): ItemType = ItemType.GLISTERING_MELON_SLICE
+
+            internal fun defaultClientItem(): ItemType = ItemType.PIG_SPAWN_EGG
 
             private fun mergeGeneratedDescriptor(
                 base: ItemDescriptor,
@@ -96,6 +135,7 @@ public sealed class BlockItemPolicy {
                     display = configured.display ?: base.display,
                     attachments = mergedAttachments,
                     onRegister = configured.onRegister,
+                    forcedItemModelId = base.forcedItemModelId,
                 )
             }
         }
@@ -168,5 +208,8 @@ internal fun prepareBlockPlacementDescriptor(
         display = current.display,
         attachments = current.attachments + placement,
         onRegister = current.onRegister,
+        forcedItemModelId = current.forcedItemModelId,
     )
 }
+
+internal fun generatedBlockItemModelId(tile: CustomTile<*>): Identifier = tile.id / "item"

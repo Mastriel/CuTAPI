@@ -325,16 +325,16 @@ internal object DescriptorPdcCodec {
         val unknown = values.keys - properties.keys - SCHEMA_TYPE_DISCRIMINATOR
         requireData(unknown.isEmpty(), path, "unknown properties: ${unknown.joinToString()}")
 
-        for ((name, property) in properties) {
-            val value = values[name] ?: continue
-            val propertyKey = nativePropertyKey(descriptor.id.namespace, name, "$path.$name")
+        val propertyKeys = nativePropertyKeys(descriptor.id.namespace, shape.properties, path)
+        for ((propertyKey, property) in propertyKeys) {
+            val value = values[property.name] ?: continue
             write(
                 container,
                 propertyKey,
                 property.serializerDescriptor,
                 value,
                 descriptor.id.namespace,
-                "$path.$name"
+                "$path.${property.name}"
             )
         }
     }
@@ -346,9 +346,7 @@ internal object DescriptorPdcCodec {
         path: String,
         allowedMetadata: Set<NamespacedKey> = emptySet()
     ): Variant.Map {
-        val properties = shape.properties.associateBy { property ->
-            nativePropertyKey(descriptor.id.namespace, property.name, "$path.${property.name}")
-        }
+        val properties = nativePropertyKeys(descriptor.id.namespace, shape.properties, path)
         val unknown = container.keys - properties.keys - allowedMetadata
         requireData(unknown.isEmpty(), path, "unknown PDC keys: ${unknown.joinToString()}")
 
@@ -783,9 +781,59 @@ internal object DescriptorPdcCodec {
         )
     }
 
+    private fun nativePropertyKeys(
+        namespace: String,
+        properties: List<SerializedPropertyDescriptor>,
+        path: String
+    ): Map<NamespacedKey, SerializedPropertyDescriptor> {
+        val normalized = linkedMapOf<NamespacedKey, SerializedPropertyDescriptor>()
+        for (property in properties) {
+            val key = nativePropertyKey(namespace, property.name, "$path.${property.name}")
+            val previous = normalized.put(key, property)
+            requireData(
+                previous == null,
+                path,
+                "schema properties '${previous?.name}' and '${property.name}' normalize to the same PDC key '$key'"
+            )
+        }
+        return normalized
+    }
+
     private fun nativePropertyKey(namespace: String, name: String, path: String): NamespacedKey {
-        requireData(NativeKeyPattern.matches(name), path, "property name '$name' is not PDC-safe")
-        return checkedKey(namespace, name, path)
+        val normalized = name.toPdcSnakeCase()
+        requireData(
+            NativeKeyPattern.matches(normalized),
+            path,
+            "property name '$name' cannot be normalized to a PDC-safe key (produced '$normalized')"
+        )
+        return checkedKey(namespace, normalized, path)
+    }
+
+    /**
+     * Normalizes Kotlin-style property casing while preserving PDC path characters
+     * deliberately supplied by an explicit serialized name.
+     */
+    private fun String.toPdcSnakeCase(): String = buildString(length + 8) {
+        for (index in this@toPdcSnakeCase.indices) {
+            val character = this@toPdcSnakeCase[index]
+            if (character !in 'A'..'Z') {
+                append(character)
+                continue
+            }
+
+            val previous = this@toPdcSnakeCase.getOrNull(index - 1)
+            val next = this@toPdcSnakeCase.getOrNull(index + 1)
+            val beginsWord =
+                previous != null &&
+                    (
+                        previous in 'a'..'z' ||
+                            previous in '0'..'9' ||
+                            (previous in 'A'..'Z' && next in 'a'..'z')
+                        )
+
+            if (beginsWord && lastOrNull() != '_') append('_')
+            append(character.lowercaseChar())
+        }
     }
 
     private fun dynamicMapKey(name: String, defaultNamespace: String, path: String): NamespacedKey {

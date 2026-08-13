@@ -2,6 +2,7 @@ package xyz.mastriel.cutapi.resources
 
 import org.bukkit.*
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.resources.data.*
 import xyz.mastriel.cutapi.resources.process.*
@@ -9,6 +10,11 @@ import xyz.mastriel.cutapi.utils.*
 import java.io.*
 
 public class ResourceManager {
+
+    private data class LoaderSelection(
+        val loader: ResourceFileLoader<*>,
+        val document: ResourceDocument? = null
+    )
 
     private val resources = mutableMapOf<ResourceRef<*>, Resource>()
     private val folders = mutableListOf<FolderRef>()
@@ -209,7 +215,10 @@ public class ResourceManager {
                     else -> 0
                 }
             }.forEach { (file, ref) ->
-                if (selectedLoaders[ref] == loader) loadResource(file, ref, loader)
+                val selection = selectedLoaders[ref]
+                if (selection?.loader == loader) {
+                    loadResource(file, ref, loader, selection.document)
+                }
             }
         }
     }
@@ -218,11 +227,12 @@ public class ResourceManager {
         resourceFile: File,
         ref: ResourceRef<*>,
         loaders: List<ResourceFileLoader<*>>
-    ): ResourceFileLoader<*>? {
+    ): LoaderSelection? {
         val metadataFile = File(resourceFile.absolutePath + ".meta")
         try {
             if (metadataFile.exists()) {
-                val tag = ResourceYaml.parse(metadataFile.readText(), metadataFile.path).requireTag()
+                val document = ResourceYaml.parse(metadataFile.readText(), metadataFile.path)
+                val tag = document.requireTypeId()
                 val loader = ResourceFileLoader.getOrNull(tag)
                 if (loader == null) {
                     Plugin.error("No resource loader is registered for metadata tag $tag on $ref.")
@@ -232,7 +242,7 @@ public class ResourceManager {
                     Plugin.error("Resource loader $tag does not accept extension '${ref.extension}' for $ref.")
                     return null
                 }
-                return loader
+                return LoaderSelection(loader, document)
             }
 
             val candidates = loaders.filter { it.acceptsExtension(ref.extension) }
@@ -240,13 +250,15 @@ public class ResourceManager {
 
             val metadataResourceCandidates = candidates.filter { it.usesDataAsMetadata }
             if (metadataResourceCandidates.isNotEmpty()) {
-                val dataTag = ResourceYaml.parse(resourceFile.readText(), resourceFile.path).requireTag()
-                metadataResourceCandidates.singleOrNull { it.id == dataTag }?.let { return it }
+                val document = ResourceYaml.parse(resourceFile.readText(), resourceFile.path)
+                val dataTag = document.requireTypeId()
+                metadataResourceCandidates.singleOrNull { it.id == dataTag }
+                    ?.let { return LoaderSelection(it, document) }
                 Plugin.error("No metadata resource loader for extension '${ref.extension}' accepts tag $dataTag on $ref.")
                 return null
             }
 
-            if (candidates.size == 1) return candidates.single()
+            if (candidates.size == 1) return LoaderSelection(candidates.single())
             Plugin.error(
                 "Resource $ref matches multiple loaders (${candidates.joinToString { it.id.toString() }}); " +
                     "add a tagged .meta file."
@@ -325,10 +337,24 @@ public class ResourceManager {
         ref: ResourceRef<*>,
         withLoader: ResourceFileLoader<*>,
         options: ResourceLoadOptions.() -> Unit = { }
+    ): ResourceLoadResult<*> = loadResource(resourceFile, ref, withLoader, null, options)
+
+    private fun loadResource(
+        resourceFile: File,
+        ref: ResourceRef<*>,
+        withLoader: ResourceFileLoader<*>,
+        parsedDocument: ResourceDocument?,
+        options: ResourceLoadOptions.() -> Unit = { }
     ): ResourceLoadResult<*> {
         @Suppress("UNCHECKED_CAST")
         when (val result =
-            loadResourceWithoutRegistering(resourceFile, ref, withLoader as ResourceFileLoader<Resource>, options)) {
+            loadResourceWithoutRegistering(
+                resourceFile,
+                ref,
+                withLoader as ResourceFileLoader<Resource>,
+                parsedDocument,
+                options
+            )) {
             is ResourceLoadResult.Success -> {
                 val loadOptions = ResourceLoadOptions().apply(options)
                 if (ref.isAvailable()) {
@@ -370,6 +396,14 @@ public class ResourceManager {
         ref: ResourceRef<T>,
         loader: ResourceFileLoader<T>,
         options: ResourceLoadOptions.() -> Unit = { }
+    ): ResourceLoadResult<T> = loadResourceWithoutRegistering(resourceFile, ref, loader, null, options)
+
+    private fun <T : Resource> loadResourceWithoutRegistering(
+        resourceFile: File,
+        ref: ResourceRef<T>,
+        loader: ResourceFileLoader<T>,
+        parsedDocument: ResourceDocument?,
+        options: ResourceLoadOptions.() -> Unit = { }
     ): ResourceLoadResult<T> {
         val loadOptions = ResourceLoadOptions().apply(options)
 
@@ -378,13 +412,18 @@ public class ResourceManager {
         try {
             val resourceBytes = resourceFile.readBytes()
 
-            val metadataDocument = loadOptions.metadata?.let(ResourceMetadataMapper::encodeMetadata)
-                ?: loadMetadata(metadataFile, ref)
+            val metadataDocument = if (loadOptions.metadata != null) {
+                null
+            } else if (loader.usesDataAsMetadata) {
+                parsedDocument ?: ResourceYaml.parse(resourceBytes.toString(Charsets.UTF_8), resourceFile.path)
+            } else {
+                loadMetadata(metadataFile, ref, parsedDocument)
+            }
 
             return tryLoadResource(ref, resourceBytes, metadataDocument, loader, loadOptions)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            return ResourceLoadResult.Failure()
+            return ResourceLoadResult.Failure(ex)
         }
     }
 
@@ -395,16 +434,18 @@ public class ResourceManager {
      * @param ref The reference of the resource.
      * @return The parsed metadata document, or null if not found.
      */
-    private fun loadMetadata(metadataFile: File, ref: ResourceRef<*>): ResourceConfigDocument? {
+    private fun loadMetadata(
+        metadataFile: File,
+        ref: ResourceRef<*>,
+        parsedFileDocument: ResourceDocument? = null
+    ): ResourceDocument? {
         val folderDocument = getFolderDefaultDocument(ref)
-        val fileDocument = if (metadataFile.exists()) {
-            ResourceYaml.parse(metadataFile.readText(), metadataFile.path).also { it.requireTag() }
+        val fileDocument = parsedFileDocument ?: if (metadataFile.exists()) {
+            ResourceYaml.parse(metadataFile.readText(), metadataFile.path).also { it.requireTypeId() }
         } else null
 
         var document = when {
-            folderDocument != null && fileDocument != null -> fileDocument.copy(
-                root = folderDocument.root.combine(fileDocument.root, combineLists = true)
-            )
+            folderDocument != null && fileDocument != null -> folderDocument.merge(fileDocument, combineLists = true)
             fileDocument != null -> fileDocument
             folderDocument != null -> folderDocument
             else -> return null
@@ -414,7 +455,7 @@ public class ResourceManager {
         while (metadataNeedsToProcessExtensions(document)) {
             depth++
             if (depth > 30) {
-                throw ResourceConfigException("Metadata templates for $ref recurse more than 30 levels.")
+                throw ResourceDocumentException("Metadata templates for $ref recurse more than 30 levels.")
             }
             document = processTemplates(ref, document)
         }
@@ -426,7 +467,7 @@ public class ResourceManager {
      *
      * @return True if extensions need to be processed, false otherwise.
      */
-    private fun metadataNeedsToProcessExtensions(document: ResourceConfigDocument): Boolean {
+    private fun metadataNeedsToProcessExtensions(document: ResourceDocument): Boolean {
         return document.requireMap()["extends"] != null
     }
 
@@ -438,11 +479,11 @@ public class ResourceManager {
      */
     private fun processTemplates(
         ref: ResourceRef<*>,
-        document: ResourceConfigDocument
-    ): ResourceConfigDocument {
+        document: ResourceDocument
+    ): ResourceDocument {
         val root = document.requireMap()
-        val extensions = root["extends"]?.asConfigMap() ?: return document
-        var metadata: ResourceConfigValue = root.without("extends")
+        val extensions = root["extends"]?.requireMap() ?: return document
+        var metadata = document.without("extends")
 
         for ((templatePath, argumentLists) in extensions) {
             val templateRef = ref<TemplateResource>(templatePath)
@@ -451,14 +492,14 @@ public class ResourceManager {
                 Plugin.error("Template $templateRef not found for resource $ref.")
                 continue
             }
-            for (arguments in argumentLists.asConfigList()) {
-                metadata = metadata.combine(
-                    template.getPatchedConfig(ref, arguments.asConfigMap()),
+            for (arguments in argumentLists.requireList()) {
+                metadata = metadata.merge(
+                    template.getPatchedDocument(ref, arguments.requireMap()),
                     combineLists = true
                 )
             }
         }
-        return document.copy(root = metadata)
+        return metadata
     }
 
     /**
@@ -475,7 +516,7 @@ public class ResourceManager {
     private fun <T : Resource> tryLoadResource(
         ref: ResourceRef<T>,
         resourceBytes: ByteArray,
-        metadataDocument: ResourceConfigDocument?,
+        metadataDocument: ResourceDocument?,
         loader: ResourceFileLoader<T>,
         options: ResourceLoadOptions = ResourceLoadOptions()
     ): ResourceLoadResult<T> {
@@ -508,7 +549,7 @@ public class ResourceManager {
     private fun createClones(
         resource: Resource,
         resourceBytes: ByteArray,
-        metadataDocument: ResourceConfigDocument?,
+        metadataDocument: ResourceDocument?,
         loader: ResourceFileLoader<*>
     ) {
         if (metadataDocument == null) return
@@ -519,7 +560,7 @@ public class ResourceManager {
             try {
                 val newMetadata = generateCloneMetadata(metadataDocument, cloneBlock)
                 val newRef = createCloneReference(resource, newMetadata)
-                val loadableMetadata = newMetadata.copy(root = newMetadata.requireMap().without("cloneSubId"))
+                val loadableMetadata = newMetadata.withRoot(newMetadata.requireMap().without("cloneSubId"))
 
                 loadAndRegisterClone(newRef, resourceBytes, loadableMetadata, loader)
             } catch (ex: Exception) {
@@ -529,24 +570,29 @@ public class ResourceManager {
         }
     }
 
-    private fun extractCloneBlocks(document: ResourceConfigDocument): List<ResourceConfigMap> {
+    private fun extractCloneBlocks(document: ResourceDocument): List<ResourceDocument> {
         val cloneValue = document.requireMap()["clone"] ?: return emptyList()
-        return cloneValue.asConfigList().map(ResourceConfigValue::asConfigMap)
+        return cloneValue.requireList().mapIndexed { index, value ->
+            value.requireMap()
+            document.subDocument(DataPath(listOf("clone", index.toString())))
+        }
     }
 
     private fun generateCloneMetadata(
-        origin: ResourceConfigDocument,
-        cloneBlock: ResourceConfigMap
-    ): ResourceConfigDocument {
-        val patchedMetadata = origin.requireMap().without("clone")
-        return origin.copy(root = patchedMetadata.combine(cloneBlock, combineLists = false))
+        origin: ResourceDocument,
+        cloneBlock: ResourceDocument
+    ): ResourceDocument {
+        return origin.without("clone").merge(cloneBlock, combineLists = false)
     }
 
-    private fun createCloneReference(resource: Resource, metadata: ResourceConfigDocument): ResourceRef<*> {
+    private fun createCloneReference(resource: Resource, metadata: ResourceDocument): ResourceRef<*> {
         val subIdNode = metadata.requireMap()["cloneSubId"]
-            ?: throw ResourceConfigException("Clone block must have a 'cloneSubId' field.")
-        val newSubId = subIdNode.asConfigScalar().value as? String
-            ?: throw ResourceConfigException("Clone 'cloneSubId' must be a string.", subIdNode.span)
+            ?: throw ResourceDocumentException("Clone block must have a 'cloneSubId' field.", metadata.span())
+        val newSubId = (subIdNode as? Variant.String)?.value
+            ?: throw ResourceDocumentException(
+                "Clone 'cloneSubId' must be a string.",
+                metadata.span(DataPath(listOf("cloneSubId")))
+            )
         return resource.ref.cloneSubId(newSubId)
     }
 
@@ -554,7 +600,7 @@ public class ResourceManager {
     private fun loadAndRegisterClone(
         newRef: ResourceRef<*>,
         resourceBytes: ByteArray,
-        newMetadata: ResourceConfigDocument,
+        newMetadata: ResourceDocument,
         loader: ResourceFileLoader<*>
     ) {
         when (val result =
@@ -599,12 +645,12 @@ public class ResourceManager {
      * @param ref The reference of the folder.
      * @return The default metadata document, or null if not found.
      */
-    private fun getFolderDefaultDocument(ref: ResourceRef<*>): ResourceConfigDocument? {
+    private fun getFolderDefaultDocument(ref: ResourceRef<*>): ResourceDocument? {
         val parent = ref.parent ?: return null
 
         val resource = parent.child<FolderApplyResource>("apply.meta.folder")
         val apply = resource.getResource()?.metadata?.apply ?: return null
-        return ResourceConfigDocument(apply.id, apply.value, "${resource}.apply")
+        return ResourceDocument(apply, "${resource}.apply")
     }
 
 

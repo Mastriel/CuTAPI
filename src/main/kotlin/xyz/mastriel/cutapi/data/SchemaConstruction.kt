@@ -20,9 +20,11 @@ public sealed interface SchemaPropertyPresence<out T> {
         public val hasDefault: Boolean
             get() = defaultProvider != null
 
-        public fun defaultValue(): T =
-            defaultProvider?.invoke()
+        public fun defaultValue(): T {
+            val provider = defaultProvider
                 ?: error("This optional property does not define an explicit default")
+            return provider()
+        }
     }
 }
 

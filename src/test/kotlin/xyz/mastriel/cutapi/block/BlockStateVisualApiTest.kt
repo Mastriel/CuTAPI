@@ -5,6 +5,9 @@ package xyz.mastriel.cutapi.block
 import org.bukkit.Material
 import org.bukkit.block.Block
 import xyz.mastriel.cutapi.attachment.BlockAttachment
+import xyz.mastriel.cutapi.block.nativeblock.blockStateModelPath
+import xyz.mastriel.cutapi.block.nativeblock.blockTextureModelLocation
+import xyz.mastriel.cutapi.block.nativeblock.blockTextureResourcePath
 import xyz.mastriel.cutapi.data.Schema
 import xyz.mastriel.cutapi.data.VariantSerializer
 import xyz.mastriel.cutapi.data.schema
@@ -39,6 +42,20 @@ public class BlockStateVisualApiTest : MockBukkitTest() {
         assertEquals(
             setOf("facing=north,lit=false", "facing=north,lit=true"),
             definition.permutations.filter { it[facing] == TestFacing.North }.map { it.canonicalValues() }.toSet(),
+        )
+        assertEquals("facing-north__lit-false", blockStateModelPath(definition.defaultState))
+        assertEquals("default", blockStateModelPath(BlockStateDefinition.Empty.defaultState))
+    }
+
+    @Test
+    public fun `cubic block textures use the block atlas`() {
+        assertEquals(
+            "block/cutapi/blocks/device_terminal_top",
+            blockTextureResourcePath("blocks/device_terminal_top"),
+        )
+        assertEquals(
+            "cutapi:block/cutapi/blocks/device_terminal_top",
+            blockTextureModelLocation("cutapi", "blocks/device_terminal_top"),
         )
     }
 

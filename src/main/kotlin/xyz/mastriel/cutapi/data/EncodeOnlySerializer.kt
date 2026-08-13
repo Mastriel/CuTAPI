@@ -19,6 +19,18 @@ public interface EncodeOnlySerializer<in T> {
 }
 
 /**
+ * Allows an encode-only serializer, including a [DebugView], to represent null values.
+ */
+public fun <T> EncodeOnlySerializer<T>.nullable(): EncodeOnlySerializer<T?> =
+    object : EncodeOnlySerializer<T?> {
+        override val descriptor: SerializerDescriptor<*> =
+            SerializerDescriptor.nullable(this@nullable.descriptor)
+
+        override fun serialize(value: T?): SerializeResult =
+            if (value == null) SerializeResult.Success(Variant.Null) else this@nullable.serialize(value)
+    }
+
+/**
  * Supplies the shared debug view associated with a type.
  *
  * Implement this on a companion object so [Identifiable] instances can discover

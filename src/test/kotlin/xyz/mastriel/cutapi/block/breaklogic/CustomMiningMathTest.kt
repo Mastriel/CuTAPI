@@ -2,8 +2,20 @@ package xyz.mastriel.cutapi.block.breaklogic
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 public class CustomMiningMathTest {
+    @Test
+    public fun `authoritative crack overlays use distinct synthetic breaker ids`() {
+        val first = CustomMiningBreakerIds.allocate()
+        val second = CustomMiningBreakerIds.allocate()
+
+        assertTrue(first < 0)
+        assertTrue(second < 0)
+        assertNotEquals(first, second)
+    }
+
     @Test
     public fun `hardness edge cases are authoritative`() {
         assertEquals(0.0f, CustomMiningMath.progressPerTick(inputs(hardness = -1.0f)))

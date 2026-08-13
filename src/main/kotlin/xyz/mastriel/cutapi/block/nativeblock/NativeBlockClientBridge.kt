@@ -29,7 +29,6 @@ import xyz.mastriel.cutapi.block.ResolvedBlockVisual
 import xyz.mastriel.cutapi.block.VirtualItemDisplayDefinition
 import xyz.mastriel.cutapi.item.nativeitem.NativeItemNetworkContext
 import xyz.mastriel.cutapi.item.nativeitem.NetworkDirection
-import xyz.mastriel.cutapi.resources.process.fixInvalidResourcePath
 import java.util.IdentityHashMap
 
 public object NativeBlockClientBridge {
@@ -154,13 +153,15 @@ public object NativeBlockClientBridge {
         noteStates: List<BlockState>,
         mushroomStates: List<BlockState>,
     ): ResolvedBlockVisual = when (allocation) {
-        is BlockVisualAllocation.Vanilla -> ResolvedBlockVisual(allocation.state.nmsState())
+        is BlockVisualAllocation.Vanilla -> ResolvedBlockVisual(
+            definition.descriptor.orientCarrier(allocation.state.nmsState(), customState),
+        )
         is BlockVisualAllocation.Carrier -> {
             val state = when (allocation.carrier) {
                 BlockVisualCarrier.NoteBlock -> noteStates[allocation.slot]
                 BlockVisualCarrier.Mushroom -> mushroomStates[allocation.slot]
             }
-            ResolvedBlockVisual(state)
+            ResolvedBlockVisual(definition.descriptor.orientCarrier(state, customState))
         }
         is BlockVisualAllocation.DisplayEntity -> {
             val displayMethod = method as BlockVisualMethod.DisplayEntity
@@ -171,8 +172,12 @@ public object NativeBlockClientBridge {
                 }
             }
             ResolvedBlockVisual(
-                allocation.carrier.nmsState(),
-                VirtualItemDisplayDefinition(item, displayMethod.transform),
+                definition.descriptor.orientCarrier(allocation.carrier.nmsState(), customState),
+                VirtualItemDisplayDefinition(
+                    item,
+                    displayMethod.transform,
+                    definition.descriptor.orientation?.modelYRotation(customState) ?: 0,
+                ),
             )
         }
     }
@@ -235,9 +240,14 @@ internal fun displayItemModelLocation(
     definition: CustomTile<*>,
     state: CustomBlockState,
 ): Pair<String, String> {
-    val stateName = state.canonicalValues().ifBlank { "default" }.fixInvalidResourcePath()
+    val stateName = blockStateModelPath(state)
     return definition.id.namespace to "cutapi/block_display/${definition.id.key}/$stateName"
 }
+
+internal fun blockStateModelPath(state: CustomBlockState): String = state.canonicalValues()
+    .ifBlank { "default" }
+    .replace(",", "__")
+    .replace("=", "-")
 
 internal fun org.bukkit.block.data.BlockData.nmsState(): BlockState =
     (this as? CraftBlockData)?.state

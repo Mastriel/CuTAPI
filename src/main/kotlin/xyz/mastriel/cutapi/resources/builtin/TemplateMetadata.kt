@@ -1,41 +1,57 @@
 package xyz.mastriel.cutapi.resources.builtin
 
+import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.data.*
 
 public class TemplateResource(
     ref: ResourceRef<TemplateResource>,
     metadata: Metadata,
-    private val body: ResourceConfigMap
+    private val body: ResourceDocument
 ) : Resource(ref, metadata) {
-    @ResourceMetadata(id = "cutapi:template")
-    public class Metadata : CuTMeta()
+    public class Metadata : CuTMeta() {
+        public companion object : Schema<Metadata> by schema(id("cutapi:template"), {
+            extends { CuTMeta }
+        })
+    }
 
-    public fun getPatchedConfig(
-        baseRef: ResourceRef<*>,
-        arguments: ResourceConfigMap
-    ): ResourceConfigMap = patch(body, baseRef, arguments).asConfigMap()
+    public fun getPatchedDocument(baseRef: ResourceRef<*>, arguments: Variant.Map): ResourceDocument =
+        body.withRoot(patch(body.root, baseRef, arguments).requireMap())
 
-    private fun patch(
-        value: ResourceConfigValue,
-        baseRef: ResourceRef<*>,
-        arguments: ResourceConfigMap
-    ): ResourceConfigValue = when (value) {
-        is ResourceConfigMap -> value.copy(values = value.mapValues { (_, child) -> patch(child, baseRef, arguments) })
-        is ResourceConfigList -> value.copy(values = value.map { patch(it, baseRef, arguments) })
-        is TaggedResourceConfig -> value.copy(value = patch(value.value, baseRef, arguments))
-        is ResourceConfigScalar -> {
-            val text = value.value as? String ?: return value
-            val exactKey = PLACEHOLDER.matchEntire(text)?.groupValues?.get(1)
-            if (exactKey != null && exactKey != "@ref") return arguments[exactKey] ?: value
-
-            var replaced = text.replace("{{@ref}}", baseRef.toString())
-            for ((key, replacement) in arguments) {
-                val scalar = replacement as? ResourceConfigScalar ?: continue
-                replaced = replaced.replace("{{${key}}}", scalar.value?.toString() ?: "null")
+    private fun patch(value: Variant, baseRef: ResourceRef<*>, arguments: Variant.Map): Variant = when (value) {
+        is Variant.Map -> Variant.Map(value.mapValues { (_, child) -> patch(child, baseRef, arguments) })
+        is Variant.List -> Variant.List(value.map { patch(it, baseRef, arguments) })
+        is Variant.String -> {
+            val exactKey = PLACEHOLDER.matchEntire(value.value)?.groupValues?.get(1)
+            if (exactKey != null && exactKey != "@ref") arguments[exactKey] ?: value
+            else {
+                var replaced = value.value.replace("{{@ref}}", baseRef.toString())
+                for ((key, replacement) in arguments) {
+                    val scalar = replacement.scalarText() ?: continue
+                    replaced = replaced.replace("{{${key}}}", scalar)
+                }
+                Variant.String(replaced)
             }
-            value.copy(value = replaced)
         }
+
+        else -> value
+    }
+
+    private fun Variant.scalarText(): String? = when (this) {
+        Variant.Null -> "null"
+        is Variant.String -> value
+        is Variant.Boolean -> value.toString()
+        is Variant.Byte -> value.toString()
+        is Variant.Short -> value.toString()
+        is Variant.Int -> value.toString()
+        is Variant.Long -> value.toString()
+        is Variant.Float -> value.toString()
+        is Variant.Double -> value.toString()
+        is Variant.Char -> value.toString()
+        is Variant.Identifier -> value.toString()
+        is Variant.ResourceRef -> value.toString()
+        is Variant.List, is Variant.Map -> null
     }
 
     private companion object {
@@ -44,14 +60,18 @@ public class TemplateResource(
 }
 
 public val TemplateResourceLoader: ResourceFileLoader<TemplateResource> =
-    resourceLoader<TemplateResource, TemplateResource.Metadata>(listOf("template")) {
+    resourceLoader<TemplateResource, TemplateResource.Metadata>(
+        extensions = listOf("template"),
+        metadataSchema = TemplateResource.Metadata
+    ) {
         val document = ResourceYaml.parse(dataAsString, ref.toString())
-        if (document.tag != null) {
+        if (document.typeId() != null) {
             return@resourceLoader failure(
-                ResourceConfigException("Template bodies must be untagged mappings.", document.root.span)
+                ResourceDocumentException("Template bodies must be untagged mappings.", document.span(DataPath()))
             )
         }
-        success(TemplateResource(ref.cast(), metadata ?: TemplateResource.Metadata(), document.requireMap()))
+        document.requireMap()
+        success(TemplateResource(ref.cast(), metadata ?: TemplateResource.Metadata(), document))
     }
 
 public typealias SerializableTemplateRef = ResourceRef<TemplateResource>

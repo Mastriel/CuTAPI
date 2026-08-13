@@ -1,14 +1,13 @@
 package xyz.mastriel.cutapi.block
 
 import net.kyori.adventure.text.*
-import org.bukkit.Material
+import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.attachment.*
-import xyz.mastriel.cutapi.behavior.*
-import xyz.mastriel.cutapi.block.behaviors.*
-import xyz.mastriel.cutapi.data.Schema
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.utils.*
 import xyz.mastriel.cutapi.utils.personalized.*
+import xyz.mastriel.cutapi.block.inventory.*
 
 public fun interface BlockVisualResolver {
     public fun resolve(state: CustomBlockState): BlockVisualMethod
@@ -19,13 +18,12 @@ public fun interface BlockModelResolver {
 }
 
 public sealed interface TileDescriptor : AttachmentHolder<BlockAttachment> {
-    @Deprecated("Use attachments and BlockSystem.")
-    public val behaviors: List<TileBehavior>
     @Deprecated("Use visualMethod(state).")
     public val blockStrategy: BlockStrategy
     public val name: Personalized<Component>?
     public val itemPolicy: BlockItemPolicy
     public val states: BlockStateDefinition
+    public val orientation: BlockOrientation?
     public val settings: BlockSettings
     public val attachments: List<BlockAttachment>
     public val dropProducer: (BlockDropContext) -> List<org.bukkit.inventory.ItemStack>
@@ -50,17 +48,36 @@ public sealed interface TileDescriptor : AttachmentHolder<BlockAttachment> {
             it as T
         }
 
+    public companion object : DebugView<TileDescriptor> by debugView(id("cutapi:tile_descriptor"), {
+        property("itemPolicy", VariantSerializer.AnyVariant) {
+            when (val policy = it.itemPolicy) {
+                is BlockItemPolicy.Generate -> mapOf(
+                    "itemId" to policy.backingItem.key.toIdentifier()
+                ).toVariant()
+
+                is BlockItemPolicy.Item -> mapOf(
+                    "itemId" to policy.item
+                ).toVariant()
+
+                is BlockItemPolicy.None -> "None".toVariant()
+            }
+        }
+        property(TileDescriptor::states, BlockStateDefinition)
+        property(TileDescriptor::settings, BlockSettings)
+        property(TileDescriptor::orientation, BlockOrientation.nullable())
+
+    })
+
     override fun getAllAttachments(): List<BlockAttachment> = attachments.toList()
 }
 
 public class BlockDescriptor(
-    @Deprecated("Use attachments and BlockSystem.")
-    override val behaviors: List<BlockBehavior> = emptyList(),
     @Deprecated("Use visualMethod(state).")
     override val blockStrategy: BlockStrategy,
     override val name: Personalized<Component>?,
     override val itemPolicy: BlockItemPolicy,
     override val states: BlockStateDefinition = BlockStateDefinition.Empty,
+    override val orientation: BlockOrientation? = null,
     override val settings: BlockSettings = BlockSettingsBuilder().build(),
     override val attachments: List<BlockAttachment> = emptyList(),
     private val visualResolver: BlockVisualResolver = BlockVisualResolver { blockStrategy.toVisualMethod() },
@@ -76,13 +93,12 @@ public class BlockDescriptor(
 }
 
 public class TileEntityDescriptor(
-    @Deprecated("Use attachments and BlockSystem.")
-    override val behaviors: List<TileEntityBehavior> = emptyList(),
     @Deprecated("Use visualMethod(state).")
     override val blockStrategy: BlockStrategy,
     override val name: Personalized<Component>?,
     override val itemPolicy: BlockItemPolicy,
     override val states: BlockStateDefinition = BlockStateDefinition.Empty,
+    override val orientation: BlockOrientation? = null,
     override val settings: BlockSettings = BlockSettingsBuilder().build(),
     override val attachments: List<BlockAttachment> = emptyList(),
     private val visualResolver: BlockVisualResolver = BlockVisualResolver { blockStrategy.toVisualMethod() },
@@ -90,6 +106,7 @@ public class TileEntityDescriptor(
     private val visualIdentityResolver: (CustomBlockState) -> String? = { null },
     override val dropProducer: (BlockDropContext) -> List<org.bukkit.inventory.ItemStack> = ::defaultBlockDrops,
     override val experienceProducer: (BlockDropContext) -> Int = { 0 },
+    public val inventory: BlockInventoryDefinition? = null,
     public val onRegister: EventHandlerList<CustomTileEntity<*>> = EventHandlerList(),
 ) : TileDescriptor {
     override fun visualMethod(state: CustomBlockState): BlockVisualMethod = visualResolver.resolve(state)
@@ -97,11 +114,7 @@ public class TileEntityDescriptor(
     override fun visualIdentity(state: CustomBlockState): String? = visualIdentityResolver(state)
 }
 
-public abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor, C : CustomTile<*>> {
-
-    @Deprecated("Use attach and BlockSystem.")
-    public open val behaviors: ListBehaviorHolder<B> = ListBehaviorHolder<B>()
-
+public abstract class TileDescriptorBuilder<T : TileDescriptor, C : CustomTile<*>> {
     public open val onRegister: EventHandlerList<C> = EventHandlerList<C>()
 
     @Deprecated("Use visual(method) or visuals(resolver).")
@@ -114,6 +127,7 @@ public abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor
     public val attachments: List<BlockAttachment> get() = attachmentValues.toList()
 
     private var statesDefinition: BlockStateDefinition = BlockStateDefinition.Empty
+    private var orientationBuilder: BlockOrientationBuilder? = null
     private var settingsDefinition: BlockSettings = BlockSettingsBuilder().build()
     private var visualResolver: BlockVisualResolver? = null
     private var modelResolver: BlockModelResolver = BlockModelResolver { null }
@@ -127,6 +141,10 @@ public abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor
 
     public fun settings(configure: BlockSettingsBuilder.() -> Unit) {
         settingsDefinition = BlockSettingsBuilder().apply(configure).build()
+    }
+
+    public fun orientation(configure: BlockOrientationBuilder.() -> Unit) {
+        orientationBuilder = BlockOrientationBuilder().apply(configure)
     }
 
     public fun visual(method: BlockVisualMethod) {
@@ -178,6 +196,7 @@ public abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor
 
     protected fun descriptorParts(): DescriptorParts = DescriptorParts(
         states = statesDefinition,
+        orientation = orientationBuilder?.build(statesDefinition),
         settings = settingsDefinition,
         attachments = attachmentValues.toList(),
         visualResolver = visualResolver ?: BlockVisualResolver { blockStrategy.toVisualMethod() },
@@ -187,85 +206,80 @@ public abstract class TileDescriptorBuilder<B : TileBehavior, T : TileDescriptor
         experienceProducer = xpProducer,
     )
 
-    public open fun behavior(vararg behaviors: B) {
-        for (behavior in behaviors) {
-            this.behaviors.requireRepeatableIfExists(behavior)
-            this.behaviors += behavior
-        }
-    }
-
-    public open fun behavior(behaviors: Collection<B>) {
-        for (behavior in behaviors) {
-            this.behaviors.requireRepeatableIfExists(behavior)
-            this.behaviors += behavior
-        }
-    }
-
-
     public abstract fun build(): T
-
 }
 
-
-public class BlockDescriptorBuilder : TileDescriptorBuilder<BlockBehavior, BlockDescriptor, CustomBlock<*>>() {
+public class BlockDescriptorBuilder : TileDescriptorBuilder<BlockDescriptor, CustomBlock<*>>() {
     override fun build(): BlockDescriptor {
         val parts = descriptorParts()
         return BlockDescriptor(
-            behaviors.toList(), blockStrategy, name, itemPolicy,
-            parts.states, parts.settings, parts.attachments, parts.visualResolver,
-            parts.modelResolver, parts.visualIdentityResolver, parts.dropsProducer,
-            parts.experienceProducer, onRegister,
+            blockStrategy = blockStrategy,
+            name = name,
+            itemPolicy = itemPolicy,
+            states = parts.states,
+            orientation = parts.orientation,
+            settings = parts.settings,
+            attachments = parts.attachments,
+            visualResolver = parts.visualResolver,
+            modelResolver = parts.modelResolver,
+            visualIdentityResolver = parts.visualIdentityResolver,
+            dropProducer = parts.dropsProducer,
+            experienceProducer = parts.experienceProducer,
+            onRegister = onRegister,
         )
     }
 }
 
-private fun BlockBehavior.tileEntity(): TileEntityBehavior {
-    return object : TileEntityBehavior(this.id), TileBehavior by this {
-        override val id: Identifier
-            get() = super.id
+public class TileEntityDescriptorBuilder public constructor(
+    private val definitionId: Identifier? = null,
+) : TileDescriptorBuilder<TileEntityDescriptor, CustomTileEntity<*>>() {
+    private var inventoryDefinition: BlockInventoryDefinition? = null
 
-    }
-}
-
-public class TileEntityDescriptorBuilder :
-    TileDescriptorBuilder<TileEntityBehavior, TileEntityDescriptor, CustomTileEntity<*>>() {
-
-    @JvmName("tileBehavior")
-    public fun behavior(vararg behaviors: TileBehavior) {
-        for (behavior in behaviors) {
-            this.behaviors.requireRepeatableIfExists(behavior)
-
-            when (behavior) {
-                is TileEntityBehavior -> {
-                    this.behaviors += behavior
-                }
-
-                is BlockBehavior -> {
-                    this.behaviors += behavior.tileEntity()
-                }
-            }
-
+    public fun inventory(
+        size: Int,
+        configure: BlockInventoryDefinitionBuilder.() -> Unit,
+    ) {
+        val tileId = requireNotNull(definitionId) {
+            "inventory(size) requires a tile-bound TileEntityDescriptorBuilder. " +
+                "Use inventory(id, size) when constructing a descriptor independently."
         }
+        inventory(tileId / "inventory", size, configure)
     }
 
-    @JvmName("blockBehavior")
-    public fun behavior(behaviors: Collection<TileBehavior>) {
-        behavior(*behaviors.toTypedArray())
+    public fun inventory(
+        id: Identifier,
+        size: Int,
+        configure: BlockInventoryDefinitionBuilder.() -> Unit,
+    ) {
+        check(inventoryDefinition == null) { "A tile entity descriptor may only declare one inventory." }
+        inventoryDefinition = BlockInventoryDefinitionBuilder(id, size).apply(configure).build()
     }
 
     override fun build(): TileEntityDescriptor {
         val parts = descriptorParts()
+        inventoryDefinition?.validateItemPolicy(itemPolicy)
         return TileEntityDescriptor(
-            behaviors.toList(), blockStrategy, name, itemPolicy,
-            parts.states, parts.settings, parts.attachments, parts.visualResolver,
-            parts.modelResolver, parts.visualIdentityResolver, parts.dropsProducer,
-            parts.experienceProducer, onRegister,
+            blockStrategy = blockStrategy,
+            name = name,
+            itemPolicy = itemPolicy,
+            states = parts.states,
+            orientation = parts.orientation,
+            settings = parts.settings,
+            attachments = parts.attachments,
+            visualResolver = parts.visualResolver,
+            modelResolver = parts.modelResolver,
+            visualIdentityResolver = parts.visualIdentityResolver,
+            dropProducer = parts.dropsProducer,
+            experienceProducer = parts.experienceProducer,
+            inventory = inventoryDefinition,
+            onRegister = onRegister,
         )
     }
 }
 
 public data class DescriptorParts(
     val states: BlockStateDefinition,
+    val orientation: BlockOrientation?,
     val settings: BlockSettings,
     val attachments: List<BlockAttachment>,
     val visualResolver: BlockVisualResolver,

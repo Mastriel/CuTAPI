@@ -274,7 +274,7 @@ public class BlockBreakManager : Listener, PacketListener {
                 dropContext.experience = definition.descriptor.experienceProducer(dropContext).coerceAtLeast(0)
             }
             BlockSystem.dispatch(tile) { it.onDrops(dropContext) }
-            if (breakEvent.isDropItems && cause != BlockBreakCause.Creative) {
+            if (breakEvent.isDropItems && dropContext.drops.isNotEmpty()) {
                 spawnDrops(block, oldBukkitState, player, dropContext)
             }
             if (dropContext.experience > 0) {

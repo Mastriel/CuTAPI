@@ -2,27 +2,32 @@ package xyz.mastriel.cutapi.resources
 
 import org.bukkit.*
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.data.*
-import kotlin.reflect.*
 
-/** Loads one resource type from resource data and optional `.meta` configuration. */
+/** Loads one resource type from resource data and optional schema-backed metadata. */
 public interface ResourceFileLoader<T : Resource> : Identifiable {
     public val dependencies: List<ResourceFileLoader<*>> get() = emptyList()
     public val extensions: Set<String>?
-    public val metadataClass: KClass<out CuTMeta>
+    public val metadataSchema: Schema<out CuTMeta>
     public val usesDataAsMetadata: Boolean get() = false
 
     public fun loadResource(
         ref: ResourceRef<T>,
         data: ByteArray,
-        metadata: ResourceConfigDocument?,
+        metadata: ResourceDocument?,
         options: ResourceLoadOptions
     ): ResourceLoadResult<T>
 
     public fun acceptsExtension(extension: String): Boolean = extensions == null || extension in extensions.orEmpty()
 
     public companion object : IdentifierRegistry<ResourceFileLoader<*>>(id("cutapi:registry/resource_file_loader")) {
+        override fun initialize() {
+            super.initialize()
+            getAllValues().forEach { it.metadataSchema.requireRegistered() }
+        }
+
         public fun getDependencySortedLoaders(): List<ResourceFileLoader<*>> {
             val sorted = mutableListOf<ResourceFileLoader<*>>()
             val visited = mutableSetOf<ResourceFileLoader<*>>()
@@ -31,21 +36,16 @@ public interface ResourceFileLoader<T : Resource> : Identifiable {
             fun visit(loader: ResourceFileLoader<*>): Boolean {
                 if (loader in recursionStack) return false
                 if (loader in visited) return true
-
                 visited += loader
                 recursionStack += loader
-                for (dependency in loader.dependencies) {
-                    if (!visit(dependency)) return false
-                }
+                for (dependency in loader.dependencies) if (!visit(dependency)) return false
                 recursionStack -= loader
                 sorted += loader
                 return true
             }
 
             for (loader in values.values) {
-                if (!visit(loader)) {
-                    throw IllegalStateException("Circular dependencies are not allowed in resource loaders.")
-                }
+                if (!visit(loader)) error("Circular dependencies are not allowed in resource loaders.")
             }
             return sorted
         }
@@ -68,86 +68,62 @@ public class ResourceFileLoaderContext<T : Resource, M : CuTMeta>(
     public val ref: ResourceRef<T>,
     public val data: ByteArray,
     public val metadata: M?,
-    public val metadataDocument: ResourceConfigDocument? = null,
     public val options: ResourceLoadOptions = ResourceLoadOptions()
 ) {
     public val dataAsString: String by lazy { data.toString(Charsets.UTF_8) }
 
     public fun success(value: T): ResourceLoadResult.Success<T> = ResourceLoadResult.Success(value)
-
-    public fun failure(exception: Throwable? = null): ResourceLoadResult.Failure<T> =
-        ResourceLoadResult.Failure(exception)
-
+    public fun failure(exception: Throwable? = null): ResourceLoadResult.Failure<T> = ResourceLoadResult.Failure(exception)
     public fun wrongType(): ResourceLoadResult.WrongType<T> = ResourceLoadResult.WrongType()
 }
 
 public fun <T : Resource, M : CuTMeta> resourceLoader(
     extensions: Collection<String>?,
-    metadataClass: KClass<M>,
+    metadataSchema: Schema<M>,
     dependencies: List<ResourceFileLoader<*>> = emptyList(),
     func: ResourceFileLoaderContext<T, M>.() -> ResourceLoadResult<T>
-): ResourceFileLoader<T> {
-    val resourceTypeId = ResourceMetadataMapper.metadataId(metadataClass)
+): ResourceFileLoader<T> = object : ResourceFileLoader<T> {
+    override val dependencies: List<ResourceFileLoader<*>> = dependencies
+    override val extensions: Set<String>? = extensions?.toSet()
+    override val metadataSchema: Schema<M> = metadataSchema
+    override val id: Identifier = metadataSchema.id
 
-    return object : ResourceFileLoader<T> {
-        override val dependencies: List<ResourceFileLoader<*>> = dependencies
-        override val extensions: Set<String>? = extensions?.toSet()
-        override val metadataClass: KClass<M> = metadataClass
-        override val id: Identifier = resourceTypeId
+    override fun loadResource(
+        ref: ResourceRef<T>,
+        data: ByteArray,
+        metadata: ResourceDocument?,
+        options: ResourceLoadOptions
+    ): ResourceLoadResult<T> {
+        if (!acceptsExtension(ref.extension)) return ResourceLoadResult.WrongType()
 
-        override fun loadResource(
-            ref: ResourceRef<T>,
-            data: ByteArray,
-            metadata: ResourceConfigDocument?,
-            options: ResourceLoadOptions
-        ): ResourceLoadResult<T> {
-            if (!acceptsExtension(ref.extension)) return ResourceLoadResult.WrongType()
-
-            try {
-                val suppliedMetadata = options.metadata
-                val parsedMetadata = when {
-                    suppliedMetadata != null -> {
-                        if (!metadataClass.isInstance(suppliedMetadata)) {
-                            throw ResourceConfigException(
-                                "Programmatic metadata for $ref must be ${metadataClass.qualifiedName}, " +
-                                    "not ${suppliedMetadata::class.qualifiedName}."
-                            )
-                        }
-                        @Suppress("UNCHECKED_CAST")
-                        suppliedMetadata as M
-                    }
-
-                    metadata != null -> {
-                        if (metadata.requireTag() != resourceTypeId) return ResourceLoadResult.WrongType()
-                        ResourceMetadataMapper.decodeMetadata(
-                            metadataClass,
-                            metadata.requireMap(),
-                            mappingContext(ref)
+        return try {
+            val suppliedMetadata = options.metadata
+            val parsedMetadata = when {
+                suppliedMetadata != null -> {
+                    if (!metadataSchema.type.isInstance(suppliedMetadata)) {
+                        throw ResourceDocumentException(
+                            "Programmatic metadata for $ref must be ${metadataSchema.type.qualifiedName}, " +
+                                "not ${suppliedMetadata::class.qualifiedName}."
                         )
                     }
-
-                    else -> null
+                    @Suppress("UNCHECKED_CAST")
+                    suppliedMetadata as M
                 }
 
-                return func(ResourceFileLoaderContext(ref, data, parsedMetadata, metadata, options))
-            } catch (exception: Exception) {
-                Plugin.error("Failed loading metadata for $ref: ${exception.message}")
-                checkResourceLoading(ref.plugin)
-                return ResourceLoadResult.Failure(exception)
+                metadata != null -> {
+                    if (metadata.requireTypeId() != id) return ResourceLoadResult.WrongType()
+                    metadata.without("extends", "clone", "cloneSubId").decode(metadataSchema)
+                }
+
+                else -> null
             }
+            func(ResourceFileLoaderContext(ref, data, parsedMetadata, options))
+        } catch (exception: Exception) {
+            Plugin.error("Failed loading metadata for $ref: ${exception.message}")
+            checkResourceLoading(ref.plugin)
+            ResourceLoadResult.Failure(exception)
         }
     }
-}
-
-public inline fun <T : Resource, reified M : CuTMeta> resourceLoader(
-    extensions: Collection<String>?,
-    dependencies: List<ResourceFileLoader<*>> = emptyList(),
-    noinline func: ResourceFileLoaderContext<T, M>.() -> ResourceLoadResult<T>
-): ResourceFileLoader<T> = resourceLoader(extensions, M::class, dependencies, func)
-
-internal fun mappingContext(ref: ResourceRef<*>): ResourceMappingContext {
-    val strict = CuTAPI.getDescriptor(ref.plugin).options.strictResourceLoading
-    return ResourceMappingContext(strictUnknownKeys = strict, warning = Plugin::warn)
 }
 
 internal fun checkResourceLoading(plugin: CuTPlugin) {

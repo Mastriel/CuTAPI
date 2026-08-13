@@ -33,6 +33,17 @@ public interface BlockTextures {
         override fun getVanillaModelParent(): ResourceRef<Model3D> = ref(MinecraftAssets, "block/cube_column.json")
     }
 
+    public data class Orientable(
+        val up: ResourceRef<Texture2D>,
+        val down: ResourceRef<Texture2D> = up,
+        val front: ResourceRef<Texture2D>,
+        val side: ResourceRef<Texture2D>,
+    ) : BlockTextures {
+        override fun getAll(): All = All(up, down, front, side, side, side)
+        override fun getVanillaModelParent(): ResourceRef<Model3D> =
+            ref(MinecraftAssets, "block/orientable_with_bottom.json")
+    }
+
 
     public fun getAll(): All
     public fun getVanillaModelParent(): ResourceRef<Model3D>
@@ -40,7 +51,7 @@ public interface BlockTextures {
 
 public sealed class BlockModel {
     public data class Cubic(val textures: BlockTextures) : BlockModel() {
-        internal val model: Model3D = textures.getVanillaModelParent().getResource()!!
+        internal val model: Model3D by lazy { textures.getVanillaModelParent().getResource()!! }
     }
 
     public data class Model(val model: ResourceRef<Model3D>) : BlockModel() {

@@ -11,6 +11,8 @@ import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.EntityBlock
+import net.minecraft.world.level.block.Mirror
+import net.minecraft.world.level.block.Rotation
 import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.entity.BlockEntityTicker
 import net.minecraft.world.level.block.entity.BlockEntityType
@@ -54,6 +56,16 @@ internal open class NativeCustomBlock(
     override fun getOcclusionShape(state: BlockState): VoxelShape =
         carrierState(state).getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)
 
+    override fun rotate(state: BlockState, rotation: Rotation): BlockState {
+        val customState = stateSchema.toCustom(state)
+        return stateSchema.toNative(state, definition.descriptor.rotateCustomState(customState, rotation))
+    }
+
+    override fun mirror(state: BlockState, mirror: Mirror): BlockState {
+        val customState = stateSchema.toCustom(state)
+        return stateSchema.toNative(state, definition.descriptor.mirrorCustomState(customState, mirror))
+    }
+
     override fun onPlace(
         state: BlockState,
         level: Level,
@@ -91,7 +103,7 @@ internal open class NativeCustomBlock(
         check(carrier.block !is NativeCustomBlock) {
             "Custom block ${definition.id} cannot use another native custom block as its client shape carrier."
         }
-        return carrier
+        return definition.descriptor.orientCarrier(carrier, customState)
     }
 
     companion object {

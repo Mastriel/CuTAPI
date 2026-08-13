@@ -7,6 +7,7 @@ import org.bukkit.plugin.Plugin
 import xyz.mastriel.cutapi.CuTAPI.registerPlugin
 import xyz.mastriel.cutapi.block.*
 import xyz.mastriel.cutapi.block.breaklogic.*
+import xyz.mastriel.cutapi.gui.*
 import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.periodic.*
 import xyz.mastriel.cutapi.registry.*
@@ -45,6 +46,7 @@ public object CuTAPI {
     public val periodicManager: PeriodicManager = PeriodicManager()
     public val serviceManager: ServiceManager = ServiceManager()
     public val blockManager: CustomBlockManager by lazy { CustomBlockManager() }
+    public val guiManager: GuiManager = GuiManager()
     public val minecraftAssetLoader: MinecraftAssetLoader = MinecraftAssetLoader()
 
     @UsesNMS
@@ -101,6 +103,7 @@ public object CuTAPI {
      */
     public fun unregisterPlugin(plugin: CuTPlugin) {
         requireRegistered(plugin)
+        guiManager.closeForPlugin(getDescriptor(plugin).namespace)
         IdentifierRegistry.unregisterPluginGlobally(plugin)
         periodicManager.cancelAll(plugin)
         plugins.remove(plugin)

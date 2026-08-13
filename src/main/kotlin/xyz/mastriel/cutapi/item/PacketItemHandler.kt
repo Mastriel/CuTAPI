@@ -3,7 +3,10 @@ package xyz.mastriel.cutapi.item
 import net.minecraft.network.HashedStack
 import net.minecraft.network.HashedPatchMap
 import net.minecraft.network.protocol.game.ServerboundContainerClickPacket
+import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket
 import net.minecraft.world.item.Items
+import xyz.mastriel.cutapi.item.nativeitem.CreativeSlotStackResolution
+import xyz.mastriel.cutapi.item.nativeitem.NativeItemClientBridge
 import xyz.mastriel.cutapi.nms.PacketEvent
 import xyz.mastriel.cutapi.nms.PacketHandler
 import xyz.mastriel.cutapi.nms.PacketListener
@@ -15,6 +18,19 @@ import xyz.mastriel.cutapi.nms.UsesNMS
  */
 @UsesNMS
 internal object PacketItemHandler : PacketListener {
+    @PacketHandler
+    fun reconcileCreativeSlot(
+        event: PacketEvent<ServerboundSetCreativeModeSlotPacket>,
+    ): ServerboundSetCreativeModeSlotPacket? {
+        return when (val resolution = NativeItemClientBridge.resolveCreativeSlotStack(event.packet.itemStack)) {
+            is CreativeSlotStackResolution.Accept -> ServerboundSetCreativeModeSlotPacket(
+                event.packet.slotNum.toInt(),
+                resolution.stack,
+            )
+            CreativeSlotStackResolution.Reject -> null
+        }
+    }
+
     @PacketHandler
     fun reconcileInventoryClick(
         event: PacketEvent<ServerboundContainerClickPacket>,

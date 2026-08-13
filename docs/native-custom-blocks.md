@@ -12,7 +12,6 @@ plugin has enabled and before Paper loads worlds.
 ```kotlin
 object CopperLampStates {
     val Lit = BlockStateType.Boolean("lit")
-    val Facing = BlockStateType.Enum<Direction>("facing")
 }
 
 object ExampleTileEntities :
@@ -23,7 +22,13 @@ object ExampleTileEntities :
     ) {
         states {
             define(CopperLampStates.Lit) { false }
-            define(CopperLampStates.Facing) { Direction.North }
+            define(HorizontalFacingState) { HorizontalFacingState.North }
+        }
+
+        orientation {
+            horizontal()
+            // Optional; this is the default.
+            placementFacing(PlacementFacing.TowardsPlacer)
         }
 
         settings {
@@ -37,7 +42,7 @@ object ExampleTileEntities :
         visual(BlockVisualMethod.NoteBlock)
         models { state ->
             val suffix = if (state[CopperLampStates.Lit]) "on" else "off"
-            BlockModel.Model("example:block/copper_lamp_$suffix")
+            BlockModel.Model("example://block/copper_lamp_$suffix.json")
         }
 
         drops { context ->
@@ -59,8 +64,12 @@ class ExamplePlugin : JavaPlugin() {
 }
 ```
 
-The reified form is preferred. When the enum type is only available as a `KClass`, use
-`BlockStateType.Enum(Direction::class, "facing")` instead.
+CuTAPI provides `HorizontalFacingState` for the built-in four-way `facing` property and `FacingState`
+for its six-way counterpart. Their companion objects are block-state types, giving the concise
+`define(HorizontalFacingState) { HorizontalFacingState.North }` form. Use the preferred reified
+`BlockStateType.Enum<HorizontalFacingState>("custom_facing")` form when a definition needs a custom
+property name. When only a `KClass` is available, use
+`BlockStateType.Enum(HorizontalFacingState::class, "custom_facing")`.
 
 The provider's `paper-plugin.yml` must put it after CuTAPI within the same STARTUP phase:
 
@@ -111,6 +120,78 @@ producers independently and creates a real NMS state for every permutation. Ever
 resolve to one client visual. Set `visualIdentity { ... }` when multiple permutations intentionally
 reuse the same finite carrier slot.
 
+## Generated placement items
+
+The default `BlockItemPolicy.Generate()` creates a native custom item backed authoritatively by
+`minecraft:glistering_melon_slice`, but projects it to vanilla clients as
+`minecraft:pig_spawn_egg`. The plain server backing has no use-on-block behavior. The spawn-egg
+projection gives use-on-block interactions a hand swing without predicting a temporary block, while
+CuTAPI strips its entity data and handles placement from the authoritative custom item. CuTAPI
+assigns the item a deterministic model ID matching its generated item ID and writes that item model
+to the resource pack:
+
+```kotlin
+itemPolicy = BlockItemPolicy.Generate {
+    display {
+        name = "Copper Lamp".colored
+    }
+}
+
+// Generated item and item-model ID: example:copper_lamp/item
+```
+
+The item model references the block definition's model for its default state. Stateful blocks
+therefore use the model returned by `models { ... }` for `states.defaultState`; later placed-state
+changes do not alter an item stack already in an inventory. A `Vanilla` visual without a custom
+`BlockModel` uses the projected material's vanilla item model, or its block model when that material
+has no item form. Use `BlockItemPolicy.Item { ExistingItems.CopperLamp }` when an existing custom item
+should place the block; existing-item policies keep that item's backing type and model.
+
+## Horizontal orientation
+
+An orientation declaration gives semantic meaning to an enum state instead of treating it as an
+unrelated set of values. A horizontal enum must contain exactly `North`, `East`, `South`, and `West`.
+Models are authored facing north; CuTAPI supplies the carrier blockstate or display-entity rotation
+for the other three values.
+
+```kotlin
+orientation {
+    horizontal()
+}
+```
+
+Placement faces the block towards its placer by default. Use the other built-in policy to point in
+the same direction as the placer:
+
+```kotlin
+orientation {
+    horizontal()
+    placementFacing(PlacementFacing.AwayFromPlacer)
+}
+```
+
+`PlacementFacing` is a fun interface, so a definition can choose a horizontal `BlockFace` from the
+placer and destination block:
+
+```kotlin
+orientation {
+    horizontal()
+    placementFacing(PlacementFacing { context ->
+        if (context.block.getRelative(BlockFace.DOWN).type.isSolid) {
+            context.placer.facing.oppositeFace
+        } else {
+            BlockFace.NORTH
+        }
+    })
+}
+```
+
+The chosen value is installed in the authoritative native state before placement events observe the
+block. Native structure rotation and mirroring update the same facing state. `Vanilla` carriers,
+finite carrier models, `BlockModel.Cubic`, and packet-only displays use the corresponding horizontal
+rotation automatically. Carrier collision and outline limitations still apply; note-block and
+mushroom visuals remain full cubes on the client.
+
 ## Client visual methods
 
 The server never sends the custom registry state ID to a vanilla client. One mapping drives both the
@@ -137,7 +218,7 @@ vanilla registry is ready.
 
 ```kotlin
 visual(BlockVisualMethod.NoteBlock)
-model(BlockModel.Model("example:block/copper_lamp"))
+model(BlockModel.Model("example://block/copper_lamp.json"))
 ```
 
 This allocates a generated note-block model and is efficient for dense full-cube terrain. Minecraft
@@ -150,7 +231,7 @@ appears as a note block without the pack.
 
 ```kotlin
 visual(BlockVisualMethod.Mushroom)
-model(BlockModel.Model("example:block/copper_lamp"))
+model(BlockModel.Model("example://block/copper_lamp.json"))
 ```
 
 This allocates red-mushroom, brown-mushroom, and mushroom-stem states. Their 192 states leave 189
@@ -168,7 +249,7 @@ visual {
         transform = ItemDisplay.ItemDisplayTransform.FIXED,
     )
 }
-model(BlockModel.Model("example:block/copper_lamp"))
+model(BlockModel.Model("example://block/copper_lamp.json"))
 ```
 
 This sends a packet-only `ItemDisplay` while keeping the chosen carrier in the chunk. It consumes no
@@ -263,7 +344,9 @@ For the active miner, CuTAPI projects `BLOCK_BREAK_SPEED` as zero without modify
 server value. It preserves this projection through real attribute updates, restores the real snapshot
 on every exit path, and acknowledges every intercepted sequence. Progress becomes vanilla crack
 stages `0..9`; `ClientboundBlockDestructionPacket` is sent only when the stage changes to the miner and
-observers within 32 blocks, using the miner entity ID so concurrent overlays stay independent.
+observers within 32 blocks. Each session uses a unique synthetic breaker ID, separate from the miner's
+entity ID, so the client's local first-stage prediction cannot overwrite the authoritative stage and
+concurrent overlays stay independent.
 
 Abort, replacement, invalidation, cancellation, completion, disconnect, death, teleport, world or
 game-mode changes, range loss, block changes, pistons, explosions, chunk unload, and timeout clear the

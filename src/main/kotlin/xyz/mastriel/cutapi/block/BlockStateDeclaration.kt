@@ -1,6 +1,9 @@
 package xyz.mastriel.cutapi.block
 
-import kotlin.reflect.KClass
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.registry.*
+import kotlin.reflect.*
 
 /** A typed property that contributes to a custom block's native state definition. */
 public sealed class BlockStateType<T : Any>(
@@ -30,7 +33,7 @@ public sealed class BlockStateType<T : Any>(
         override fun canonicalValue(value: kotlin.Boolean): String = value.toString()
     }
 
-    public class EnumType<T : kotlin.Enum<T>>(
+    public open class EnumType<T : kotlin.Enum<T>>(
         public val enumClass: KClass<T>,
         name: String,
     ) : BlockStateType<T>(name) {
@@ -130,7 +133,21 @@ public class BlockStateDefinition internal constructor(
         return permutations
     }
 
-    public companion object {
+    public companion object :
+        DebugView<BlockStateDefinition> by debugView(id("cutapi:block_state_definition"), {
+            property(BlockStateDefinition::permutationCount, VariantSerializer.Int)
+            property("declarations", VariantSerializer.Map) {
+                val map = mutableMapOf<String, Variant>()
+
+                for (declaration in it.declarations) {
+                    map[declaration.name] = when (val d = declaration) {
+                        is BlockStateType.Boolean -> "Boolean"
+                        is BlockStateType.EnumType -> "Enum of" + d.enumClass
+                    }.toVariant()
+                }
+                map.toVariant()
+            }
+        }) {
         public val Empty: BlockStateDefinition = BlockStateDefinition(emptyList(), emptyMap())
     }
 }

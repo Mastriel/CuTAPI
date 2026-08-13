@@ -20,6 +20,7 @@ import xyz.mastriel.cutapi.item.CuTItemStack
 import xyz.mastriel.cutapi.item.attachments.Tool
 import xyz.mastriel.cutapi.nms.nms
 import xyz.mastriel.cutapi.nms.sendTo
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.floor
 
 internal data class MiningTickInputs(
@@ -61,6 +62,14 @@ internal object CustomMiningMath {
     }
 }
 
+internal object CustomMiningBreakerIds {
+    private val next = AtomicInteger(Int.MIN_VALUE)
+
+    fun allocate(): Int = next.getAndUpdate { current ->
+        if (current == -1) Int.MIN_VALUE else current + 1
+    }
+}
+
 internal class CustomMiningSession(
     val player: Player,
     val pos: BlockPos,
@@ -78,6 +87,10 @@ internal class CustomMiningSession(
         private set
     private var lastStage: Int = -1
     private var ended: Boolean = false
+    // The client writes its own predicted crack stage under the player's entity ID every tick.
+    // Keeping the authoritative overlay under a separate ID prevents those two stages from
+    // alternately replacing one another. Negative IDs cannot collide with normal entity IDs.
+    private val breakerId: Int = CustomMiningBreakerIds.allocate()
 
     fun tick(): Boolean {
         if (ended || !isValid()) return false
@@ -143,7 +156,7 @@ internal class CustomMiningSession(
     }
 
     private fun sendCrack(stage: Int) {
-        val packet = ClientboundBlockDestructionPacket(player.entityId, pos, stage)
+        val packet = ClientboundBlockDestructionPacket(breakerId, pos, stage)
         packet.sendTo(player)
         val level = player.nms().level()
         MinecraftServer.getServer().playerList.broadcast(

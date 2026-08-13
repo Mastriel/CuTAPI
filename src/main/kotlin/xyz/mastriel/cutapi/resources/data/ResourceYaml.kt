@@ -6,10 +6,11 @@ import org.snakeyaml.engine.v2.common.*
 import org.snakeyaml.engine.v2.exceptions.*
 import org.snakeyaml.engine.v2.nodes.*
 import org.snakeyaml.engine.v2.schema.*
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.registry.*
 import java.math.*
 
-/** Parser and writer for CuTAPI's constrained YAML resource language. */
+/** Parser and writer for CuTAPI's schema-backed YAML resource language. */
 public object ResourceYaml {
     private const val MAX_DEPTH: Int = 50
 
@@ -34,34 +35,40 @@ public object ResourceYaml {
         .setSchema(CoreSchema())
         .build()
 
-    public fun parse(text: String, source: String = "<metadata>"): ResourceConfigDocument {
+    public fun parse(text: String, source: String = "<metadata>"): ResourceDocument {
         try {
             val nodes = Compose(loadSettings).composeAllFromString(text).toList()
-            if (nodes.isEmpty()) throw ResourceConfigException("The YAML document is empty.")
-            if (nodes.size != 1) throw ResourceConfigException("Only one YAML document is allowed per file.")
+            if (nodes.isEmpty()) {
+                throw ResourceDocumentException(
+                    "The YAML document is empty.",
+                    ResourceSourceSpan(source, 1, 1)
+                )
+            }
+            if (nodes.size != 1) {
+                throw ResourceDocumentException(
+                    "Only one YAML document is allowed per file.",
+                    span(nodes[1], source)
+                )
+            }
 
-            val root = unwrapAnchor(nodes.single())
-            val documentTag = customTag(root.tag, root, source)
-            return ResourceConfigDocument(
-                documentTag,
-                convert(root, source, 0, ignoreTag = documentTag != null),
-                source
-            )
-        } catch (exception: ResourceConfigException) {
+            val spans = linkedMapOf<DataPath, ResourceSourceSpan>()
+            val root = convert(unwrapAnchor(nodes.single()), source, DataPath(), 0, spans)
+            return ResourceDocument(root, source, spans)
+        } catch (exception: ResourceDocumentException) {
             throw exception
         } catch (exception: MarkedYamlEngineException) {
             val mark = exception.problemMark.orElse(exception.contextMark.orElse(null))
             val span = mark?.let { ResourceSourceSpan(source, it.line + 1, it.column + 1) }
-            throw ResourceConfigException(exception.problem ?: "Invalid YAML.", span, exception)
+            throw ResourceDocumentException(exception.problem ?: "Invalid YAML.", span, exception)
         } catch (exception: YamlEngineException) {
-            throw ResourceConfigException(exception.message ?: "Invalid YAML.", null, exception)
+            throw ResourceDocumentException(exception.message ?: "Invalid YAML.", null, exception)
         }
     }
 
-    public fun encode(document: ResourceConfigDocument): String {
-        val root = toNode(document.root)
-        if (document.tag != null) root.tag = Tag(document.tag.toString())
+    public fun encode(document: ResourceDocument): String = encode(document.root)
 
+    public fun encode(variant: Variant): String {
+        val root = toNode(variant)
         val output = StringBuilder()
         Dump(dumpSettings).dumpNode(root, object : StreamDataWriter {
             override fun write(str: String) {
@@ -78,62 +85,87 @@ public object ResourceYaml {
     private fun convert(
         original: Node,
         source: String,
+        path: DataPath,
         depth: Int,
-        ignoreTag: Boolean = false
-    ): ResourceConfigValue {
+        spans: MutableMap<DataPath, ResourceSourceSpan>,
+    ): Variant {
         if (depth > MAX_DEPTH) {
-            throw ResourceConfigException("YAML nesting exceeds $MAX_DEPTH levels.", span(original, source))
+            throw ResourceDocumentException("YAML nesting exceeds $MAX_DEPTH levels.", span(original, source))
         }
 
         val node = unwrapAnchor(original)
+        span(node, source)?.let { spans[path] = it }
         val value = when (node) {
             is MappingNode -> {
-                val values = linkedMapOf<String, ResourceConfigValue>()
+                val values = linkedMapOf<String, Variant>()
                 for (tuple in node.value) {
                     val keyNode = unwrapAnchor(tuple.keyNode) as? ScalarNode
-                        ?: throw ResourceConfigException("Mapping keys must be strings.", span(tuple.keyNode, source))
+                        ?: throw ResourceDocumentException("Mapping keys must be strings.", span(tuple.keyNode, source))
                     if (keyNode.tag != Tag.STR) {
-                        throw ResourceConfigException("Mapping keys must be strings.", span(keyNode, source))
+                        throw ResourceDocumentException("Mapping keys must be strings.", span(keyNode, source))
                     }
                     if (values.containsKey(keyNode.value)) {
-                        throw ResourceConfigException("Duplicate mapping key '${keyNode.value}'.", span(keyNode, source))
+                        throw ResourceDocumentException(
+                            "Duplicate mapping key '${keyNode.value}'.",
+                            span(keyNode, source),
+                        )
                     }
-                    values[keyNode.value] = convert(tuple.valueNode, source, depth + 1)
+                    values[keyNode.value] = convert(
+                        tuple.valueNode,
+                        source,
+                        path.child(keyNode.value),
+                        depth + 1,
+                        spans,
+                    )
                 }
-                ResourceConfigMap(values, span(node, source))
+                Variant.Map(values)
             }
 
-            is SequenceNode -> ResourceConfigList(
-                node.value.map { convert(it, source, depth + 1) },
-                span(node, source)
+            is SequenceNode -> Variant.List(
+                node.value.mapIndexed { index, child ->
+                    convert(child, source, path.child(index.toString()), depth + 1, spans)
+                },
             )
 
-            is ScalarNode -> ResourceConfigScalar(parseScalar(node, source), span(node, source))
-            else -> throw ResourceConfigException("Unsupported YAML node type ${node.nodeType}.", span(node, source))
+            is ScalarNode -> parseScalar(node, source)
+            else -> throw ResourceDocumentException(
+                "Unsupported YAML node type ${node.nodeType}.",
+                span(node, source),
+            )
         }
 
-        val tag = if (ignoreTag) null else customTag(node.tag, node, source)
-        return if (tag == null) value else TaggedResourceConfig(tag, value, value.span)
+        val tag = customTag(node.tag, node, source) ?: return value
+        val map = value as? Variant.Map
+            ?: throw ResourceDocumentException("Schema tags may only be applied to mappings.", span(node, source))
+        if (SCHEMA_TYPE_DISCRIMINATOR in map) {
+            throw ResourceDocumentException(
+                "Tagged mappings cannot also declare '$SCHEMA_TYPE_DISCRIMINATOR'.",
+                span(node, source),
+            )
+        }
+        spans[path.child(SCHEMA_TYPE_DISCRIMINATOR)] = span(node, source) ?: return map
+        return Variant.Map(
+            linkedMapOf(SCHEMA_TYPE_DISCRIMINATOR to Variant.String(tag.toString())) + map.value,
+        )
     }
 
-    private fun parseScalar(node: ScalarNode, source: String): Any? = when (node.tag) {
-        Tag.NULL -> null
-        Tag.STR -> node.value
+    private fun parseScalar(node: ScalarNode, source: String): Variant = when (node.tag) {
+        Tag.NULL -> Variant.Null
+        Tag.STR -> Variant.String(node.value)
         Tag.BOOL -> when (node.value.lowercase()) {
-            "true" -> true
-            "false" -> false
-            else -> throw ResourceConfigException("Invalid Boolean '${node.value}'.", span(node, source))
+            "true" -> Variant.Boolean(true)
+            "false" -> Variant.Boolean(false)
+            else -> throw ResourceDocumentException("Invalid Boolean '${node.value}'.", span(node, source))
         }
-
         Tag.INT -> parseInteger(node.value, node, source)
         Tag.FLOAT -> node.value.replace("_", "").toDoubleOrNull()
             ?.takeIf { it.isFinite() }
-            ?: throw ResourceConfigException("Invalid finite number '${node.value}'.", span(node, source))
-
-        else -> throw ResourceConfigException("Unsupported scalar tag '${node.tag.value}'.", span(node, source))
+            ?.let(Variant::Double)
+            ?: throw ResourceDocumentException("Invalid finite number '${node.value}'.", span(node, source))
+        else -> throw ResourceDocumentException("Unsupported scalar tag '${node.tag.value}'.", span(node, source))
     }
 
-    private fun parseInteger(text: String, node: Node, source: String): Long {
+    private fun parseInteger(text: String, node: Node, source: String): Variant {
         val normalized = text.replace("_", "")
         val negative = normalized.startsWith('-')
         val unsigned = normalized.removePrefix("+").removePrefix("-")
@@ -143,10 +175,14 @@ public object ResourceYaml {
             else -> 10 to unsigned
         }
         return try {
-            val parsed = BigInteger(digits, radix).let { if (negative) it.negate() else it }
-            parsed.longValueExact()
+            val value = BigInteger(digits, radix).let { if (negative) it.negate() else it }.longValueExact()
+            if (value in Int.MIN_VALUE..Int.MAX_VALUE) Variant.Int(value.toInt()) else Variant.Long(value)
         } catch (exception: Exception) {
-            throw ResourceConfigException("Integer '$text' is outside the supported range.", span(node, source), exception)
+            throw ResourceDocumentException(
+                "Integer '$text' is outside the supported range.",
+                span(node, source),
+                exception,
+            )
         }
     }
 
@@ -155,37 +191,44 @@ public object ResourceYaml {
         return try {
             id(tag.value)
         } catch (exception: Exception) {
-            throw ResourceConfigException(
+            throw ResourceDocumentException(
                 "Custom YAML tag '${tag.value}' must be a CuTAPI namespace:type identifier.",
-                node.startMark.orElse(null)?.let {
-                    ResourceSourceSpan(source, it.line + 1, it.column + 1)
-                },
-                exception
+                span(node, source),
+                exception,
             )
         }
     }
 
-    private fun toNode(value: ResourceConfigValue): Node = when (value) {
-        is ResourceConfigMap -> MappingNode(
-            Tag.MAP,
-            value.values.map { (key, child) ->
-                NodeTuple(ScalarNode(Tag.STR, key, ScalarStyle.PLAIN), toNode(child))
-            },
-            FlowStyle.BLOCK
-        )
-
-        is ResourceConfigList -> SequenceNode(Tag.SEQ, value.values.map(::toNode), FlowStyle.BLOCK)
-        is ResourceConfigScalar -> when (val scalar = value.value) {
-            null -> ScalarNode(Tag.NULL, "null", ScalarStyle.PLAIN)
-            is Boolean -> ScalarNode(Tag.BOOL, scalar.toString(), ScalarStyle.PLAIN)
-            is Byte, is Short, is Int, is Long -> ScalarNode(Tag.INT, scalar.toString(), ScalarStyle.PLAIN)
-            is Float -> finiteFloatNode(scalar.toDouble())
-            is Double -> finiteFloatNode(scalar)
-            is String -> ScalarNode(Tag.STR, scalar, ScalarStyle.PLAIN)
-            else -> throw ResourceConfigException("Cannot encode scalar type ${scalar::class.qualifiedName}.", value.span)
+    private fun toNode(value: Variant): Node = when (value) {
+        Variant.Null -> ScalarNode(Tag.NULL, "null", ScalarStyle.PLAIN)
+        is Variant.Boolean -> ScalarNode(Tag.BOOL, value.value.toString(), ScalarStyle.PLAIN)
+        is Variant.Byte -> ScalarNode(Tag.INT, value.value.toString(), ScalarStyle.PLAIN)
+        is Variant.Short -> ScalarNode(Tag.INT, value.value.toString(), ScalarStyle.PLAIN)
+        is Variant.Int -> ScalarNode(Tag.INT, value.value.toString(), ScalarStyle.PLAIN)
+        is Variant.Long -> ScalarNode(Tag.INT, value.value.toString(), ScalarStyle.PLAIN)
+        is Variant.Float -> finiteFloatNode(value.value.toDouble())
+        is Variant.Double -> finiteFloatNode(value.value)
+        is Variant.String -> ScalarNode(Tag.STR, value.value, ScalarStyle.PLAIN)
+        is Variant.Char -> ScalarNode(Tag.STR, value.value.toString(), ScalarStyle.PLAIN)
+        is Variant.Identifier -> ScalarNode(Tag.STR, value.value.toString(), ScalarStyle.PLAIN)
+        is Variant.ResourceRef -> ScalarNode(Tag.STR, value.value.toString(), ScalarStyle.PLAIN)
+        is Variant.List -> SequenceNode(Tag.SEQ, value.value.map(::toNode), FlowStyle.BLOCK)
+        is Variant.Map -> {
+            val type = value[SCHEMA_TYPE_DISCRIMINATOR]
+            val typeId = (type as? Variant.String)?.value
+            if (type != null && typeId == null) {
+                throw ResourceDocumentException("'$SCHEMA_TYPE_DISCRIMINATOR' must be a string identifier.")
+            }
+            MappingNode(
+                typeId?.let(::Tag) ?: Tag.MAP,
+                value.value
+                    .filterKeys { it != SCHEMA_TYPE_DISCRIMINATOR }
+                    .map { (key, child) ->
+                        NodeTuple(ScalarNode(Tag.STR, key, ScalarStyle.PLAIN), toNode(child))
+                    },
+                FlowStyle.BLOCK,
+            )
         }
-
-        is TaggedResourceConfig -> toNode(value.value).also { it.tag = Tag(value.id.toString()) }
     }
 
     private fun finiteFloatNode(value: Double): ScalarNode {
@@ -208,6 +251,6 @@ public object ResourceYaml {
         Tag.NULL,
         Tag.BOOL,
         Tag.INT,
-        Tag.FLOAT
+        Tag.FLOAT,
     )
 }

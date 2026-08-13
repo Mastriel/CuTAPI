@@ -67,6 +67,8 @@ public fun blockVisualData(material: Material): BlockData =
 public data class VirtualItemDisplayDefinition(
     val item: ItemStack,
     val transform: ItemDisplayTransform,
+    /** Clockwise rotation around the block's vertical axis. */
+    val yRotationDegrees: Int = 0,
 )
 
 /** The single client representation resolved for one authoritative native state. */

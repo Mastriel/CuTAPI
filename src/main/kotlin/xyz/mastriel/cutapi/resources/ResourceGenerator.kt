@@ -1,145 +1,81 @@
 package xyz.mastriel.cutapi.resources
 
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.data.*
-import kotlin.reflect.*
 
-
-/**
- * Represents the stages of resource generation.
- * These stages determine when a resource generator is executed during the resource lifecycle.
- */
 public enum class ResourceGenerationStage {
-    /**
-     * Executed before resource processors are run.
-     */
     BeforeProcessors,
-
-    /**
-     * Executed after resource processors are run.
-     */
     AfterProcessors,
-
-    /**
-     * Executed before resource pack processors are run.
-     */
     BeforePackProcessors,
-
-    /**
-     * Executed after resource pack processors are run.
-     */
     AfterPackProcessors
 }
 
-/**
- * Abstract base class for resource generators.
- * Resource generators are responsible for generating resources during specific stages
- * of the resource lifecycle.
- *
- * @property id The unique identifier for the resource generator.
- * @property stage The stage at which the generator is executed.
- */
-public abstract class ResourceGenerator(
-    override val id: Identifier,
+/** A registered generator whose registry ID is its typed option-schema ID. */
+public abstract class ResourceGenerator<O : Any>(
+    public val optionsSchema: Schema<O>,
     public val stage: ResourceGenerationStage = ResourceGenerationStage.BeforeProcessors
 ) : Identifiable {
+    final override val id: Identifier get() = optionsSchema.id
 
-    /**
-     * Generates or modifies resources during the specified stage.
-     *
-     * **Note:** [context.resource] and resources generated through [ResourceGeneratorContext.register]
-     * must not have the same [ResourceRef]. Use `subId` to differentiate between them using [ResourceRef.subId].
-     *
-     * @param context The context for the resource generation, containing the resource and helper methods.
-     */
-    public abstract fun generate(context: ResourceGeneratorContext<Resource>)
+    internal abstract fun generateUntyped(
+        resource: Resource,
+        generateBlock: GenerateBlock<*>,
+        ref: ResourceRef<*>,
+        register: (Resource) -> Unit
+    )
 
-    /**
-     * Companion object for managing and retrieving registered resource generators.
-     */
-    public companion object : IdentifierRegistry<ResourceGenerator>(id("cutapi:registry/resource_generator")) {
+    internal fun decodeBlock(root: Variant.Map, subId: String?): GenerateBlock<O> {
+        val normalized = root.normalize(optionsSchema.descriptor)
+        val options = optionsSchema.deserialize(normalized).getOrThrow()
+        return GenerateBlock(this, subId, options)
+    }
 
-        /**
-         * Retrieves all resource generators for a specific stage.
-         *
-         * @param stage The stage to filter resource generators by.
-         * @return A list of resource generators for the specified stage.
-         */
-        public fun getByStage(stage: ResourceGenerationStage): List<ResourceGenerator> =
+    public companion object :
+        IdentifierRegistry<ResourceGenerator<*>>(id("cutapi:registry/resource_generator")) {
+        override fun initialize() {
+            super.initialize()
+            getAllValues().forEach { it.optionsSchema.requireRegistered() }
+        }
+
+        public fun getByStage(stage: ResourceGenerationStage): List<ResourceGenerator<*>> =
             getAllValues().filter { it.stage == stage }
     }
 }
 
-/**
- * Context provided to resource generators during execution.
- *
- * @param T The type of resource being generated or modified.
- * @property resource The resource being processed by the generator.
- * @property generateBlock The block of metadata associated with the resource.
- * @property ref The reference to the resource being processed.
- * @property register A function to register newly generated resources.
- */
-public data class ResourceGeneratorContext<out T : Resource>(
-    val resource: T,
-    val generateBlock: GenerateBlock,
-    val ref: ResourceRef<T>,
-    val register: (Resource) -> Unit
+public data class ResourceGeneratorContext<out T : Resource, out O : Any>(
+    public val resource: T,
+    public val generateBlock: GenerateBlock<@UnsafeVariance O>,
+    public val ref: ResourceRef<T>,
+    public val register: (Resource) -> Unit
 ) {
-
-    /**
-     * Deserializes the options for this generator into a new object.
-     *
-     * @param S The type to deserialize into.
-     * @return The deserialized options object.
-     */
-    public fun <S : Any> castOptions(type: KClass<S>): S =
-        ResourceMetadataMapper.decode(type, generateBlock.options, mappingContext(ref))
-
-    public inline fun <reified S : Any> castOptions(): S = castOptions(S::class)
+    public val options: O get() = generateBlock.options
 }
 
-/**
- * Creates a resource generator that is executed for all resources.
- *
- * @param id The unique identifier for the generator.
- * @param priority The stage at which the generator is executed.
- * @param block The logic to execute for each resource.
- * @return A [ResourceGenerator] instance.
- */
-public fun resourceGenerator(
-    id: Identifier,
-    priority: ResourceGenerationStage = ResourceGenerationStage.BeforeProcessors,
-    block: ResourceGeneratorContext<Resource>.() -> Resource?
-): ResourceGenerator {
-    return object : ResourceGenerator(id, priority) {
-        override fun generate(context: ResourceGeneratorContext<Resource>) {
-            block(context)
-        }
-    }
-}
-
-/**
- * Creates a resource generator that is executed only for resources of a specific type.
- *
- * @param T The type of resource to process.
- * @param id The unique identifier for the generator.
- * @param priority The stage at which the generator is executed.
- * @param block The logic to execute for each resource of type [T].
- * @return A [ResourceGenerator] instance.
- */
 @JvmName("resourceGeneratorWithType")
-public inline fun <reified T : Resource> resourceGenerator(
-    id: Identifier,
-    priority: ResourceGenerationStage = ResourceGenerationStage.BeforeProcessors,
-    crossinline block: ResourceGeneratorContext<T>.() -> Unit
-): ResourceGenerator {
-    return object : ResourceGenerator(id, priority) {
-        override fun generate(context: ResourceGeneratorContext<Resource>) {
-            if (context.resource is T) {
-                // Cast the context to the specific type and execute the block.
-                @Suppress("UNCHECKED_CAST")
-                block(context as ResourceGeneratorContext<T>)
-            }
+public inline fun <reified T : Resource, O : Any> resourceGenerator(
+    optionsSchema: Schema<O>,
+    stage: ResourceGenerationStage = ResourceGenerationStage.BeforeProcessors,
+    crossinline block: ResourceGeneratorContext<T, O>.() -> Unit
+): ResourceGenerator<O> = object : ResourceGenerator<O>(optionsSchema, stage) {
+    override fun generateUntyped(
+        resource: Resource,
+        generateBlock: GenerateBlock<*>,
+        ref: ResourceRef<*>,
+        register: (Resource) -> Unit
+    ) {
+        if (resource !is T) return
+        require(generateBlock.generator === this) {
+            "Generator block ${generateBlock.generatorId} cannot be handled by $id."
         }
+        @Suppress("UNCHECKED_CAST")
+        block(
+            ResourceGeneratorContext(
+                resource,
+                generateBlock as GenerateBlock<O>,
+                ref.cast(),
+                register
+            )
+        )
     }
 }

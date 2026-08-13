@@ -197,13 +197,16 @@ private fun JsonObject.toVariant(
         }
 
         val property = properties[name]
-            ?: throw SchemaJsonException(
+        if (property == null) {
+            if (!schema.strict) continue
+            throw SchemaJsonException(
                 errorMessage = "Unknown property for schema ${rootSchema.id} at " +
                     "'${(path + name).renderPath()}'.",
                 expected = "registered property name",
                 found = JsonPrimitive(name).toString(),
                 availableEntries = SerializerValueDomain.Literal(properties.keys.sorted())
             )
+        }
         values[name] = property.serializer.deserializeJsonValue(
             element = element,
             rootSchema = rootSchema,
@@ -435,13 +438,16 @@ private fun JsonElement.toObjectVariant(
         }
 
         val property = properties[name]
-            ?: throw SchemaJsonException(
+        if (property == null) {
+            if (!shape.strict) continue
+            throw SchemaJsonException(
                 errorMessage = "Unknown property for schema ${rootSchema.id} at " +
                     "'${(path + name).renderPath()}'.",
                 expected = "registered property name",
                 found = JsonPrimitive(name).toString(),
                 availableEntries = SerializerValueDomain.Literal(properties.keys.sorted())
             )
+        }
         values[name] = element.toVariant(
             property.serializerDescriptor,
             rootSchema,

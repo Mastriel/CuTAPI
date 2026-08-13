@@ -15,6 +15,12 @@ public interface TextureLike {
 
     public val materials: List<String>
 
+    /**
+     * Allows this resource's item model to render outside the normal GUI item bounds.
+     */
+    public val oversizedInGui: Boolean
+        get() = false
+
     public val resource: Resource
 }
 

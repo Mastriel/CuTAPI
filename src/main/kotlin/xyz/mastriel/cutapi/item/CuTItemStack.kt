@@ -96,17 +96,18 @@ public open class CuTItemStack protected constructor(public val handle: ItemStac
     /** Returns a detached presentation copy. The authoritative [handle] is never mutated. */
     public open fun getRenderedItemStack(viewer: Player?): ItemStack {
         val rendered = handle.clone()
-        val definition = customItem
-        val display = definition?.descriptor?.display
+        val display = customItem?.descriptor?.display
 
+        rendered.editMeta { meta ->
+            meta.itemModel = customItem?.descriptor?.forcedItemModelId?.toNamespacedKey()
+        }
         if (display != null) {
             rendered.editMeta { meta ->
                 val builder = ItemDisplayBuilder(this, viewer).apply(display)
                 meta.lore(getLore(viewer))
-                meta.itemName(if (nameHasChanged) name else builder.name ?: "&c${definition.id}".colored)
-                builder.texture?.let { texture ->
-                    meta.itemModel = texture.getItemModelId().toNamespacedKey()
-                }
+                meta.itemName(if (nameHasChanged) name else builder.name ?: "&c${customItem?.id}".colored)
+                val itemModelId = builder.texture?.getItemModelId()
+                if (itemModelId != null) meta.itemModel = itemModelId.toNamespacedKey()
             }
         } else if (!isCustom) {
             val addedLore = getLore(viewer)

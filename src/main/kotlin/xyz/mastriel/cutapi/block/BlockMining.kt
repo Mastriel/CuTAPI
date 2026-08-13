@@ -1,10 +1,12 @@
 package xyz.mastriel.cutapi.block
 
-import org.bukkit.entity.Player
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.item.CuTItemStack
-import xyz.mastriel.cutapi.item.attachments.ToolCategory
-import xyz.mastriel.cutapi.item.attachments.ToolTier
+import org.bukkit.entity.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.item.attachments.*
+import xyz.mastriel.cutapi.registry.*
 
 public enum class BlockBreakCause {
     Player,
@@ -28,6 +30,16 @@ public data class BlockSettings(
             "Block explosion resistance must be a non-negative number."
         }
     }
+
+    public companion object : DebugView<BlockSettings> by debugView(id("cutapi:block_settings"), {
+        property(BlockSettings::hardness, VariantSerializer.Float)
+        property(BlockSettings::explosionResistance, VariantSerializer.Float)
+        property("effectiveTools", VariantSerializer.ListOf(ToolCategory)) {
+            it.effectiveTools.toList()
+        }
+        property(BlockSettings::minimumToolTier, ToolTier.nullable())
+        property(BlockSettings::requiresCorrectToolForDrops, VariantSerializer.Boolean)
+    }) {}
 }
 
 public class BlockSettingsBuilder {

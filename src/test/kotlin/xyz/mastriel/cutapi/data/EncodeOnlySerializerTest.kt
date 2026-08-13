@@ -34,6 +34,46 @@ class EncodeOnlySerializerTest {
     }
 
     @Test
+    fun `debug views can be used as nullable property serializers`() {
+        val valueView = debugView<PartialDebugValue>(id("test:nullable_debug_value")) {
+            property(PartialDebugValue::visible, VariantSerializer.String)
+        }
+        val containerView = debugView<NullableDebugContainer>(id("test:nullable_debug_container")) {
+            property(NullableDebugContainer::value, valueView.nullable())
+        }
+
+        assertIs<SerializerShape.Nullable>(
+            assertIs<SerializerShape.Object>(containerView.descriptor.shape)
+                .properties.single().serializerDescriptor.shape
+        )
+        assertEquals(
+            Variant.Map(
+                linkedMapOf(
+                    SCHEMA_TYPE_DISCRIMINATOR to Variant.String("test:nullable_debug_container"),
+                    "value" to Variant.Null
+                )
+            ),
+            containerView.serialize(NullableDebugContainer(null)).getOrThrow()
+        )
+        assertEquals(
+            Variant.Map(
+                linkedMapOf(
+                    SCHEMA_TYPE_DISCRIMINATOR to Variant.String("test:nullable_debug_container"),
+                    "value" to Variant.Map(
+                        linkedMapOf(
+                            SCHEMA_TYPE_DISCRIMINATOR to Variant.String("test:nullable_debug_value"),
+                            "visible" to Variant.String("shown")
+                        )
+                    )
+                )
+            ),
+            containerView.serialize(
+                NullableDebugContainer(PartialDebugValue("shown", "hidden"))
+            ).getOrThrow()
+        )
+    }
+
+    @Test
     fun `custom debug views can extend companion and external parent views`() {
         val secondParentView = debugView<SecondDebugParent>(id("test:second_debug_parent")) {
             property(SecondDebugParent::second, VariantSerializer.Int)
@@ -108,6 +148,10 @@ class EncodeOnlySerializerTest {
 private data class PartialDebugValue(
     val visible: String,
     val hidden: String
+)
+
+private data class NullableDebugContainer(
+    val value: PartialDebugValue?
 )
 
 private interface FirstDebugParent {

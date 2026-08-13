@@ -53,10 +53,11 @@ public data class SerializerDescriptor<out S : SerializerShape>(
             id: Identifier,
             type: KClass<*>,
             tagged: Boolean,
+            strict: Boolean = true,
             properties: kotlin.collections.List<SerializedPropertyDescriptor>
         ): SerializerDescriptor<SerializerShape.Object> = SerializerDescriptor(
             id = id,
-            shape = SerializerShape.Object(type, tagged, properties)
+            shape = SerializerShape.Object(type, tagged, strict, properties)
         )
 
         public fun polymorphic(
@@ -104,6 +105,7 @@ public sealed interface SerializerShape {
     public data class Object(
         public val type: KClass<*>,
         public val tagged: Boolean,
+        public val strict: Boolean,
         public val properties: kotlin.collections.List<SerializedPropertyDescriptor>
     ) : ObjectLike
 

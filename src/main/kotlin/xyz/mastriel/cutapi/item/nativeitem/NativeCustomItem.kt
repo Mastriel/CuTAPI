@@ -43,7 +43,7 @@ internal class NativeCustomItem(
     override fun canDestroyBlock(stack: ItemStack, state: BlockState, level: Level, pos: BlockPos, entity: LivingEntity): Boolean =
         backing.canDestroyBlock(stack, state, level, pos, entity)
 
-    override fun useOn(context: UseOnContext): InteractionResult = backing.useOn(context)
+    override fun useOn(context: UseOnContext): InteractionResult = behavior.useOn(context)
 
     override fun getDestroySpeed(stack: ItemStack, state: BlockState): Float = backing.getDestroySpeed(stack, state)
 

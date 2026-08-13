@@ -12,12 +12,17 @@ import org.bukkit.event.server.*
 import org.bukkit.plugin.java.*
 import org.bukkit.scheduler.*
 import xyz.mastriel.cutapi.block.*
+import xyz.mastriel.cutapi.block.inventory.*
 import xyz.mastriel.cutapi.block.nativeblock.*
 import xyz.mastriel.cutapi.commands.*
 import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.gui.*
+import xyz.mastriel.cutapi.gui.internal.*
+import xyz.mastriel.cutapi.gui.resource.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.item.bukkitevents.*
+import xyz.mastriel.cutapi.item.internal.*
 import xyz.mastriel.cutapi.item.nativeitem.*
 import xyz.mastriel.cutapi.item.recipe.*
 import xyz.mastriel.cutapi.nms.*
@@ -26,6 +31,7 @@ import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.resources.data.*
+import xyz.mastriel.cutapi.resources.data.minecraft.*
 import xyz.mastriel.cutapi.resources.minecraft.*
 import xyz.mastriel.cutapi.resources.process.*
 import xyz.mastriel.cutapi.resources.uploader.*
@@ -91,6 +97,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         }
 
         ResourcePackProcessor.register(TextureAndModelProcessor, name = "Texture Processor")
+        ResourcePackProcessor.register(GuiOverlayResourceProcessor, name = "GUI Overlay Processor")
 
         MinecraftAssetDownloader.modifyRegistry {
             register(GithubMinecraftAssetDownloader())
@@ -107,11 +114,18 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
         NativeItemChannelInitializer.register()
 
+        GuiType.registerBuiltins()
+        BlockSystem.modifyRegistry {
+            register(BlockInventorySystem)
+            register(EvilMachineSystem)
+        }
         BlockSystem.DeferredRegistry.commitToRegistry()
         CustomItem.DeferredRegistry.commitToRegistry()
 
         if (CuTAPI.enableDebugItems) {
-            DebugItems.commitToRegistry();
+            DebugItems.Items.commitToRegistry();
+            DebugItems.Blocks.commitToRegistry();
+            DebugItems.TileEntities.commitToRegistry();
             DebugItems.Extensions.commitToRegistry();
             info("Debug items are enabled!")
         }
@@ -120,7 +134,6 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         CuTAPI.serverReady {
             Schema.initialize()
             DebugFormatter.initialize()
-            ResourceValueCodec.initialize()
             ResourceFileLoader.initialize()
             ResourceGenerator.initialize()
             MinecraftAssetDownloader.initialize()
@@ -128,6 +141,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             Uploader.initialize()
             ItemSystem.initialize()
             BlockSystem.initialize()
+            GuiType.initialize()
             PlayerSystem.initialize()
 
             try {
@@ -183,6 +197,25 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             register(MyAbstractData)
             register(MyChildData)
 
+            register(CuTMeta)
+            register(Animation)
+            register(AnimationFrame)
+            register(ItemModelData)
+            register(FontSettings)
+            register(FolderApplyResource.Metadata)
+            register(JsonResource.Metadata)
+            register(MetadataResource.GenericMetadata)
+            register(Model3D.Metadata)
+            register(PostProcessDefinitionsResource.Data)
+            register(TemplateResource.Metadata)
+            register(Texture2D.Metadata)
+            register(GenerateResource.Metadata)
+            register(HorizontalAtlasTextureGeneratorOptions)
+            register(InventoryTextureGeneratorOptions)
+            register(GrayscaleOptions)
+            register(PaletteSwapOptions)
+            register(MultiplyOpaqueOptions)
+
             register(BlockPlaceAttachment)
             register(DisplayAs)
             register(Durability)
@@ -197,6 +230,9 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             register(Unstackable)
             register(VanillaTool)
             register(CraftsAsBaseMaterial)
+            register(BlockContents)
+
+            register(EvilMachineData)
         }
 
         DebugFormatter.modifyRegistry {
@@ -270,6 +306,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         val periodicManager = CuTAPI.periodicManager
 
         periodicManager.register(this, CuTAPI.blockBreakManager)
+        periodicManager.register(this, CuTAPI.guiManager)
 
     }
 
@@ -296,6 +333,8 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         server.pluginManager.registerEvents(PlayerItemEvents, this)
         server.pluginManager.registerEvents(NativeBlockDisplayManager, this)
         server.pluginManager.registerEvents(BlockRuntimeEvents, this)
+        server.pluginManager.registerEvents(GuiListener(CuTAPI.guiManager), this)
+        server.pluginManager.registerEvents(BlockInventoryLifecycleListener, this)
 
         server.pluginManager.registerEvents(CuTAPI.blockBreakManager, this)
         server.pluginManager.registerEvents(CraftingRecipeEvents(), this)
@@ -335,6 +374,9 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
 
     override fun onDisable() {
+        BlockInventoryStore.all().forEach(BlockInventory::flushPending)
+        CuTAPI.guiManager.shutdown()
+        BlockInventoryStore.clear()
         NativeBlockLifecycle.state = NativeBlockState.Stopped
         NativeItemCodecInstrumentation.clear()
         NativeItemChannelInitializer.unregister()

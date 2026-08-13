@@ -3,8 +3,13 @@ package xyz.mastriel.cutapi.commands
 import com.mojang.brigadier.arguments.*
 import net.kyori.adventure.extra.kotlin.*
 import net.kyori.adventure.text.*
+import org.bukkit.entity.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.commands.brigadier.*
+import xyz.mastriel.cutapi.item.*
+import xyz.mastriel.cutapi.pdc.tags.*
+import xyz.mastriel.cutapi.player.*
+import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.minecraft.*
 import xyz.mastriel.cutapi.utils.*
@@ -24,7 +29,24 @@ internal val CuTAPICommand = command("cutapi") {
             return@executes BrigadierCommandReturn.Other(1)
         }
     }
+
+    subcommand("toggleDebug") {
+        executes {
+            val player = sender as? Player ?: return@executes BrigadierCommandReturn.Failure
+
+            player.debugModeEnabled = !player.debugModeEnabled
+            player.inventory.forceRerender()
+            player.sendMessage("<green>Debug mode toggled.".miniMessage)
+            BrigadierCommandReturn.Success
+        }
+    }
 }
+
+public var Player.debugModeEnabled: Boolean
+    get() = tags.getBoolean(id(Plugin, "debug")) ?: false
+    set(value) {
+        tags.setBoolean(id(Plugin, "debug"), value)
+    }
 
 public fun createRfsChatComponent(includeMinecraft: Boolean): Component {
     val components = mutableListOf<Component>()

@@ -6,15 +6,15 @@ import kotlin.properties.*
 import kotlin.reflect.*
 
 
-public fun <T : Any> configValue(plugin: Plugin, path: String, default: () -> T): ConfigDelegate<T> {
+public fun <T> configValue(plugin: Plugin, path: String, default: () -> T): ConfigDelegate<T> {
     return ConfigDelegate(plugin, path, default)
 }
 
-internal fun <T : Any> cutConfigValue(path: String, default: () -> T): ConfigDelegate<T> {
+internal fun <T> cutConfigValue(path: String, default: () -> T): ConfigDelegate<T> {
     return ConfigDelegate(Plugin, path, default)
 }
 
-public class ConfigDelegate<T : Any> internal constructor(
+public class ConfigDelegate<T> internal constructor(
     public val plugin: Plugin,
     public val path: String,
     default: () -> T
@@ -26,7 +26,12 @@ public class ConfigDelegate<T : Any> internal constructor(
 
     @Suppress("UNCHECKED_CAST")
     override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+        return get()
+    }
+
+    public fun get(): T {
         return try {
+            @Suppress("UNCHECKED_CAST")
             (plugin.config.get(path) as? T?) ?: default
         } catch (ex: ClassCastException) {
             default

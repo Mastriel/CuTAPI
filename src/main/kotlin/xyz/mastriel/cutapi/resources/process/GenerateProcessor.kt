@@ -1,102 +1,128 @@
 package xyz.mastriel.cutapi.resources.process
 
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.resources.data.*
 
-
 public class GenerateResource(
     override val ref: ResourceRef<GenerateResource>,
     override val metadata: Metadata
 ) : MetadataResource<GenerateResource.Metadata>(ref, metadata) {
+    public class Metadata(
+        public val generation: GenerateBlock<*>,
+        public val baseId: ResourceRef<Resource>
+    ) : CuTMeta() {
+        public val generatorId: Identifier get() = generation.generatorId
+        public val options: Any get() = generation.options
 
-    @ResourceMetadata(id = "cutapi:generate")
-    public data class Metadata(
-        val generatorId: Identifier,
-        val baseId: ResourceRef<Resource>,
-        val options: ResourceConfigMap
-    ) : CuTMeta()
+        public companion object : Schema<Metadata> by schema(id("cutapi:generate"), {
+            extends { CuTMeta }
+            val generator = property(
+                name = "generatorId",
+                serializer = VariantSerializer.Identifiable(ResourceGenerator),
+                getProperty = { it.generation.generator },
+                constructorParameterName = null
+            )
+            val base = property(Metadata::baseId, VariantSerializer.ResourceRef<Resource>())
+            val optionMap = property(
+                name = "options",
+                serializer = VariantSerializer.Map,
+                getProperty = Metadata::serializedOptions,
+                constructorParameterName = null
+            )
+            constructs {
+                val selected = value(generator)
+                val rawOptions = Variant.Map(
+                    value(optionMap) +
+                        (SCHEMA_TYPE_DISCRIMINATOR to Variant.String(selected.id.toString()))
+                )
+                val block = try {
+                    selected.decodeBlock(rawOptions, subId = null)
+                } catch (exception: VariantNormalizationException) {
+                    throw VariantNormalizationException(
+                        exception.message ?: "Invalid generator options.",
+                        exception.path.prepend("options"),
+                        exception.expected,
+                        exception.actual,
+                        exception
+                    )
+                }
+                Metadata(block, value(base))
+            }
+        })
+
+        private fun serializedOptions(): Map<String, Variant> {
+            @Suppress("UNCHECKED_CAST")
+            val selected = generation.generator as ResourceGenerator<Any>
+            return selected.optionsSchema.serialize(generation.options).getOrThrow()
+                .requireMap().without(SCHEMA_TYPE_DISCRIMINATOR).value
+        }
+    }
 
     public companion object {
         public val Loader: ResourceFileLoader<GenerateResource> = metadataResourceLoader(
             extensions = listOf("gen"),
-            metadataClass = Metadata::class,
+            metadataSchema = Metadata
         ) {
             success(GenerateResource(ref, metadata!!))
         }
     }
 }
 
-// processes all resources and generates new resources based on the generate blocks
 internal fun generateResources(resources: List<Resource>, stage: ResourceGenerationStage) {
     for (resource in resources) {
         if (resource is GenerateResource) {
-            // If the resource is a GenerateResource, we handle it separately
-            val generator = ResourceGenerator.getOrNull(resource.metadata.generatorId)
-                ?: error("'${resource.metadata.generatorId}' is not a valid Resource Generator for ${resource::class.simpleName}.")
+            val block = resource.metadata.generation
+            val generator = block.generator
             if (generator.stage != stage) continue
-
-            val ref = resource.ref.toString().removeSuffix("gen") + resource.ref.extension
-
-            val generateBlock = GenerateBlock(
-                resource.metadata.generatorId,
-                subId = null,
-                resource.metadata.options
+            val generatedRef = ref<Resource>(
+                resource.ref.toString().removeSuffix("gen") + resource.ref.extension
             )
-
-            val newResources = mutableListOf<Resource>()
-            fun register(resource: Resource) {
-                CuTAPI.resourceManager.register(resource)
-                newResources.add(resource)
-            }
-
             val baseResource = resource.metadata.baseId.getResource()
                 ?: error("Base resource for GenerateResource '${resource.ref}' not found.")
-
-            val ctx = ResourceGeneratorContext(baseResource, generateBlock, ref(ref), ::register)
-
-            generator.generate(ctx)
-
-            for (newResource in newResources) {
-                generateResources(newResources, stage)
-            }
+            val newResources = generate(generator, baseResource, block, generatedRef)
+            generateResources(newResources, stage)
             continue
         }
 
-        val generators = resource.metadata?.generateBlocks ?: continue
-        for (generateBlock in generators) {
+        for (block in resource.metadata?.generateBlocks.orEmpty()) {
             try {
-                val generator = ResourceGenerator.getOrNull(generateBlock.generatorId)
-                    ?: error("'${generateBlock.generatorId}' is not a valid Resource Generator for ${resource::class.simpleName}.")
-                if (generator.stage != stage) return
-                val subId = generateBlock.subId ?: error("No subId supplied.")
-
-                val newResources = mutableListOf<Resource>()
-                fun register(resource: Resource) {
-                    CuTAPI.resourceManager.register(resource)
-                    newResources.add(resource)
-                }
-
-                val ctx =
-                    ResourceGeneratorContext(resource, generateBlock, resource.ref.generatedSubId(subId), ::register)
-
-                generator.generate(ctx)
-
-                for (newResource in newResources) {
-                    generateResources(newResources, stage)
-                }
-
-            } catch (ex: Exception) {
-                val subid = resource.ref.generatedSubId(generateBlock.subId ?: "<no subid>")
-                Plugin.error("Failed to generate resource '$subid' from '${resource.ref}'")
-                ex.printStackTrace()
+                val generator = block.generator
+                if (generator.stage != stage) continue
+                val subId = block.subId ?: error("No subId supplied.")
+                val newResources = generate(
+                    generator,
+                    resource,
+                    block,
+                    resource.ref.generatedSubId(subId)
+                )
+                generateResources(newResources, stage)
+            } catch (exception: Exception) {
+                val subId = resource.ref.generatedSubId(block.subId ?: "<no subid>")
+                Plugin.error("Failed to generate resource '$subId' from '${resource.ref}'")
+                exception.printStackTrace()
             }
         }
     }
 }
 
-public fun <T : Resource> ResourceRef<T>.generatedSubId(string: String): ResourceRef<T> {
-    return ref(root, "${this.path()}${Locator.GENERATED_SEPARATOR}$string.${this.extension}")
+private fun generate(
+    generator: ResourceGenerator<*>,
+    resource: Resource,
+    block: GenerateBlock<*>,
+    ref: ResourceRef<*>
+): List<Resource> {
+    val generated = mutableListOf<Resource>()
+    fun register(resource: Resource) {
+        CuTAPI.resourceManager.register(resource)
+        generated += resource
+    }
+    generator.generateUntyped(resource, block, ref, ::register)
+    return generated
 }
+
+public fun <T : Resource> ResourceRef<T>.generatedSubId(string: String): ResourceRef<T> =
+    ref(root, "${path()}${Locator.GENERATED_SEPARATOR}$string.$extension")

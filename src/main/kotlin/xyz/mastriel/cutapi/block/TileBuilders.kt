@@ -80,7 +80,7 @@ public fun customTileEntity(
     id: Identifier,
     configure: TileEntityDescriptorBuilder.() -> Unit = {},
 ): CustomTileEntity<CuTPlacedTileEntity> =
-    CustomTileEntity(id, TileEntityDescriptorBuilder().apply(configure).build(), CuTPlacedTileEntity::class)
+    CustomTileEntity(id, TileEntityDescriptorBuilder(id).apply(configure).build(), CuTPlacedTileEntity::class)
 
 public fun customTileEntityFromDescriptor(
     id: Identifier,
@@ -91,7 +91,7 @@ public fun customTileEntityFromDescriptor(
 public inline fun <reified T : CuTPlacedTileEntity> customTileEntity(
     id: Identifier,
     noinline configure: TileEntityDescriptorBuilder.() -> Unit = {},
-): CustomTileEntity<T> = CustomTileEntity(id, TileEntityDescriptorBuilder().apply(configure).build(), T::class)
+): CustomTileEntity<T> = CustomTileEntity(id, TileEntityDescriptorBuilder(id).apply(configure).build(), T::class)
 
 @JvmName("customTileEntityFromDescriptorWithPlacedType")
 public inline fun <reified T : CuTPlacedTileEntity> customTileEntityFromDescriptor(
@@ -104,7 +104,7 @@ public fun <T : CuTPlacedTileEntity> typedCustomTileEntity(
     placedBlockClass: KClass<T>,
     configure: TileEntityDescriptorBuilder.() -> Unit = {},
 ): CustomTileEntity<T> =
-    CustomTileEntity(id, TileEntityDescriptorBuilder().apply(configure).build(), placedBlockClass)
+    CustomTileEntity(id, TileEntityDescriptorBuilder(id).apply(configure).build(), placedBlockClass)
 
 public fun <T : CuTPlacedTileEntity> typedCustomTileEntityFromDescriptor(
     id: Identifier,

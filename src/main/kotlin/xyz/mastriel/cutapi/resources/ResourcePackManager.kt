@@ -37,6 +37,16 @@ public class ResourcePackManager {
     public var packInfo: PackInfo? = null
         private set
 
+    private var packUploader: Uploader? = null
+
+    internal fun packInfoForConnection(handshakeHostname: String?): PackInfo? {
+        val info = packInfo ?: return null
+        val resolvedUrl = (packUploader as? BuiltinUploader)
+            ?.urlForConnection(handshakeHostname)
+            ?: info.packUrl
+        return info.copy(packUrl = resolvedUrl)
+    }
+
     /**
      * Gets the textures folder for a specific namespace in the resource pack.
      *
@@ -122,6 +132,7 @@ public class ResourcePackManager {
         val md = MessageDigest.getInstance("SHA-1")
         val packHash = byteArrayToHexString(md.digest(zipFile.readBytes()))
 
+        packUploader = activeUploader
         NativeBlockManifestWriter.write(packHash)
         return PackInfo(url, packHash).also { packInfo = it }
     }

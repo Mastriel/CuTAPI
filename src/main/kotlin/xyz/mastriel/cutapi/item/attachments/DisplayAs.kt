@@ -5,7 +5,6 @@ package xyz.mastriel.cutapi.item.attachments
 import org.bukkit.NamespacedKey
 import org.bukkit.Registry
 import org.bukkit.inventory.ItemType
-import xyz.mastriel.cutapi.Plugin
 import xyz.mastriel.cutapi.attachment.ItemAttachment
 import xyz.mastriel.cutapi.data.Schema
 import xyz.mastriel.cutapi.data.VariantSerializer
@@ -27,7 +26,7 @@ public data class DisplayAs(public val itemType: ItemType) : ItemAttachment {
         ) { "DisplayAs requires a vanilla ItemType: ${itemType.key}" }
     }
 
-    public companion object : Schema<DisplayAs> by schema(id(Plugin, "display_as"), {
+    public companion object : Schema<DisplayAs> by schema(id("cutapi:display_as"), {
         property(DisplayAs::itemType, ItemTypeSerializer, name = "item_type")
     })
 }

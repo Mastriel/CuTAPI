@@ -3,8 +3,6 @@ package xyz.mastriel.cutapi.entity
 import net.kyori.adventure.text.*
 import org.bukkit.entity.*
 import org.bukkit.inventory.*
-import xyz.mastriel.cutapi.behavior.*
-import xyz.mastriel.cutapi.entity.behaviors.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.utils.personalized.*
@@ -13,7 +11,6 @@ public class EntityDescriptor(
     public val name: PersonalizedWithDefault<Component>? = null,
     public val texture: Personalized<ResourceRef<Texture2D>>? = null,
     public val maxHealth: Int = 20,
-    public val entityBehaviors: List<EntityBehavior> = listOf(),
     public val equipment: EntityEquipment
 ) {
 
@@ -28,24 +25,6 @@ public open class EntityDescriptorBuilder {
     public var equipment: EntityEquipment = EntityEquipment()
         private set
 
-    public val entityBehaviors: MutableList<EntityBehavior> = mutableListOf<EntityBehavior>()
-
-    public fun behavior(vararg behaviors: EntityBehavior) {
-        for (behavior in behaviors) {
-            if (this.entityBehaviors.any { it.id == behavior.id } && !behavior.isRepeatable())
-                error("${behavior.id} lacks a RepeatableBehavior annotation to be repeatable.")
-            this.entityBehaviors += behavior
-        }
-    }
-
-    public fun behavior(behaviors: Collection<EntityBehavior>) {
-        for (behavior in behaviors) {
-            if (this.entityBehaviors.any { it.id == behavior.id } && !behavior.isRepeatable())
-                error("${behavior.id} lacks a RepeatableBehavior annotation to be repeatable.")
-            this.entityBehaviors += behavior
-        }
-    }
-
     public fun equipment(block: EquipmentBuilder.() -> Unit) {
         equipment = EquipmentBuilder().apply(block).build()
     }
@@ -55,7 +34,6 @@ public open class EntityDescriptorBuilder {
             name,
             texture,
             maxHealth,
-            entityBehaviors,
             equipment
         )
     }

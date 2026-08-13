@@ -1,5 +1,6 @@
 package xyz.mastriel.cutapi.resources.data
 
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.testing.*
 import kotlin.test.*
 
@@ -16,8 +17,11 @@ class BundledResourceYamlTest : MockBukkitTest() {
         for ((path, expectedTag) in resources) {
             val text = requireNotNull(javaClass.getResource(path)).readText()
             val document = ResourceYaml.parse(text, path)
-            assertEquals(expectedTag, document.requireTag().toString())
+            assertEquals(expectedTag, document.requireTypeId().toString())
             document.requireMap()
+            val encoded = ResourceYaml.encode(document)
+            assertTrue(encoded.startsWith("!<$expectedTag>"))
+            assertFalse(SCHEMA_TYPE_DISCRIMINATOR in encoded)
         }
     }
 
@@ -27,7 +31,16 @@ class BundledResourceYamlTest : MockBukkitTest() {
         val text = requireNotNull(javaClass.getResource(path)).readText()
         val document = ResourceYaml.parse(text, path)
 
-        assertNull(document.tag)
+        assertNull(document.typeId())
         assertNotNull(document.requireMap()["itemModelData"])
+    }
+
+    @Test
+    fun `inventory background opts into oversized GUI rendering`() {
+        val path = "/pack/ui/inventory_bg.model3d.json.meta"
+        val text = requireNotNull(javaClass.getResource(path)).readText()
+        val metadata = ResourceYaml.parse(text, path).requireMap()
+
+        assertEquals(true, (metadata["oversizedInGui"] as? Variant.Boolean)?.value)
     }
 }

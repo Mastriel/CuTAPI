@@ -1,5 +1,6 @@
 package xyz.mastriel.cutapi.item.systems
 
+import net.kyori.adventure.text.format.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.registry.*
@@ -10,21 +11,31 @@ import xyz.mastriel.cutapi.utils.*
  */
 public object ItemOriginSystem : ItemSystem by generalItemSystem(id(Plugin, "item_origin")) {
 
-    private val itemOriginFormatter: String by cutConfigValue("item-origin-formatter") { "&9{}" }
+    private val enabled: Boolean by cutConfigValue("item-origin-formatter.enabled") { true }
+    private val default: String by cutConfigValue("item-origin-formatter.default") { "<blue>{}" }
+
 
     override fun onRender(context: ItemRenderContext) {
-        if (itemOriginFormatter != $$"$DISABLE") {
+        if (enabled) {
             val prerenderHandle = context.prerenderStack.handle
 
             val id = prerenderHandle.itemIdentity.logicalId
 
             val displayName = id.plugin?.displayName ?: id.namespace
+            val configObject = cutConfigValue<String?>("item-origin-formatter.${id.namespace}") { null }
+
+            val formatter = configObject.get() ?: default
 
             context.item.handle.appendLore(
-                itemOriginFormatter
+                *formatter
                     .replace("{}", displayName)
                     .replace("{small}", displayName.toSmallCaps())
-                    .colored
+                    .split("<br>")
+                    .map {
+                        it.miniMessage
+                            .decoration(TextDecoration.ITALIC, false)
+                    }
+                    .toTypedArray()
             )
         }
 

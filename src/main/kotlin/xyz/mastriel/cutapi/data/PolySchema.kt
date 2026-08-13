@@ -169,6 +169,7 @@ private class DeferredPolySchema<T : Any>(
     override val type: KClass<T> get() = knownType ?: resolved.type
     override val properties: List<SchemaProperty<T, *>> get() = resolved.properties
     override val untagged: Boolean get() = resolved.untagged
+    override val strict: Boolean get() = resolved.strict
     override val includedTypes: Set<KClass<out T>> get() = resolved.includedTypes
     override val descriptor: SerializerDescriptor<SerializerShape.Polymorphic> get() = resolved.descriptor
 

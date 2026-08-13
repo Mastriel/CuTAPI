@@ -216,7 +216,13 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
             serialize = { values -> Variant.List(values.map { serializer.serialize(it).getOrThrow() }) },
             deserialize = { variant ->
                 val values = (variant as? Variant.List)?.value ?: throw VariantTypeException("List", variant)
-                values.map { serializer.deserialize(it).getOrThrow() }
+                values.mapIndexed { index, value ->
+                    try {
+                        serializer.deserialize(value).getOrThrow()
+                    } catch (exception: Exception) {
+                        throw exception.withPathPrefix(index.toString(), "Failed to deserialize list element")
+                    }
+                }
             }
         )
 
@@ -229,7 +235,13 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
                 serialize = { values -> Variant.List(values.map { serializer.serialize(it).getOrThrow() }) },
                 deserialize = { variant ->
                     val values = (variant as? Variant.List)?.value ?: throw VariantTypeException("List", variant)
-                    values.map { serializer.deserialize(it).getOrThrow() }
+                    values.mapIndexed { index, value ->
+                        try {
+                            serializer.deserialize(value).getOrThrow()
+                        } catch (exception: Exception) {
+                            throw exception.withPathPrefix(index.toString(), "Failed to deserialize list element")
+                        }
+                    }
                 }
             )
         }
@@ -242,7 +254,13 @@ public interface VariantSerializer<T> : TaggedSerializer<T> {
             },
             deserialize = { variant ->
                 val values = (variant as? Variant.Map)?.value ?: throw VariantTypeException("Map", variant)
-                values.mapValues { (_, value) -> serializer.deserialize(value).getOrThrow() }
+                values.mapValues { (key, value) ->
+                    try {
+                        serializer.deserialize(value).getOrThrow()
+                    } catch (exception: Exception) {
+                        throw exception.withPathPrefix(key, "Failed to deserialize map value")
+                    }
+                }
             }
         )
 

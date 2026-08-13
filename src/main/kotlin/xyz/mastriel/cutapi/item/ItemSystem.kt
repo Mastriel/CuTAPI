@@ -110,6 +110,7 @@ public interface ItemSystem : CuTSystem<CuTItemStack> {
             registerSystem(ShinySystem)
             registerSystem(BlockPlaceSystem)
             registerSystem(ItemOriginSystem)
+            registerSystem(ItemDebugSystem)
         }
 
         public fun dispatchRender(context: ItemRenderContext) {

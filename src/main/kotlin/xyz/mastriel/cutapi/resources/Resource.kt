@@ -2,6 +2,7 @@ package xyz.mastriel.cutapi.resources
 
 import kotlinx.serialization.*
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.resources.data.*
 import java.io.*
 import kotlin.contracts.*
@@ -153,7 +154,9 @@ public fun <T> T.saveWithMetadata(
 ) where T : ByteArraySerializable, T : Resource {
     file.parentFile?.mkdirs()
     if (metadata != null) {
-        val document = ResourceMetadataMapper.encodeMetadata(metadata!!)
+        val schema = metadata!!.metadataSchema()
+        val variant = schema.serialize(metadata!!).getOrThrow()
+        val document = ResourceDocument(variant)
         File(file.path + ".meta").writeText(ResourceYaml.encode(document))
     }
     saveTo(file)

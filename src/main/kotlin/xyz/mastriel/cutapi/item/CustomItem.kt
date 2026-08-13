@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 import org.bukkit.*
 import org.bukkit.event.*
 import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.nativeitem.*
@@ -97,7 +98,7 @@ public open class CustomItem<TStack : CuTItemStack> @PublishedApi internal const
             attach(xyz.mastriel.cutapi.item.attachments.HideTooltip)
             display {
                 texture = itemModel(
-                    xyz.mastriel.cutapi.Plugin,
+                    Plugin,
                     "ui/inventory_bg.model3d.json",
                 )
             }

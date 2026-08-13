@@ -5,6 +5,7 @@ package xyz.mastriel.cutapi.block.nativeblock
 
 import io.papermc.paper.event.packet.PlayerChunkLoadEvent
 import io.papermc.paper.event.packet.PlayerChunkUnloadEvent
+import com.mojang.math.Transformation
 import net.minecraft.core.BlockPos
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket
@@ -23,6 +24,8 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerChangedWorldEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import org.joml.Quaternionf
+import org.joml.Vector3f
 import xyz.mastriel.cutapi.nms.sendTo
 import java.util.UUID
 
@@ -95,6 +98,16 @@ internal object NativeBlockDisplayManager : Listener {
             setPos(block.x + 0.5, block.y + 0.5, block.z + 0.5)
             itemStack = CraftItemStack.asNMSCopy(display.item)
             itemTransform = ItemDisplayContext.valueOf(display.transform.name)
+            if (display.yRotationDegrees != 0) {
+                setTransformation(
+                    Transformation(
+                        Vector3f(),
+                        Quaternionf().rotateY(Math.toRadians(-display.yRotationDegrees.toDouble()).toFloat()),
+                        Vector3f(1.0f, 1.0f, 1.0f),
+                        Quaternionf(),
+                    ),
+                )
+            }
         }
         ClientboundAddEntityPacket(
             entity.id,

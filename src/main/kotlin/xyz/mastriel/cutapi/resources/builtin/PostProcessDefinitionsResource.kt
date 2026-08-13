@@ -1,5 +1,7 @@
 package xyz.mastriel.cutapi.resources.builtin
 
+import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.data.*
 
@@ -8,17 +10,20 @@ public class PostProcessDefinitionsResource(
     override val ref: ResourceRef<PostProcessDefinitionsResource>,
     override val metadata: Data
 ) : MetadataResource<PostProcessDefinitionsResource.Data>(ref, metadata) {
-    @ResourceMetadata(id = "cutapi:post_process_definitions")
     public data class Data(
-        public val postProcess: List<TaggedResourceConfig>
+        public val postProcess: List<TexturePostprocessTable<*>>
     ) : CuTMeta() {
-        public val postProcessors: List<TexturePostprocessTable>
-            get() = postProcess.map(TexturePostprocessTable::fromConfig)
+        public val postProcessors: List<TexturePostprocessTable<*>> get() = postProcess
+
+        public companion object : Schema<Data> by schema(id("cutapi:post_process_definitions"), {
+            extends { CuTMeta }
+            property(Data::postProcess, VariantSerializer.ListOf(TexturePostprocessTableSerializer))
+        })
     }
 
     public companion object {
         public val Loader: ResourceFileLoader<PostProcessDefinitionsResource> =
-            metadataResourceLoader<PostProcessDefinitionsResource, Data>(listOf("ppdef")) {
+            metadataResourceLoader(listOf("ppdef"), Data) {
                 success(PostProcessDefinitionsResource(ref, metadata!!))
             }
     }

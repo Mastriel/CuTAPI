@@ -10,6 +10,7 @@ import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.block.nativeblock.*
+import xyz.mastriel.cutapi.block.inventory.*
 import xyz.mastriel.cutapi.nms.nms
 import org.bukkit.GameMode
 import org.bukkit.SoundCategory
@@ -60,7 +61,8 @@ internal object BlockPlaceSystem : ItemSystem by attachmentItemSystem(BlockPlace
         if (level.isOutsideBuildHeight(pos) || !level.worldBorder.isWithinBounds(pos)) return
         if (!nmsPlayer.mayInteract(level, pos) || !nmsPlayer.mayUseItemAt(pos, direction, nmsPlayer.mainHandItem)) return
 
-        val nativeState = NativeBlockTypes.state(definition, definition.descriptor.states.defaultState)
+        val placementState = definition.placementState(context.player, target)
+        val nativeState = NativeBlockTypes.state(definition, placementState)
         val projectedData = NativeBlockClientBridge.project(nativeState).createCraftBlockData()
         val canBuild = BlockCanBuildEvent(
             target,
@@ -73,7 +75,7 @@ internal object BlockPlaceSystem : ItemSystem by attachmentItemSystem(BlockPlace
         if (!canBuild.isBuildable) return
 
         val replaced = target.state
-        val placed = NativeBlockTypes.setAt(target, definition, definition.descriptor.states.defaultState)
+        val placed = NativeBlockTypes.setAt(target, definition, placementState)
         val place = BlockPlaceEvent(
             target,
             replaced,
@@ -91,6 +93,13 @@ internal object BlockPlaceSystem : ItemSystem by attachmentItemSystem(BlockPlace
         }
         interact.setUseItemInHand(Event.Result.DENY)
         if (place.isCancelled || !place.canBuild()) {
+            replaced.update(true, false)
+            NativeBlockDisplayManager.refresh(target)
+            return
+        }
+
+        val placedEntity = placed as? CuTPlacedTileEntity
+        if (placedEntity != null && !restoreContents(placedEntity, context.item)) {
             replaced.update(true, false)
             NativeBlockDisplayManager.refresh(target)
             return
@@ -116,12 +125,53 @@ internal object BlockPlaceSystem : ItemSystem by attachmentItemSystem(BlockPlace
         if (context.event in syntheticEvents) return
         if (context.event.isCancelled || !context.event.canBuild()) return
         for (attachment in context.item.getAttachments(BlockPlaceAttachment)) {
-            attachment.tile.setAt(context.event.blockPlaced)
+            val block = context.event.blockPlaced
+            val placementState = attachment.tile.placementState(context.player, block)
+            NativeBlockTypes.setAt(block, attachment.tile, placementState)
             val placed = NativeBlockTypes.placedTile(context.event.blockPlaced)
+            val placedEntity = placed as? CuTPlacedTileEntity
+            if (placedEntity != null && !restoreContents(placedEntity, context.item)) {
+                context.event.blockReplacedState.update(true, false)
+                NativeBlockDisplayManager.refresh(block)
+                if (attachment.consumesItem && context.player.gameMode != GameMode.CREATIVE) {
+                    context.item.handle.amount += 1
+                }
+                continue
+            }
             BlockSystem.dispatch(placed) {
                 it.onPlaced(BlockPlaceContext(placed, context.player, context.event))
             }
             if (!attachment.consumesItem) context.item.handle.amount += 1
         }
     }
+}
+
+private fun restoreContents(tile: CuTPlacedTileEntity, item: CuTItemStack): Boolean {
+    val contents = item.getAttachmentOrNull(BlockContents) ?: return true
+    if (item.handle.amount != 1) {
+        Plugin.error(
+            "Refusing to place content-bearing tile ${tile.type.id} from a stack of ${item.handle.amount} items.",
+        )
+        return false
+    }
+    return runCatching { BlockInventoryStore.install(tile, contents) }
+        .onFailure { failure ->
+            Plugin.error(
+                "Failed to restore ${contents.inventoryId} while placing ${tile.type.id} at ${tile.location}: " +
+                    failure.stackTraceToString(),
+            )
+        }
+        .isSuccess
+}
+
+private fun CustomTile<*>.placementState(
+    placer: org.bukkit.entity.Player,
+    block: org.bukkit.block.Block,
+): CustomBlockState {
+    val defaultState = descriptor.states.defaultState
+    return descriptor.orientation?.stateForPlacement(
+        descriptor.states,
+        defaultState,
+        PlacementFacingContext(placer, block),
+    ) ?: defaultState
 }

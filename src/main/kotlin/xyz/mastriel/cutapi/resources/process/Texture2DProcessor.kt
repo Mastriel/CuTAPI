@@ -10,6 +10,7 @@ import xyz.mastriel.cutapi.resources.data.minecraft.*
 import xyz.mastriel.cutapi.utils.*
 import java.io.*
 import kotlin.math.*
+import xyz.mastriel.cutapi.gui.GuiOverlayCatalog
 
 public val TextureAndModelProcessor: ResourceProcessor = resourceProcessor<Resource> {
     val textures = this.resources.filterIsInstance<Texture2D>().filter { !it.metadata.transient }
@@ -26,7 +27,7 @@ public val TextureAndModelProcessor: ResourceProcessor = resourceProcessor<Resou
     generateModelItemFiles(models)
 
     // generates the glyphs
-    generateGlyphs(textures)
+    generateGlyphs(textures.filterNot { GuiOverlayCatalog.isClaimed(it.ref) })
 }
 
 @Serializable
@@ -205,10 +206,11 @@ private fun generateAnimationMcMeta(texture: Texture2D, texturesFolder: File, an
 }
 
 private fun applyPostProcessing(texture: Texture2D) {
-    texture.metadata.postProcessors.forEach {
-        val context = TexturePostProcessContext(it.options, texture.ref)
-        it.processor.process(texture, context)
-    }
+    texture.metadata.postProcessors.forEach { process(texture, it) }
+}
+
+private fun <O : Any> process(texture: Texture2D, table: TexturePostprocessTable<O>) {
+    table.processor.process(texture, TexturePostProcessContext(table.options))
 }
 
 private fun generateModelFile(texture: Texture2D) {
@@ -229,10 +231,14 @@ private fun generateModelFile(texture: Texture2D) {
 }
 
 @Serializable
+@OptIn(ExperimentalSerializationApi::class)
 private data class ItemModelFile(
     @SerialName("hand_animation_on_swap")
     val handAnimationOnSwap: Boolean,
-    val model: ModelData
+    val model: ModelData,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    @SerialName("oversized_in_gui")
+    val oversizedInGui: Boolean = false,
 ) {
 
     @Serializable
@@ -248,17 +254,23 @@ private data class ItemModelFile(
     )
 }
 
+internal fun encodeItemModelFile(
+    model: VanillaItemModel,
+    handAnimationOnSwap: Boolean,
+    oversizedInGui: Boolean = false,
+): String = CuTApiJson.encodeToString(
+    ItemModelFile(
+        handAnimationOnSwap = handAnimationOnSwap,
+        model = ItemModelFile.ModelData(
+            type = ItemModelFile.ModelType.Model,
+            model = VanillaRef(model.location),
+        ),
+        oversizedInGui = oversizedInGui,
+    )
+)
+
 // we generate 2 different item models, one with no hand swap animation and one with it
 private fun generateItemModelFiles(texture: TextureLike) {
-
-    val modelData = ItemModelFile.ModelData(
-        ItemModelFile.ModelType.Model,
-        VanillaRef(texture.getItemModel().location)
-    )
-
-    val noSwap = ItemModelFile(false, modelData)
-    val swap = ItemModelFile(true, modelData)
-
     val folder = CuTAPI.resourcePackManager.getItemModelFolder(texture.ref.namespace)
 
     val path = texture.ref.path(withExtension = false)
@@ -268,8 +280,20 @@ private fun generateItemModelFiles(texture: TextureLike) {
     noSwapFile.parentFile.mkdirs()
     swapFile.parentFile.mkdirs()
 
-    noSwapFile.createAndWrite(CuTAPI.json.encodeToString(noSwap))
-    swapFile.createAndWrite(CuTAPI.json.encodeToString(swap))
+    noSwapFile.createAndWrite(
+        encodeItemModelFile(
+            model = texture.getItemModel(),
+            handAnimationOnSwap = false,
+            oversizedInGui = texture.oversizedInGui,
+        )
+    )
+    swapFile.createAndWrite(
+        encodeItemModelFile(
+            model = texture.getItemModel(),
+            handAnimationOnSwap = true,
+            oversizedInGui = texture.oversizedInGui,
+        )
+    )
 }
 
 private fun generateTextureItemAndModelJsonFiles(textures: Collection<Texture2D>) {

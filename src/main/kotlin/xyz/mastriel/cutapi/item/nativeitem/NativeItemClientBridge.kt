@@ -15,6 +15,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.ComponentSerialization
 import net.minecraft.network.chat.HoverEvent
 import net.minecraft.network.chat.Style
+import net.minecraft.resources.Identifier as MinecraftIdentifier
 import net.minecraft.resources.RegistryOps
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
@@ -35,6 +36,7 @@ import xyz.mastriel.cutapi.item.clearStoredItemMaterialization
 import xyz.mastriel.cutapi.item.hasStoredItemAttachments
 import xyz.mastriel.cutapi.item.hasStoredItemMaterialization
 import xyz.mastriel.cutapi.item.setAttachment
+import xyz.mastriel.cutapi.item.attachments.BlockPlaceAttachment
 import xyz.mastriel.cutapi.item.attachments.DisplayAs
 import xyz.mastriel.cutapi.item.attachments.Durability
 import xyz.mastriel.cutapi.item.attachments.HideTooltip
@@ -42,6 +44,8 @@ import xyz.mastriel.cutapi.item.getAttachmentOrNull
 import xyz.mastriel.cutapi.block.nativeblock.NativeBlockClientBridge
 import xyz.mastriel.cutapi.block.nativeblock.NativeBlockLifecycle
 import java.security.MessageDigest
+import java.util.Collections
+import java.util.WeakHashMap
 import java.util.concurrent.atomic.AtomicLong
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -53,6 +57,8 @@ public object NativeItemClientBridge {
     private const val Version = 2
     private val secret = Random.Default.nextBytes(32)
     private val componentProjectionCalls = AtomicLong()
+    private val pendingCreativeStacks: MutableMap<ItemStack, PendingCreativeStack> =
+        Collections.synchronizedMap(WeakHashMap())
 
     @JvmStatic
     public fun encode(stack: ItemStack): ItemStack {
@@ -76,11 +82,27 @@ public object NativeItemClientBridge {
         rendered.clearStoredItemAttachments()
         rendered.clearStoredItemMaterialization()
         val renderedNms = CraftItemStack.asNMSCopy(rendered)
+        val displayedType = definition?.let {
+            wrapped.getAttachmentOrNull<DisplayAs>()?.itemType ?: it.backingItem
+        }
         val projected = if (definition == null) {
             renderedNms
         } else {
-            val displayedType = wrapped.getAttachmentOrNull<DisplayAs>()?.itemType ?: definition.backingItem
-            renderedNms.transmuteCopy(NativeItemTypes.getMinecraft(displayedType))
+            renderedNms.transmuteCopy(NativeItemTypes.getMinecraft(requireNotNull(displayedType)))
+        }
+        if (
+            displayedType == org.bukkit.inventory.ItemType.PIG_SPAWN_EGG &&
+            wrapped.getAttachmentOrNull<BlockPlaceAttachment>() != null
+        ) {
+            // Spawn-egg use-on-block succeeds client-side and supplies the desired hand swing. The
+            // entity identity is unnecessary for that path and must never escape as usable egg data.
+            projected.remove(DataComponents.ENTITY_DATA)
+        }
+        definition?.descriptor?.forcedItemModelId?.let { modelId ->
+            projected.set(
+                DataComponents.ITEM_MODEL,
+                MinecraftIdentifier.fromNamespaceAndPath(modelId.namespace, modelId.key),
+            )
         }
         if (
             definition == null &&
@@ -108,10 +130,21 @@ public object NativeItemClientBridge {
             check(projected.item === expectedDisplayedItem) {
                 "Client projection for ${definition.id} did not use ${expectedDisplayedType.key}."
             }
+            if (
+                expectedDisplayedType == org.bukkit.inventory.ItemType.PIG_SPAWN_EGG &&
+                expectedWrapper.getAttachmentOrNull<BlockPlaceAttachment>() != null
+            ) {
+                check(!projected.has(DataComponents.ENTITY_DATA)) {
+                    "Client placement projection for ${definition.id} retained spawn-egg entity data."
+                }
+            }
 
             val expectedPresentation = CraftItemStack.asNMSCopy(expectedWrapper.getRenderedItemStack(null))
             val explicitModel = expectedPresentation.componentsPatch.get(DataComponents.ITEM_MODEL)
-            val expectedModel = if (explicitModel == null) {
+            val forcedModel = definition.descriptor.forcedItemModelId?.let { modelId ->
+                MinecraftIdentifier.fromNamespaceAndPath(modelId.namespace, modelId.key)
+            }
+            val expectedModel = forcedModel ?: if (explicitModel == null) {
                 ItemStack(expectedDisplayedItem).get(DataComponents.ITEM_MODEL)
             } else {
                 explicitModel.orElse(null)
@@ -119,6 +152,11 @@ public object NativeItemClientBridge {
             val actualModel = projected.get(DataComponents.ITEM_MODEL)
             check(actualModel == expectedModel) {
                 "Client projection for ${definition.id} used item model $actualModel; expected $expectedModel."
+            }
+            if (forcedModel != null) {
+                check(actualModel == forcedModel) {
+                    "Client projection for ${definition.id} omitted forced item model $forcedModel."
+                }
             }
             val restored = NativeItemNetworkContext.with(
                 NativeItemNetworkCall(NetworkDirection.Serverbound, null),
@@ -134,6 +172,7 @@ public object NativeItemClientBridge {
         }
         verifyVanillaAttachmentRoundTrip()
         verifyVanillaMaterializationRoundTrip()
+        verifyCreativeBundleMutationRoundTrip()
         verifyUnattachedVanillaRenderRoundTrip()
         verifyTagProjection()
     }
@@ -233,6 +272,61 @@ public object NativeItemClientBridge {
         ) { decode(authoritative) }
         check(!CraftItemStack.asCraftMirror(forged.copy()).hasStoredItemMaterialization()) {
             "Unauthenticated item materialization state was accepted from the client."
+        }
+    }
+
+    private fun verifyCreativeBundleMutationRoundTrip() {
+        val registryAccess = MinecraftServer.getServer().registryAccess()
+        val authoritative = ItemStack(net.minecraft.world.item.Items.BUNDLE)
+        val clientboundBytes = Unpooled.buffer()
+        val serverboundBytes = Unpooled.buffer()
+        try {
+            val clientboundBuffer = RegistryFriendlyByteBuf(clientboundBytes, registryAccess)
+            NativeItemNetworkContext.with(NativeItemNetworkCall(NetworkDirection.Clientbound, null)) {
+                ItemStack.OPTIONAL_STREAM_CODEC.encode(clientboundBuffer, authoritative)
+            }
+            clientboundBytes.readerIndex(0)
+            val projected = ItemStack.OPTIONAL_STREAM_CODEC.decode(clientboundBuffer)
+            projected.set(
+                DataComponents.BUNDLE_CONTENTS,
+                net.minecraft.world.item.component.BundleContents(
+                    listOf(ItemStack(net.minecraft.world.item.Items.STONE)),
+                ),
+            )
+
+            val serverboundBuffer = RegistryFriendlyByteBuf(serverboundBytes, registryAccess)
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(serverboundBuffer, projected)
+            serverboundBytes.readerIndex(0)
+            val decoded = NativeItemNetworkContext.with(
+                NativeItemNetworkCall(NetworkDirection.Serverbound, null),
+            ) { ItemStack.OPTIONAL_STREAM_CODEC.decode(serverboundBuffer) }
+            val recovered = when (val resolution = resolveCreativeSlotStack(decoded)) {
+                is CreativeSlotStackResolution.Accept -> resolution.stack
+                CreativeSlotStackResolution.Reject -> error(
+                    "A legitimate creative bundle-content edit was rejected.",
+                )
+            }
+            check(recovered.item === authoritative.item)
+            check(
+                recovered.get(DataComponents.BUNDLE_CONTENTS)
+                    ?.items()
+                    ?.singleOrNull()
+                    ?.item === net.minecraft.world.item.Items.STONE,
+            ) {
+                "A creative bundle-content edit did not retain its authoritative nested item."
+            }
+            val withoutContents = recovered.copy().apply {
+                set(DataComponents.BUNDLE_CONTENTS, authoritative.getOrDefault(
+                    DataComponents.BUNDLE_CONTENTS,
+                    net.minecraft.world.item.component.BundleContents.EMPTY,
+                ))
+            }
+            check(ItemStack.isSameItemSameComponents(authoritative, withoutContents)) {
+                "A creative bundle-content edit retained client-rendered outer components."
+            }
+        } finally {
+            clientboundBytes.release()
+            serverboundBytes.release()
         }
     }
 
@@ -392,7 +486,10 @@ public object NativeItemClientBridge {
 
     private fun verifyCodecRoundTrip(authoritative: ItemStack, definition: CustomItem<*>) {
         val registryAccess = MinecraftServer.getServer().registryAccess()
-        val expectedDisplayedItem = displayedItem(authoritative, definition)
+        val expectedWrapper = CuTItemStack.wrap(CraftItemStack.asCraftMirror(authoritative.copy()))
+        val expectedDisplayedType = expectedWrapper.getAttachmentOrNull<DisplayAs>()?.itemType
+            ?: definition.backingItem
+        val expectedDisplayedItem = NativeItemTypes.getMinecraft(expectedDisplayedType)
         val clientboundBytes = Unpooled.buffer()
         val serverboundBytes = Unpooled.buffer()
         try {
@@ -403,6 +500,20 @@ public object NativeItemClientBridge {
             clientboundBytes.readerIndex(0)
             val projected = ItemStack.OPTIONAL_STREAM_CODEC.decode(clientboundBuffer)
             check(projected.item === expectedDisplayedItem)
+            if (
+                expectedDisplayedType == org.bukkit.inventory.ItemType.PIG_SPAWN_EGG &&
+                expectedWrapper.getAttachmentOrNull<BlockPlaceAttachment>() != null
+            ) {
+                check(!projected.has(DataComponents.ENTITY_DATA)) {
+                    "Instrumented stack codec retained spawn-egg entity data for ${definition.id}."
+                }
+            }
+            definition.descriptor.forcedItemModelId?.let { modelId ->
+                val forcedModel = MinecraftIdentifier.fromNamespaceAndPath(modelId.namespace, modelId.key)
+                check(projected.get(DataComponents.ITEM_MODEL) == forcedModel) {
+                    "Instrumented stack codec omitted forced item model $forcedModel for ${definition.id}."
+                }
+            }
 
             val serverboundBuffer = RegistryFriendlyByteBuf(serverboundBytes, registryAccess)
             ItemStack.OPTIONAL_STREAM_CODEC.encode(serverboundBuffer, projected)
@@ -455,13 +566,24 @@ public object NativeItemClientBridge {
             call.player?.let { player ->
                 Bukkit.getScheduler().runTask(xyz.mastriel.cutapi.Plugin, Runnable(player::updateInventory))
             }
-            return removeProtectedItemState(cleaned)
+            return removeProtectedItemState(cleaned).also { rejected ->
+                pendingCreativeStacks[rejected] = PendingCreativeStack.Rejected
+            }
         }
 
         val originalBytes = envelope.getByteArray("original").orElse(null) ?: return reject()
         val signature = envelope.getByteArray("signature").orElse(null) ?: return reject()
         if (envelope.getIntOr("version", -1) != Version) return reject()
-        if (!MessageDigest.isEqual(signature, sign(originalBytes, ItemStack.hashItemAndComponents(cleaned)))) return reject()
+        if (!MessageDigest.isEqual(signature, sign(originalBytes, ItemStack.hashItemAndComponents(cleaned)))) {
+            val mutation = recoverCreativeBundleMutation(
+                originalBytes = originalBytes,
+                signature = signature,
+                received = cleaned,
+                player = call.player,
+            ) ?: return reject()
+            pendingCreativeStacks[cleaned] = mutation
+            return cleaned
+        }
 
         if (NativeItemLifecycle.state != NativeItemState.Active) return reject()
 
@@ -470,6 +592,79 @@ public object NativeItemClientBridge {
         }.getOrElse { return reject() }
         restored.count = stack.count
         return restored
+    }
+
+    internal fun resolveCreativeSlotStack(stack: ItemStack): CreativeSlotStackResolution {
+        val resolved = resolvePendingCreativeStack(stack)
+            ?: return CreativeSlotStackResolution.Reject
+        return CreativeSlotStackResolution.Accept(resolved)
+    }
+
+    private fun resolvePendingCreativeStack(stack: ItemStack): ItemStack? {
+        return when (val pending = pendingCreativeStacks.remove(stack)) {
+            null -> stack
+            PendingCreativeStack.Rejected -> null
+            is PendingCreativeStack.BundleMutation -> {
+                val contents = resolvePendingCreativeContents(pending.contents) ?: return null
+                pending.authoritative.copy().apply {
+                    set(DataComponents.BUNDLE_CONTENTS, contents)
+                }
+            }
+        }
+    }
+
+    private fun resolvePendingCreativeContents(
+        contents: net.minecraft.world.item.component.BundleContents,
+    ): net.minecraft.world.item.component.BundleContents? {
+        var changed = false
+        val resolvedItems = contents.items().map { item ->
+            val resolved = resolvePendingCreativeStack(item) ?: return null
+            changed = changed || resolved !== item
+            resolved
+        }
+        if (!changed) return contents
+
+        var resolved = net.minecraft.world.item.component.BundleContents(resolvedItems)
+        if (contents.hasSelectedItem()) {
+            val mutable = net.minecraft.world.item.component.BundleContents.Mutable(resolved)
+            mutable.toggleSelectedItem(contents.selectedItem)
+            resolved = mutable.toImmutable()
+        }
+        return resolved
+    }
+
+    private fun recoverCreativeBundleMutation(
+        originalBytes: ByteArray,
+        signature: ByteArray,
+        received: ItemStack,
+        player: org.bukkit.entity.Player?,
+    ): PendingCreativeStack.BundleMutation? {
+        if (NativeItemLifecycle.state != NativeItemState.Active) return null
+        val authoritative = runCatching {
+            CraftItemStack.asNMSCopy(Bukkit.getUnsafe().deserializeItem(originalBytes))
+        }.getOrNull() ?: return null
+        if (authoritative.get(DataComponents.BUNDLE_CONTENTS) == null) return null
+        val expectedProjection = NativeItemNetworkContext.with(
+            NativeItemNetworkCall(NetworkDirection.Clientbound, player),
+        ) { encode(authoritative.copy()) }
+        val expectedDisplayed = removeEnvelope(expectedProjection)
+        val expectedSignature = sign(originalBytes, ItemStack.hashItemAndComponents(expectedDisplayed))
+        if (!MessageDigest.isEqual(signature, expectedSignature)) return null
+        if (!differsOnlyInBundleContents(expectedDisplayed, received)) return null
+        val contents = received.get(DataComponents.BUNDLE_CONTENTS) ?: return null
+        return PendingCreativeStack.BundleMutation(authoritative, contents)
+    }
+
+    private fun differsOnlyInBundleContents(expected: ItemStack, received: ItemStack): Boolean {
+        if (expected.item !== received.item || expected.count != received.count) return false
+        val normalized = received.copy()
+        val expectedContents = expected.get(DataComponents.BUNDLE_CONTENTS)
+        if (expectedContents == null) {
+            normalized.remove(DataComponents.BUNDLE_CONTENTS)
+        } else {
+            normalized.set(DataComponents.BUNDLE_CONTENTS, expectedContents)
+        }
+        return ItemStack.isSameItemSameComponents(expected, normalized)
     }
 
     @JvmStatic
@@ -566,4 +761,19 @@ public object NativeItemClientBridge {
         ))
         return mac.doFinal()
     }
+
+    private sealed interface PendingCreativeStack {
+        data class BundleMutation(
+            val authoritative: ItemStack,
+            val contents: net.minecraft.world.item.component.BundleContents,
+        ) : PendingCreativeStack
+
+        data object Rejected : PendingCreativeStack
+    }
+}
+
+internal sealed interface CreativeSlotStackResolution {
+    data class Accept(val stack: ItemStack) : CreativeSlotStackResolution
+
+    data object Reject : CreativeSlotStackResolution
 }
