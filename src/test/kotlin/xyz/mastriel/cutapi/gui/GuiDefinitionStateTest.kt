@@ -1,9 +1,12 @@
 package xyz.mastriel.cutapi.gui
 
-import org.bukkit.inventory.*
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.TextComponent
+import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.event.inventory.*
+import org.bukkit.inventory.*
 import org.mockbukkit.mockbukkit.*
-import org.mockbukkit.mockbukkit.inventory.SimpleInventoryViewMock
+import org.mockbukkit.mockbukkit.inventory.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
@@ -161,7 +164,7 @@ public class GuiDefinitionStateTest {
             org.bukkit.Material.IRON_NUGGET,
             element.item!!.invoke(GuiRenderContext(guiSession(definition)))!!.type,
         )
-        assertNotEquals(inputPort, GuiSlotPort("input"))
+        assertEquals(inputPort, GuiSlotPort("input"))
     }
 
     @Test
@@ -403,9 +406,11 @@ public class GuiDefinitionStateTest {
         }
         assertEquals(setOf(port), portWins.slotPorts)
         assertEquals(emptySet(), portWins.requiredSlotPorts)
-        assertEquals(org.bukkit.Material.BARRIER, portWins.element(port)?.item?.invoke(
-            GuiRenderContext(guiSession(portWins)),
-        )?.type)
+        assertEquals(
+            org.bukkit.Material.BARRIER, portWins.element(port)?.item?.invoke(
+                GuiRenderContext(guiSession(portWins)),
+            )?.type
+        )
 
         val decorationWins = gui(id("test:decoration_wins"), TestGuiType) {
             boundSlot(port, 0) { placeholder { ItemStack(org.bukkit.Material.BARRIER) } }
@@ -431,6 +436,11 @@ public class GuiDefinitionStateTest {
         assertSame(first, duplicate)
         assertEquals("test:gui/profile", first.fontKey.asString())
         assertTrue(GuiOverlayCatalog.isClaimed(texture))
+        val overlayGlyph = GuiOverlayComposer.compose(identifier, spec)
+            .allComponents()
+            .filterIsInstance<TextComponent>()
+            .single { it.content() == first.layerGlyphs.single() }
+        assertEquals(NamedTextColor.WHITE, overlayGlyph.color())
         assertFailsWith<IllegalArgumentException> {
             GuiOverlayCatalog.contribute(identifier, GuiOverlaySpec(profile, listOf(GuiOverlayLayer(texture, x = 1))))
         }
@@ -501,9 +511,13 @@ public class GuiDefinitionStateTest {
         fixed.forEach { (type, expectedSize) ->
             assertEquals(expectedSize, type.layout.topSize, type.id.toString())
             assertNotNull(type.overlayProfile, type.id.toString())
+            assertEquals(13, type.overlayProfile?.bitmapAscent, type.id.toString())
             assertNotNull(type.inventoryType, type.id.toString())
         }
-        (1..6).forEach { rows -> assertEquals(rows * 9, GuiType.Chest(rows).layout.topSize) }
+        (1..6).forEach { rows ->
+            assertEquals(rows * 9, GuiType.Chest(rows).layout.topSize)
+            assertEquals(13, GuiType.Chest(rows).overlayProfile?.bitmapAscent)
+        }
         assertEquals(all.size, all.map { it.id }.distinct().size)
     }
 
@@ -703,3 +717,6 @@ private object TestResourceRoot : ResourceRoot {
 
     override fun getResourcesFolder(): File = File(".")
 }
+
+private fun Component.allComponents(): List<Component> =
+    listOf(this) + children().flatMap { it.allComponents() }

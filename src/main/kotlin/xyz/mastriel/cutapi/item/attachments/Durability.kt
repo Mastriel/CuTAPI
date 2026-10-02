@@ -16,10 +16,18 @@ public data class Durability(public val maxDamage: Int) : ItemAttachment {
 internal val DurabilityMaterializer: ItemAttachmentMaterializer<Durability> = itemAttachmentMaterializer(
     id = Durability.id / "materializer",
     schema = Durability,
-    revision = 1,
-    claims = setOf(ItemTraitClaim.Component(DataComponentTypes.MAX_DAMAGE)),
+    revision = 2,
+    claims = setOf(
+        ItemTraitClaim.Component(DataComponentTypes.MAX_DAMAGE),
+        ItemTraitClaim.Component(DataComponentTypes.DAMAGE),
+    ),
 ) { context, output ->
     val durability = context.attachments.single()
     require(durability.maxDamage > 0) { "Durability.maxDamage must be positive." }
     output.set(DataComponentTypes.MAX_DAMAGE, durability.maxDamage)
+    output.setUsing(DataComponentTypes.DAMAGE) { stack ->
+        if (!stack.hasData(DataComponentTypes.DAMAGE)) {
+            stack.setData(DataComponentTypes.DAMAGE, 0)
+        }
+    }
 }

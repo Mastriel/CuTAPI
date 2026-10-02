@@ -9,11 +9,8 @@ public sealed interface GuiSlot {
 
 /**
  * An opaque semantic storage port whose visual position is owned by a GUI definition.
- *
- * Presentations must bind the exact port instance declared by the GUI. The diagnostic [name]
- * does not make independently constructed ports interchangeable.
  */
-public class GuiSlotPort(public val name: String) {
+public data class GuiSlotPort(public val name: String) {
     init {
         require(name.isNotBlank()) { "A GUI slot port name may not be blank." }
     }

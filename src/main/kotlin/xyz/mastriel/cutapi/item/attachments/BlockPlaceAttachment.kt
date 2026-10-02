@@ -148,16 +148,18 @@ internal object BlockPlaceSystem : ItemSystem by attachmentItemSystem(BlockPlace
 
 private fun restoreContents(tile: CuTPlacedTileEntity, item: CuTItemStack): Boolean {
     val contents = item.getAttachmentOrNull(BlockContents) ?: return true
+    val tileId = tile.identity.customTile?.id
+        ?: error("Block at ${tile.location} is not a native custom tile entity.")
     if (item.handle.amount != 1) {
         Plugin.error(
-            "Refusing to place content-bearing tile ${tile.type.id} from a stack of ${item.handle.amount} items.",
+            "Refusing to place content-bearing tile $tileId from a stack of ${item.handle.amount} items.",
         )
         return false
     }
     return runCatching { BlockInventoryStore.install(tile, contents) }
         .onFailure { failure ->
             Plugin.error(
-                "Failed to restore ${contents.inventoryId} while placing ${tile.type.id} at ${tile.location}: " +
+                "Failed to restore ${contents.inventoryId} while placing $tileId at ${tile.location}: " +
                     failure.stackTraceToString(),
             )
         }

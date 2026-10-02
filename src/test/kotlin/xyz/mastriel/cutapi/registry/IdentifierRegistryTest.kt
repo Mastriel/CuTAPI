@@ -75,7 +75,7 @@ public class IdentifierRegistryTest : MockBukkitTest() {
         high.commitToRegistry()
         registry.initialize()
 
-        assertEquals(listOf(highId, lowId), order)
+        assertEquals(listOf(lowId, highId), order)
     }
 }
 

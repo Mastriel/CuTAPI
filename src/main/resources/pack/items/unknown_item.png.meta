@@ -1,3 +1,5 @@
 !<cutapi:texture2d>
-materials:
-  - glistering_melon_slice
+generate:
+  - !<cutapi:texture_model>
+    generate:
+      - !<cutapi:item_model> {}

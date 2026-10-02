@@ -55,7 +55,14 @@ public object NativeBlockTypes {
     public fun definition(state: BlockState): CustomTile<*>? = definitionsByBlock[state.block]
 
     public fun definition(block: BukkitBlock): CustomTile<*>? =
-        definitionsByBlock[(block as? CraftBlock)?.nms?.block]
+        nativeStateOf(block)?.let(::definition)
+
+    private fun nativeStateOf(block: BukkitBlock): BlockState? {
+        // API-compatible block implementations (notably MockBukkit) are necessarily vanilla and
+        // do not provide CraftBlock. Avoid resolving the CraftBukkit class unless the handle is one.
+        if (block.javaClass.name != "org.bukkit.craftbukkit.block.CraftBlock") return null
+        return (block as CraftBlock).nms
+    }
 
     public fun idOf(state: BlockState): Identifier? = definition(state)?.id
 
@@ -75,6 +82,8 @@ public object NativeBlockTypes {
     public fun customState(state: BlockState): CustomBlockState? =
         (state.block as? NativeCustomBlock)?.stateSchema?.toCustom(state)
 
+    public fun customState(block: BukkitBlock): CustomBlockState? = nativeStateOf(block)?.let(::customState)
+
     public fun setAt(block: BukkitBlock, definition: CustomTile<*>, state: CustomBlockState): CuTPlacedTile {
         NativeBlockLifecycle.requireActive()
         val world = (block.world as CraftWorld).handle
@@ -89,6 +98,20 @@ public object NativeBlockTypes {
     public fun placedTile(block: BukkitBlock): CuTPlacedTile {
         require(definition(block) != null) { "Block at ${block.location} is not a native custom block." }
         return CuTAPI.blockManager.getPlacedTile(block)
+    }
+
+    internal fun placedTile(
+        block: BukkitBlock,
+        expectedDefinition: CustomTile<*>,
+        nativeState: BlockState,
+    ): CuTPlacedTile {
+        require(definition(nativeState) === expectedDefinition) {
+            "Native state $nativeState does not belong to custom block ${expectedDefinition.id}."
+        }
+        val state = requireNotNull(customState(nativeState)) {
+            "Native state $nativeState has no CuTAPI custom state."
+        }
+        return CuTAPI.blockManager.getPlacedTile(block, expectedDefinition, state)
     }
 }
 

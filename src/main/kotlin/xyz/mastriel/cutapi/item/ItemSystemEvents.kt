@@ -2,6 +2,8 @@
 
 package xyz.mastriel.cutapi.item
 
+import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent
+import io.papermc.paper.event.player.PlayerStopUsingItemEvent
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket
 import io.papermc.paper.event.entity.EntityEquipmentChangedEvent
 import org.bukkit.*
@@ -158,8 +160,10 @@ public class ItemSystemEvents : Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public fun onInteract(event: PlayerInteractEvent) {
+        // Block interactions run first and may consume the click, just like vanilla inventories.
+        if (event.action.isRightClick && event.useItemInHand() == Event.Result.DENY) return
         val item = event.player.inventory.itemInMainHand.wrap()
         dispatch(item) {
             when {
@@ -198,6 +202,56 @@ public class ItemSystemEvents : Listener {
         val item = event.itemDrop.itemStack.wrap()
         dispatch(item) {
             it.onDrop(ItemDropContext(item, event.player, event))
+        }
+    }
+
+    @EventHandler
+    public fun onConsume(event: PlayerItemConsumeEvent) {
+        val item = event.item.wrap()
+        dispatch(item) {
+            it.onConsume(ItemConsumeContext(item, event.player, event))
+        }
+    }
+
+    @EventHandler
+    public fun onLaunchProjectile(event: PlayerLaunchProjectileEvent) {
+        val item = event.itemStack.wrap()
+        dispatch(item) {
+            it.onLaunchProjectile(ItemLaunchProjectileContext(item, event.player, event.projectile, event))
+        }
+    }
+
+    @EventHandler
+    public fun onFish(event: PlayerFishEvent) {
+        val hand = event.hand ?: return
+        val item = event.player.inventory.getItem(hand).wrap()
+        dispatch(item) {
+            it.onFish(ItemFishContext(item, event.player, event))
+        }
+    }
+
+    @EventHandler
+    public fun onShootBow(event: EntityShootBowEvent) {
+        val bow = event.bow ?: return
+        val item = bow.wrap()
+        dispatch(item) {
+            it.onShootBow(ItemShootBowContext(item, event.entity, event.projectile, event))
+        }
+    }
+
+    @EventHandler
+    public fun onStopUsing(event: PlayerStopUsingItemEvent) {
+        val item = event.item.wrap()
+        dispatch(item) {
+            it.onStopUsing(ItemStopUsingContext(item, event.player, event))
+        }
+    }
+
+    @EventHandler
+    public fun onRiptide(event: PlayerRiptideEvent) {
+        val item = event.item.wrap()
+        dispatch(item) {
+            it.onRiptide(ItemRiptideContext(item, event.player, event))
         }
     }
 

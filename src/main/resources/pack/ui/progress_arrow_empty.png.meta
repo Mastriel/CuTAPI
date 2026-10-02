@@ -1,0 +1,9 @@
+!<cutapi:texture2d>
+emit: false
+fontSettings:
+  enabled: false
+generate:
+  - !<cutapi:horizontal_progress>
+    subId: frames
+    fullTexture: cutapi://ui/progress_arrow_full.png
+    backgroundModel: cutapi://ui/inventory_bg.model.json

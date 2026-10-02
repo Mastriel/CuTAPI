@@ -1,6 +1,6 @@
 package xyz.mastriel.cutapi.registry
 
-import java.util.IdentityHashMap
+import java.util.*
 import kotlin.reflect.*
 
 
@@ -15,6 +15,7 @@ public interface Deferred<T : Identifiable> {
 
 public class SingleProducer<T>(private val producer: () -> T) {
     private var value: Any? = null
+
     @Volatile
     public var hasProduced: Boolean = false
         private set
@@ -57,6 +58,11 @@ public interface DeferredRegistry<T : Identifiable> {
     public fun <V : T> register(producer: () -> V): Deferred<V>
     public fun getByProducer(producer: () -> T): Identifier
     public fun associateId(producer: () -> T, id: Identifier)
+
+    /**
+     * Resolves duplicates in the deferred registry to allowing the last item to take priority, instead of throwing an error.
+     */
+    public var overrideDuplicates: Boolean
     public fun commitToRegistry()
 }
 
@@ -74,6 +80,11 @@ public open class BasicDeferredRegistry<T : Identifiable> internal constructor(
     private val producersToItems: IdentityHashMap<Any, DeferredItem<T, *>> = IdentityHashMap()
     final override var isOpen: Boolean = true
         protected set
+
+    /**
+     * Resolves duplicates in the deferred registry to allowing the last item to take priority, instead of throwing an error.
+     */
+    public override var overrideDuplicates: Boolean = true
 
     /**
      * Registers a deferred item. Note that this must return an Identifiable with a consistent Identifier.
@@ -109,11 +120,24 @@ public open class BasicDeferredRegistry<T : Identifiable> internal constructor(
 
         // Register all items in the registry
         registry.modifyRegistry(priority) {
+            val createdItems = mutableListOf<T>()
             for (entry in items) {
                 val item = entry.producer.produce()
                 entry.delegate.id = item.id
-                register(item)
+                createdItems.add(item)
             }
+
+            if (overrideDuplicates) {
+                createdItems
+                    .reversed()
+                    .distinctBy { it.id }
+                    .reversed()
+                    .forEach { item -> register(item) }
+            } else {
+                createdItems
+                    .forEach { item -> register(item) }
+            }
+
         }
     }
 

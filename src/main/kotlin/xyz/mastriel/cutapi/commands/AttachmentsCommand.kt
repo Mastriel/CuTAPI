@@ -7,8 +7,11 @@ import io.papermc.paper.command.brigadier.argument.*
 import net.kyori.adventure.text.*
 import net.kyori.adventure.text.event.*
 import net.kyori.adventure.text.format.*
+import org.bukkit.*
 import org.bukkit.entity.*
 import xyz.mastriel.cutapi.attachment.*
+import xyz.mastriel.cutapi.block.*
+import xyz.mastriel.cutapi.block.CustomBlockManager.Companion.wrap
 import xyz.mastriel.cutapi.commands.brigadier.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
@@ -36,6 +39,19 @@ internal val AttachmentsCommand = command("attachments") {
             val player = sender as Player
             val item = player.inventory.itemInMainHand.wrap()
             ItemAttachmentCommandTarget(item)
+        }
+    }
+
+    subcommand("block") {
+        requires { sender is Player }
+        attachmentActions(BlockAttachment::class) {
+            val player = sender as Player
+            val block = requireNotNull(
+                player.getTargetBlockExact(BLOCK_ATTACHMENT_TARGET_RANGE, FluidCollisionMode.NEVER),
+            ) {
+                "No block in range."
+            }
+            BlockAttachmentCommandTarget(block.wrap())
         }
     }
 }
@@ -322,10 +338,60 @@ private class ItemAttachmentCommandTarget(
     }
 }
 
+private class BlockAttachmentCommandTarget(
+    private val tile: CuTPlacedTile,
+) : AttachmentCommandTarget {
+    override val description: String
+        get() {
+            val block = tile.handle
+            val blockId = tile.identity.customTile?.id ?: tile.material.key
+            return "$blockId block at ${block.x}, ${block.y}, ${block.z}"
+        }
+
+    override fun entries(): List<AttachmentCommandEntry> {
+        val intrinsic = tile.identity.getAllAttachments()
+        val tileEntity = tile as? CuTPlacedTileEntity
+            ?: return intrinsic.map { AttachmentCommandEntry(it, intrinsic = true) }
+        val state = AttachmentPdcStorage.read(tileEntity.persistentDataContainer())
+        return blockAttachmentCommandEntries(
+            intrinsic = intrinsic,
+            overlay = state.attachments.filterIsInstance<BlockAttachment>(),
+            suppressed = state.suppressed,
+        )
+    }
+
+    override fun setAttachment(attachment: Attachment) {
+        mutableTileEntity().setAttachment(attachment as BlockAttachment)
+    }
+
+    override fun removeAttachment(schema: Schema<out Attachment>) {
+        @Suppress("UNCHECKED_CAST")
+        mutableTileEntity().removeAttachment(schema as Schema<out BlockAttachment>)
+    }
+
+    private fun mutableTileEntity(): CuTPlacedTileEntity =
+        requireNotNull(tile as? CuTPlacedTileEntity) {
+            "${description.replaceFirstChar(Char::uppercase)} is not a tile entity; " +
+                "only tile entities support mutable placed attachments."
+        }
+}
+
 internal fun itemAttachmentCommandEntries(
     intrinsic: List<ItemAttachment>,
     overlay: List<ItemAttachment>,
     suppressed: Set<Identifier>
+): List<AttachmentCommandEntry> = attachmentCommandEntries(intrinsic, overlay, suppressed)
+
+internal fun blockAttachmentCommandEntries(
+    intrinsic: List<BlockAttachment>,
+    overlay: List<BlockAttachment>,
+    suppressed: Set<Identifier>,
+): List<AttachmentCommandEntry> = attachmentCommandEntries(intrinsic, overlay, suppressed)
+
+private fun <A : Attachment> attachmentCommandEntries(
+    intrinsic: List<A>,
+    overlay: List<A>,
+    suppressed: Set<Identifier>,
 ): List<AttachmentCommandEntry> {
     val overlaySchemaIds = overlay.mapTo(mutableSetOf()) { it.schema().id }
     val intrinsicEntries = intrinsic
@@ -344,6 +410,8 @@ internal fun itemAttachmentCommandEntries(
         }
     return intrinsicEntries + overlay.map { AttachmentCommandEntry(it, intrinsic = false) }
 }
+
+private const val BLOCK_ATTACHMENT_TARGET_RANGE = 6
 
 private fun attachmentSchemaArgument(
     attachmentType: KClass<out Attachment>

@@ -81,6 +81,23 @@ public class PlayerSystemEvents : Listener {
         dispatch(event.player) { it.onDropItem(PlayerDropItemContext(event.player, event)) }
     }
 
+    @EventHandler
+    public fun onHeldSlotChange(event: PlayerItemHeldEvent) {
+        dispatch(event.player) { it.onHeldSlotChange(PlayerHeldSlotChangeContext(event.player, event)) }
+    }
+
+    @EventHandler
+    public fun onProjectileHit(event: ProjectileHitEvent) {
+        val player = event.entity.shooter as? Player ?: return
+        dispatch(player) { it.onProjectileHit(PlayerProjectileHitContext(player, event.entity, event)) }
+    }
+
+    @EventHandler
+    public fun onToggleGlide(event: EntityToggleGlideEvent) {
+        val player = event.entity as? Player ?: return
+        dispatch(player) { it.onToggleGlide(PlayerToggleGlideContext(player, event)) }
+    }
+
     @Periodic(1)
     public fun tickEvents() {
         onlinePlayers().forEach { player ->

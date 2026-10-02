@@ -38,13 +38,11 @@ import xyz.mastriel.cutapi.attachment.schema
 import xyz.mastriel.cutapi.data.Variant
 import xyz.mastriel.cutapi.item.attachments.Durability
 import xyz.mastriel.cutapi.item.attachments.Equipable
+import xyz.mastriel.cutapi.item.attachments.BaseAttackDamageKey
+import xyz.mastriel.cutapi.item.attachments.BaseAttackSpeedKey
+import xyz.mastriel.cutapi.item.attachments.MeleeWeapon
 import xyz.mastriel.cutapi.item.attachments.ModifyAttribute
-import xyz.mastriel.cutapi.item.attachments.Tool
-import xyz.mastriel.cutapi.item.attachments.ToolCategory
-import xyz.mastriel.cutapi.item.attachments.ToolSpeed
-import xyz.mastriel.cutapi.item.attachments.ToolTier
 import xyz.mastriel.cutapi.item.attachments.Unstackable
-import xyz.mastriel.cutapi.item.attachments.VanillaTool
 import xyz.mastriel.cutapi.data.getOrThrow
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.registry.id
@@ -55,6 +53,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import kotlin.time.Duration.Companion.milliseconds
 
 internal enum class ItemTraitStrength { Default, Explicit }
 
@@ -378,6 +377,12 @@ public object ItemMaterializationManager {
 
     @Suppress("DEPRECATION")
     internal fun verifyBuiltInRoundTrips() {
+        val componentlessDurability = ItemStack(Material.COMMAND_BLOCK_MINECART)
+        check(!componentlessDurability.hasData(DataComponentTypes.DAMAGE))
+        componentlessDurability.setAttachment(Durability(4))
+        check(componentlessDurability.getData(DataComponentTypes.MAX_DAMAGE) == 4)
+        check(componentlessDurability.getData(DataComponentTypes.DAMAGE) == 0)
+
         val durability = ItemStack(Material.DIAMOND_PICKAXE)
         val nativeMaxDamage = requireNotNull(durability.getData(DataComponentTypes.MAX_DAMAGE))
         durability.setAttachment(Durability(77))
@@ -387,6 +392,10 @@ public object ItemMaterializationManager {
         val reloaded = Bukkit.getUnsafe().deserializeItem(Bukkit.getUnsafe().serializeItem(durability))
         check(reloaded.getData(DataComponentTypes.MAX_DAMAGE) == 77)
         check(reloaded.hasStoredItemMaterialization())
+        check(reloaded.getData(DataComponentTypes.DAMAGE) == 0)
+        reloaded.setData(DataComponentTypes.DAMAGE, 12)
+        check(ItemAttachmentReconciler.reconcile(reloaded))
+        check(reloaded.getData(DataComponentTypes.DAMAGE) == 12)
         reloaded.removeAttachment(Durability)
         check(reloaded.getData(DataComponentTypes.MAX_DAMAGE) == nativeMaxDamage)
         check(!reloaded.hasStoredItemMaterialization())
@@ -427,21 +436,40 @@ public object ItemMaterializationManager {
                 ?.none { it.modifier().key == modifierKey.toNamespacedKey() } != false,
         )
 
+        for (material in listOf(Material.PAPER, Material.DIAMOND_SWORD, Material.DIAMOND_AXE)) {
+            val weaponStack = ItemStack(material)
+            val baselineAttributes = ComponentSnapshots.capture(weaponStack, DataComponentTypes.ATTRIBUTE_MODIFIERS)
+            val baselineWeapon = ComponentSnapshots.capture(weaponStack, DataComponentTypes.WEAPON)
+            weaponStack.setAttachment(MeleeWeapon(7.5, 1.7, 2, 750.milliseconds))
+            weaponStack.addAttachment(
+                ModifyAttribute(
+                    key = modifierKey,
+                    slotGroup = EquipmentSlotGroup.MAINHAND,
+                    attribute = Attribute.ATTACK_DAMAGE,
+                    amount = 2.0,
+                ),
+            )
+
+            val modifiers = requireNotNull(weaponStack.getData(DataComponentTypes.ATTRIBUTE_MODIFIERS)).modifiers()
+            check(modifiers.single { it.modifier().key == BaseAttackDamageKey }.modifier().amount == 6.5)
+            check(modifiers.single { it.modifier().key == BaseAttackSpeedKey }.modifier().amount == -2.3)
+            check(modifiers.any { it.modifier().key == modifierKey.toNamespacedKey() })
+            val weaponComponent = requireNotNull(weaponStack.getData(DataComponentTypes.WEAPON))
+            check(weaponComponent.itemDamagePerAttack() == 2)
+            check(weaponComponent.disableBlockingForSeconds() == 0.75f)
+
+            weaponStack.removeAttachment(MeleeWeapon)
+            weaponStack.removeAttachment(ModifyAttribute)
+            check(ComponentSnapshots.capture(weaponStack, DataComponentTypes.ATTRIBUTE_MODIFIERS) == baselineAttributes)
+            check(ComponentSnapshots.capture(weaponStack, DataComponentTypes.WEAPON) == baselineWeapon)
+        }
+
         val equipable = ItemStack(Material.PAPER)
         equipable.setAttachment(Equipable(org.bukkit.inventory.EquipmentSlot.HEAD))
         check(equipable.hasData(DataComponentTypes.EQUIPPABLE))
         equipable.removeAttachment(Equipable)
         check(!equipable.isDataOverridden(DataComponentTypes.EQUIPPABLE))
 
-        val tool = ItemStack(Material.PAPER)
-        tool.setAttachment(
-            VanillaTool(
-                Tool(ToolCategory.Pickaxe, ToolTier.Diamond, ToolSpeed.Diamond),
-            ),
-        )
-        check(tool.hasData(DataComponentTypes.TOOL))
-        tool.removeAttachment(VanillaTool)
-        check(!tool.isDataOverridden(DataComponentTypes.TOOL))
     }
 
     private const val MaxNestedDepth: Int = 16

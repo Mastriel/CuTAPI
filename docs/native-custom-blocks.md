@@ -218,7 +218,7 @@ vanilla registry is ready.
 
 ```kotlin
 visual(BlockVisualMethod.NoteBlock)
-model(BlockModel.Model("example://block/copper_lamp.json"))
+model(BlockModel.Model("example://block/copper_lamp.model.json"))
 ```
 
 This allocates a generated note-block model and is efficient for dense full-cube terrain. Minecraft
@@ -231,7 +231,7 @@ appears as a note block without the pack.
 
 ```kotlin
 visual(BlockVisualMethod.Mushroom)
-model(BlockModel.Model("example://block/copper_lamp.json"))
+model(BlockModel.Model("example://block/copper_lamp.model.json"))
 ```
 
 This allocates red-mushroom, brown-mushroom, and mushroom-stem states. Their 192 states leave 189
@@ -246,20 +246,25 @@ blockstate files. Without the pack, it appears as an unusual mushroom state.
 visual {
     BlockVisualMethod.DisplayEntity(
         carrier = blockVisualData(Material.BARRIER),
-        transform = ItemDisplay.ItemDisplayTransform.FIXED,
     )
 }
-model(BlockModel.Model("example://block/copper_lamp.json"))
+model(BlockModel.Model("example://block/copper_lamp.model.json"))
 ```
 
 This sends a packet-only `ItemDisplay` while keeping the chosen carrier in the chunk. It consumes no
 note or mushroom capacity and supports transforms, interpolation, oversized models, and animation.
 The block model is required and is connected to a deterministic generated item-model resource.
+The display transform defaults to `NONE`, preserving the model's authored block-sized coordinates.
+This bypasses inherited item presentation such as `block/block`'s half-sized `fixed` transform. Set
+`transform` explicitly only when the model is intentionally authored for another item-display context.
+By default, CuTAPI explicitly samples the block and sky light incident on the carrier's cell and
+faces. This prevents the display from going dark when its entity is centered inside the carrier.
+A definition can still request fixed light levels with `brightness = Display.Brightness(15, 15)`.
 It requires one visible virtual entity per block per player, making it unsuitable for dense terrain.
-Collision, selection, pathfinding, occlusion, and crack overlays belong to the carrier; lighting,
-shadows, ambient occlusion, and culling differ from chunk models. Without the pack, its item model is
-missing or falls back. Tracking, reconnects, teleports, pistons, and state changes are explicitly
-synchronized by CuTAPI.
+Collision, selection, pathfinding, and occlusion belong to the carrier; lighting, shadows, ambient
+occlusion, and culling differ from chunk models. Breaking cracks and particles are generated from the
+display model. Without the pack, its item model is missing or falls back. Tracking, reconnects,
+teleports, pistons, and state changes are explicitly synchronized by CuTAPI.
 
 All finite allocation is deterministic by definition ID and canonical state values. Startup fails for
 missing visuals/models, finite-capacity exhaustion, incompatible models, duplicate assignments, or
@@ -316,13 +321,41 @@ fun registerExampleSystems() {
 ```
 
 Both system types share one priority-ordered registry. Definitions expose immutable intrinsic
-attachments. Only a placed native tile entity can add, replace, suppress, or remove persisted overlay
-attachments with `setAttachment`, `addAttachment`, and `removeAttachment`; changes invoke
+attachments. A placed custom or vanilla tile entity can add, replace, suppress, or remove persisted
+overlay attachments with `setAttachment`, `addAttachment`, and `removeAttachment`; changes invoke
 `TileSystem.onAttachmentChanged`.
 
 `BlockSystem` also exposes placement, left/right interaction, neighbor change, state change,
 pre-break, drop, post-break, and explosion callbacks. The native block and block entity route these
 lifecycles; `TileSystem.onTick` runs from Minecraft's block-entity ticker.
+
+## Placed block wrappers
+
+Like `CuTItemStack`, the placed-block API wraps both vanilla and custom values. An ordinary vanilla
+block becomes `CuTPlacedBlock`, while a vanilla block backed by Bukkit `TileState` becomes
+`CuTPlacedTileEntity`. Custom definitions still select their registered specialized wrapper class.
+
+```kotlin
+import xyz.mastriel.cutapi.block.CustomBlockManager.Companion.wrap
+
+val placed: CuTPlacedTile = block.wrap()
+val definition: CustomTile<*>? = placed.customTile
+val state: CustomBlockState? = placed.customState
+
+val tileEntity: CuTPlacedTileEntity? = block.wrap<CuTPlacedTileEntity>()
+if (tileEntity != null) {
+    tileEntity.setAttachment(MachineData(energy = 20))
+}
+```
+
+`identity` is a `BlockIdentity.Custom` or `BlockIdentity.Vanilla`; `isCustom`, `customTile`,
+`material`, and `customState` provide the common shortcuts. The strict `type` and `state` properties
+remain available for code that requires a custom definition and throw when used for vanilla blocks.
+Persisted attachment overlays on vanilla tile entities use that tile state's PDC.
+
+Wrapping does not opt vanilla blocks into CuTAPI's native lifecycle. Custom mining, native
+block-entity ticking, projection, and automatic block-system event routing remain custom-block
+features; vanilla behavior continues through Bukkit and Minecraft.
 
 CraftBukkit does not have a public wrapper factory for third-party block-entity types. CuTAPI's native
 and system APIs operate normally, but direct calls such as `Block#getState()` or
@@ -355,8 +388,15 @@ the Paper break event, block-system pre-break, native removal, durability, produ
 drop event, post-break, sound/particle, cleanup order and disables native automatic loot to prevent
 duplicates. Cancelled completion retains and resends the projected block.
 
-Mining visuals have up to one tick of latency and depend on explicit crack packets. `DisplayEntity`
-cracks cover only its carrier. Another plugin independently spoofing `BLOCK_BREAK_SPEED` cannot be
-merged with unknown client-only state. Commands, editing plugins, explosions, pistons, and API removal
-use their own removal contexts rather than a player mining session, and redundant start/abort traffic
-is rate-limited.
+Mining visuals have up to one tick of latency. Finite and vanilla visuals use explicit crack packets.
+For `DisplayEntity`, pack generation creates ten item-model variants by compositing the vanilla
+destroy-stage textures over every resolved model texture. The compositor applies vanilla's per-channel
+crumbling blend (`2 * base * overlay`) and alpha cutoff, preserving dark cracks, bright edges, and
+the source texture's transparency. Texture loading preserves the encoded grayscale samples, so the
+grayscale early stages and indexed-color later stages use the same crack brightness. Mining updates
+the existing packet-only display to the highest active stage, while hit and completion effects use
+item-model particles rather than the invisible carrier. Another plugin independently spoofing
+`BLOCK_BREAK_SPEED` cannot be merged
+with unknown client-only state. Commands, editing plugins, explosions, pistons, and API removal use
+their own removal contexts rather than a player mining session, and redundant start/abort traffic is
+rate-limited.

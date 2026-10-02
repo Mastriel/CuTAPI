@@ -65,6 +65,18 @@ public class PlayerBlockPlaceContext(player: Player, public val event: BlockPlac
 public class PlayerDropItemContext(player: Player, public val event: PlayerDropItemEvent) :
     PlayerSystemContext(player)
 
+public class PlayerHeldSlotChangeContext(player: Player, public val event: PlayerItemHeldEvent) :
+    PlayerSystemContext(player)
+
+public class PlayerProjectileHitContext(
+    player: Player,
+    public val projectile: Projectile,
+    public val event: ProjectileHitEvent,
+) : PlayerSystemContext(player)
+
+public class PlayerToggleGlideContext(player: Player, public val event: EntityToggleGlideEvent) :
+    PlayerSystemContext(player)
+
 public class PlayerTickContext(player: Player) : PlayerSystemContext(player)
 
 public interface PlayerSystem : CuTSystem<Player> {
@@ -81,6 +93,9 @@ public interface PlayerSystem : CuTSystem<Player> {
     public fun onBreak(context: PlayerBlockBreakContext) {}
     public fun onPlace(context: PlayerBlockPlaceContext) {}
     public fun onDropItem(context: PlayerDropItemContext) {}
+    public fun onHeldSlotChange(context: PlayerHeldSlotChangeContext) {}
+    public fun onProjectileHit(context: PlayerProjectileHitContext) {}
+    public fun onToggleGlide(context: PlayerToggleGlideContext) {}
     public fun onTick(context: PlayerTickContext) {}
 
     public companion object : IdentifierRegistry<PlayerSystem>(id("cutapi:registry/player_system"))

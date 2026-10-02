@@ -12,20 +12,20 @@ import xyz.mastriel.cutapi.resources.builtin.*
 public data class Equipable(
     public val slot: EquipmentSlot,
     public val isSwappable: Boolean = true,
-    public val model: ResourceRef<Model3D>? = null,
+    public val model: ResourceRef<MinecraftModel>? = null,
     public var damageItemWhenHurt: Boolean = false
 ) : ItemAttachment {
 
     public class Builder internal constructor(public val slot: EquipmentSlot) {
         public var isSwappable: Boolean = true
-        public var model: ResourceRef<Model3D>? = null
+        public var model: ResourceRef<MinecraftModel>? = null
         public var damageItemWhenHurt: Boolean = false
     }
 
     public companion object : Schema<Equipable> by schema(id(Plugin, "equipable"), {
         property(Equipable::slot, VariantSerializer.Enum<EquipmentSlot>())
         property(Equipable::isSwappable, VariantSerializer.Boolean, name = "is_swappable")
-        property(Equipable::model, VariantSerializer.ResourceRef<Model3D>().nullable())
+        property(Equipable::model, VariantSerializer.ResourceRef<MinecraftModel>().nullable())
         property(
             Equipable::damageItemWhenHurt,
             VariantSerializer.Boolean,
@@ -78,7 +78,7 @@ internal val EquipableMaterializer: ItemAttachmentMaterializer<Equipable>
             meta.setEquippable(meta.equippable.also {
                 it.slot = attachment.slot
                 it.isSwappable = attachment.isSwappable
-                it.model = attachment.model?.getResource()?.getItemModel()?.toIdentifier()?.toNamespacedKey()
+                it.model = attachment.model?.toMinecraftModelLocator()?.let(::id)?.toNamespacedKey()
                 it.isDamageOnHurt = attachment.damageItemWhenHurt
             })
         }

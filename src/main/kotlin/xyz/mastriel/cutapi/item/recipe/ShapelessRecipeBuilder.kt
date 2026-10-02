@@ -97,7 +97,7 @@ public fun ItemDescriptorBuilder.shapelessRecipe(
     onRegister += {
         val builder = ShapelessRecipeBuilder(item.createItemStack(amount), id).apply(block)
         CustomShapelessRecipe.modifyRegistry {
-            builder.build()
+            register(builder.build())
         }
     }
 }

@@ -181,6 +181,22 @@ public fun normalizeRefPath(path: String): String {
     return path.replace("\\", "/").removeSuffix("/").removePrefix("/")
 }
 
+/** Replaces this reference's complete compound extension and optionally inserts a generated sub-ID. */
+public fun <T : Resource> ResourceRef<*>.withResourceExtension(
+    expectedExtension: String,
+    newExtension: String,
+    subId: String? = null,
+): ResourceRef<T> {
+    require(extension == expectedExtension) {
+        "Expected resource extension '$expectedExtension' for $this, found '$extension'."
+    }
+    require(subId?.isNotBlank() != false) { "Generated resource subId cannot be blank." }
+    val sourcePath = path(withExtension = true)
+    val basePath = sourcePath.removeSuffix(".$expectedExtension")
+    val generatedSuffix = subId?.let { "${Locator.GENERATED_SEPARATOR}$it" }.orEmpty()
+    return ref(root, "$basePath$generatedSuffix.$newExtension")
+}
+
 /**
  * Creates a `ResourceRef` from a root and a path.
  * @param root The resource root.

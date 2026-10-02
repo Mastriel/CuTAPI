@@ -38,10 +38,15 @@ internal class NativeCustomBlockEntity(
     state: BlockState,
 ) : BlockEntity(NativeBlockTypes.getBlockEntityType(definition.id), pos, state), WorldlyContainer {
     private var lifecycleLoaded: Boolean = false
+    private var placedTileSnapshot: CuTPlacedTileEntity? = null
     private val viewers: MutableList<HumanEntity> = mutableListOf()
     private var containerMaxStackSize: Int = Container.MAX_STACK
     private val craftInventory: CraftInventory by lazy { CraftInventory(this) }
     private var bukkitHolder: BlockInventoryHolder? = null
+    // Minecraft mutates non-empty stacks returned by Container#getItem and then calls setChanged;
+    // it does not call setItem for a hopper merge. Keep those slot views live until they are flushed.
+    private val nativeInventorySlots: MutableMap<Int, NativeItemStack> = mutableMapOf()
+    private var flushingNativeInventory: Boolean = false
 
     fun tick() {
         val tile = placedTile() ?: return
@@ -77,18 +82,26 @@ internal class NativeCustomBlockEntity(
     }
 
     override fun preRemoveSideEffects(pos: BlockPos, state: BlockState) {
-        placedTile()?.let { tile ->
+        placedTile(state)?.let { tile ->
             tile.snapshotForRemoval()
             tileSystems(tile).forEach { it.onRemoved(TileRemoveContext(tile)) }
         }
-        super.preRemoveSideEffects(pos, state)
+        // BlockEntity's implementation drops Container contents immediately. CuTAPI inventories
+        // apply their DropContents, KeepContents, or DeleteContents policy later through
+        // BlockInventorySystem, so delegating here would release the same contents twice and
+        // would also make removeWithoutDrops produce drops.
     }
 
-    private fun placedTile(): CuTPlacedTileEntity? {
+    private fun placedTile(stateSnapshot: BlockState = blockState): CuTPlacedTileEntity? {
         if (NativeBlockLifecycle.state != NativeBlockState.Active) return null
+        placedTileSnapshot?.let { return it }
         val currentLevel = level as? net.minecraft.server.level.ServerLevel ?: return null
         val world: CraftWorld = currentLevel.world
-        return NativeBlockTypes.placedTile(world.getBlockAt(blockPos.x, blockPos.y, blockPos.z)) as? CuTPlacedTileEntity
+        val block = world.getBlockAt(blockPos.x, blockPos.y, blockPos.z)
+        val tile = NativeBlockTypes.placedTile(block, definition, stateSnapshot) as? CuTPlacedTileEntity ?: return null
+        tile.captureNativeEntity(this)
+        placedTileSnapshot = tile
+        return tile
     }
 
     private fun tileSystems(tile: CuTPlacedTileEntity): List<TileSystem> =
@@ -100,8 +113,12 @@ internal class NativeCustomBlockEntity(
 
     override fun isEmpty(): Boolean = logicalInventory()?.contents()?.all { it == null || it.type.isAir } ?: true
 
-    override fun getItem(slot: Int): NativeItemStack =
-        logicalInventory()?.getItem(slot)?.nms() ?: NativeItemStack.EMPTY
+    override fun getItem(slot: Int): NativeItemStack {
+        nativeInventorySlots[slot]?.let { return it }
+        val stack = logicalInventory()?.getItem(slot)?.nms() ?: return NativeItemStack.EMPTY
+        nativeInventorySlots[slot] = stack
+        return stack
+    }
 
     override fun removeItem(slot: Int, amount: Int): NativeItemStack =
         logicalInventory()?.extractFromAutomation(slot, amount)?.nms() ?: NativeItemStack.EMPTY
@@ -117,6 +134,7 @@ internal class NativeCustomBlockEntity(
 
     override fun clearContent() {
         logicalInventory()?.clear()
+        nativeInventorySlots.clear()
     }
 
     override fun getMaxStackSize(): Int = containerMaxStackSize
@@ -126,7 +144,33 @@ internal class NativeCustomBlockEntity(
     }
 
     override fun setChanged() {
+        flushInventoryChanges()
         super.setChanged()
+    }
+
+    internal fun flushInventoryChanges() {
+        if (!flushingNativeInventory) {
+            flushingNativeInventory = true
+            try {
+                flushNativeInventory()
+            } finally {
+                flushingNativeInventory = false
+            }
+        }
+    }
+
+    internal fun invalidateInventorySlot(slot: Int) {
+        nativeInventorySlots.remove(slot)
+    }
+
+    private fun flushNativeInventory() {
+        val inventory = logicalInventory() ?: run {
+            nativeInventorySlots.clear()
+            return
+        }
+        nativeInventorySlots.toMap().forEach { (slot, stack) ->
+            inventory.setFromAutomation(slot, stack.takeUnless(NativeItemStack::isEmpty)?.bukkit())
+        }
     }
 
     override fun stillValid(player: NativePlayer): Boolean =
@@ -151,6 +195,8 @@ internal class NativeCustomBlockEntity(
         val tile = placedTile() ?: return null
         return bukkitHolder ?: BlockInventoryHolder(tile, craftInventory).also { bukkitHolder = it }
     }
+
+    override fun getOwner(useSnapshot: Boolean): InventoryHolder? = getOwner()
 
     override fun getLocation(): org.bukkit.Location? = placedTile()?.location
 

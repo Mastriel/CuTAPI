@@ -1,7 +1,6 @@
 package xyz.mastriel.cutapi.block.inventory
 
 import org.bukkit.GameMode
-import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -19,7 +18,6 @@ import xyz.mastriel.cutapi.block.TileSaveContext
 import xyz.mastriel.cutapi.block.TileSystem
 import xyz.mastriel.cutapi.block.TileUnloadContext
 import xyz.mastriel.cutapi.gui.GuiCloseReason
-import xyz.mastriel.cutapi.gui.GuiOpenResult
 import xyz.mastriel.cutapi.item.CuTItemStack
 import xyz.mastriel.cutapi.item.attachments.BlockPlaceAttachment
 import xyz.mastriel.cutapi.item.attachments.Unstackable
@@ -32,16 +30,13 @@ internal object BlockInventorySystem : TileSystem {
     override val id: Identifier = id("cutapi:block_inventory/system")
 
     override fun tilePrerequisite(tile: CuTPlacedTileEntity): Boolean =
-        (tile.type as? CustomTileEntity<*>)?.descriptor?.inventory != null
+        (tile.identity.customTile as? CustomTileEntity<*>)?.descriptor?.inventory != null
 
-    override fun onRightClick(context: BlockInteractContext) {
+    override fun onInteract(context: BlockInteractContext) {
         val tile = context.tile as CuTPlacedTileEntity
         val definition = tile.requireInventory().definition
         if (!definition.openOnRightClick || definition.presentation == null) return
-        if (tile.openInventory(context.player) is GuiOpenResult.Opened) {
-            context.event.setUseInteractedBlock(Event.Result.DENY)
-            context.event.setUseItemInHand(Event.Result.DENY)
-        }
+        context.event.handleBlockInventoryInteraction { tile.openInventory(context.player) }
     }
 
     override fun onPreBreak(context: BlockPreBreakContext) {
@@ -52,6 +47,7 @@ internal object BlockInventorySystem : TileSystem {
         val tile = context.tile as CuTPlacedTileEntity
         val inventory = tile.inventoryOrNull ?: return
         val definition = inventory.definition
+        val tileId = requireNotNull(tile.identity.customTile).id
         val snapshot = inventory.snapshot()
         val wrongToolDeletes = definition.requireCorrectToolForContents &&
             context.player?.gameMode in setOf(GameMode.SURVIVAL, GameMode.ADVENTURE) &&
@@ -65,7 +61,7 @@ internal object BlockInventorySystem : TileSystem {
                 BlockInventoryBreakPolicy.KeepContents -> {
                     context.drops.removeIf { drop ->
                         runCatching {
-                            CuTItemStack.wrap(drop).getAttachmentOrNull(BlockPlaceAttachment)?.tileId == tile.type.id
+                            CuTItemStack.wrap(drop).getAttachmentOrNull(BlockPlaceAttachment)?.tileId == tileId
                         }.getOrDefault(false)
                     }
                     if (snapshot != null) {
@@ -81,7 +77,7 @@ internal object BlockInventorySystem : TileSystem {
         } else if (definition.breakPolicy == BlockInventoryBreakPolicy.KeepContents) {
             context.drops.removeIf { drop ->
                 runCatching {
-                    CuTItemStack.wrap(drop).getAttachmentOrNull(BlockPlaceAttachment)?.tileId == tile.type.id
+                    CuTItemStack.wrap(drop).getAttachmentOrNull(BlockPlaceAttachment)?.tileId == tileId
                 }.getOrDefault(false)
             }
         }
@@ -91,6 +87,7 @@ internal object BlockInventorySystem : TileSystem {
     override fun onExploded(context: BlockExplosionContext) {
         val tile = context.tile as CuTPlacedTileEntity
         val inventory = tile.inventoryOrNull ?: return
+        val tileDefinition = requireNotNull(tile.identity.customTile)
         inventory.flushPending()
         CuTAPI.guiManager.closeForBlock(tile, GuiCloseReason.BlockRemoved)
         val snapshot = inventory.snapshot()
@@ -99,8 +96,8 @@ internal object BlockInventorySystem : TileSystem {
                 tile.handle.world.dropItemNaturally(tile.location, stack.clone())
             }
             BlockInventoryBreakPolicy.KeepContents -> if (snapshot != null) {
-                val placement = tile.type.placementItemOrNull()?.createItemStack()?.vanilla()
-                    ?: error("KeepContents tile ${tile.type.id} has no placement item.")
+                val placement = tileDefinition.placementItemOrNull()?.createItemStack()?.vanilla()
+                    ?: error("KeepContents tile ${tileDefinition.id} has no placement item.")
                 val wrapped = CuTItemStack.wrap(placement)
                 wrapped.setAttachment(snapshot)
                 wrapped.setAttachment(Unstackable)

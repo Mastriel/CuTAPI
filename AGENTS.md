@@ -1,5 +1,11 @@
 # CuTAPI Development Rules
 
+## Development Servers
+
+- Before starting a development server, verify that its configured port is free and that no applicable server or world lock file exists.
+- If the port is already in use or a lock file exists, do not attempt to start the server.
+- Do not retry on another port, world, or universe to bypass this guard.
+
 ## Enum Entry Names
 
 - Enum entry names must use UpperCamelCase, such as `MainHand` and `ReadOnly`, never SCREAMING_SNAKE_CASE.

@@ -18,6 +18,77 @@ import kotlin.test.*
 public class BlockDefinitionApiTest : MockBukkitTest() {
 
     @Test
+    public fun `vanilla blocks and tile entities use the common placed wrappers`() {
+        val world = server.addSimpleWorld("vanilla_placed_wrappers")
+        val manager = CustomBlockManager()
+        val ordinaryBlock = world.getBlockAt(0, 64, 0).apply { type = Material.STONE }
+        val tileBlock = world.getBlockAt(1, 64, 0).apply { type = Material.CHEST }
+
+        val ordinary = manager.getPlacedTile(ordinaryBlock)
+        val tile = manager.getPlacedTile(tileBlock)
+
+        assertIs<CuTPlacedBlock>(ordinary)
+        assertIs<CuTPlacedTileEntity>(tile)
+        assertIs<BlockIdentity.Vanilla>(ordinary.identity)
+        assertIs<BlockIdentity.Vanilla>(tile.identity)
+        assertFalse(ordinary.isCustom)
+        assertFalse(tile.isCustom)
+        assertNull(ordinary.customTile)
+        assertNull(tile.customTile)
+        assertNull(ordinary.customState)
+        assertNull(tile.customState)
+        assertEquals(Material.STONE, ordinary.material)
+        assertEquals(Material.CHEST, tile.material)
+        assertNull(manager.getPlacedTile(ordinaryBlock) as? CuTPlacedTileEntity)
+        assertNotNull(manager.getPlacedTile(tileBlock) as? CuTPlacedTileEntity)
+
+        with(CustomBlockManager.Companion) {
+            assertEquals(CuTPlacedBlock::class, ordinaryBlock.typeClass)
+            assertEquals(CuTPlacedTileEntity::class, tileBlock.typeClass)
+        }
+    }
+
+    @Test
+    public fun `vanilla tile entity wrappers persist placed attachment overlays`() {
+        Schema.registerSchema(DefinitionBlockAttachment)
+        val world = server.addSimpleWorld("vanilla_tile_attachments")
+        val block = world.getBlockAt(0, 64, 0).apply { type = Material.CHEST }
+        val manager = CustomBlockManager()
+        val first = assertIs<CuTPlacedTileEntity>(manager.getPlacedTile(block))
+
+        first.setAttachment(DefinitionBlockAttachment(7))
+
+        val rewrapped = assertIs<CuTPlacedTileEntity>(manager.getPlacedTile(block))
+        assertEquals(DefinitionBlockAttachment(7), rewrapped.getAttachment(DefinitionBlockAttachment))
+    }
+
+    @Test
+    public fun `removed native tile wrappers retain their supplied definition and state`() {
+        val manager = CustomBlockManager()
+        manager.registerPlacedTileType(
+            id("test:snapshot_aware_tile"),
+            SnapshotAwarePlacedTileEntity::class,
+            ::SnapshotAwarePlacedTileEntity,
+        )
+        val definition = customTileEntity<SnapshotAwarePlacedTileEntity>(id("test:removed_native_tile")) {
+            itemPolicy = BlockItemPolicy.None
+        }
+        val state = definition.descriptor.states.defaultState
+        val world = server.addSimpleWorld("removed_native_tile_snapshot")
+        val replacedBlock = world.getBlockAt(0, 64, 0).apply { type = Material.AIR }
+
+        val removed = assertIs<SnapshotAwarePlacedTileEntity>(
+            manager.getPlacedTile(replacedBlock, definition, state),
+        )
+
+        assertSame(definition, removed.definitionAtConstruction)
+        assertSame(definition, removed.customTile)
+        assertEquals(state, removed.customState)
+        assertTrue(removed.isCustom)
+        assertFalse(manager.getPlacedTile(replacedBlock).isCustom)
+    }
+
+    @Test
     public fun `custom tile definition companions provide concrete debug views`() {
         assertTrue(CustomBlock::class.companionObject!!.isSubclassOf(DebugViewProvider::class))
         assertTrue(CustomTileEntity::class.companionObject!!.isSubclassOf(DebugViewProvider::class))
@@ -271,6 +342,10 @@ public class BlockDefinitionApiTest : MockBukkitTest() {
 private class TestPlacedBlock(handle: Block) : CuTPlacedBlock(handle)
 
 private class TestPlacedTileEntity(handle: Block) : CuTPlacedTileEntity(handle)
+
+private class SnapshotAwarePlacedTileEntity(handle: Block) : CuTPlacedTileEntity(handle) {
+    val definitionAtConstruction: CustomTile<*> = requireNotNull(identity.customTile)
+}
 
 @RepeatableAttachment
 private data class DefinitionBlockAttachment(val value: Int) : BlockAttachment {

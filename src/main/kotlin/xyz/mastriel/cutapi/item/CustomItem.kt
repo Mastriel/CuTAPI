@@ -10,8 +10,15 @@ import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.data.*
+import xyz.mastriel.cutapi.item.CustomItem.Companion.ProgressArrow
+import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.item.nativeitem.*
+import xyz.mastriel.cutapi.item.systems.*
 import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.*
+import xyz.mastriel.cutapi.resources.builtin.*
+import xyz.mastriel.cutapi.resources.process.*
+import xyz.mastriel.cutapi.utils.Color
 import kotlin.reflect.*
 
 public object CustomItemSerializer : IdentifiableSerializer<CustomItem<*>>("customItem", CustomItem)
@@ -32,7 +39,7 @@ public open class CustomItem<TStack : CuTItemStack> @PublishedApi internal const
 
     public val itemType: ItemType
         get() {
-            xyz.mastriel.cutapi.item.nativeitem.NativeItemLifecycle.requireActive()
+            NativeItemLifecycle.requireActive()
             return NativeItemTypes.get(id)
         }
 
@@ -46,7 +53,7 @@ public open class CustomItem<TStack : CuTItemStack> @PublishedApi internal const
         check(NativeItemLifecycle.state == NativeItemState.Collecting) {
             "Custom item $id cannot be prepared while native items are ${NativeItemLifecycle.state}."
         }
-        check(CustomItem.isOpen) { "Custom item $id cannot be prepared after its registry has closed." }
+        check(isOpen) { "Custom item $id cannot be prepared after its registry has closed." }
         preparedDescriptor = transform(preparedDescriptor)
     }
 
@@ -58,19 +65,40 @@ public open class CustomItem<TStack : CuTItemStack> @PublishedApi internal const
 
     private val attachmentHolder by lazy { CustomItemAttachmentHolder(this) }
 
-    override fun hasAttachment(schema: xyz.mastriel.cutapi.data.Schema<out ItemAttachment>): Boolean =
+    override fun hasAttachment(schema: Schema<out ItemAttachment>): Boolean =
         attachmentHolder.hasAttachment(schema)
 
-    override fun <T : ItemAttachment> getAttachment(schema: xyz.mastriel.cutapi.data.Schema<T>): T =
+    override fun <T : ItemAttachment> getAttachment(schema: Schema<T>): T =
         attachmentHolder.getAttachment(schema)
 
-    override fun <T : ItemAttachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
+    override fun <T : ItemAttachment> getAttachmentOrNull(schema: Schema<T>): T? =
         attachmentHolder.getAttachmentOrNull(schema)
 
-    override fun <T : ItemAttachment> getAttachments(schema: xyz.mastriel.cutapi.data.Schema<T>): List<T> =
+    override fun <T : ItemAttachment> getAttachments(schema: Schema<T>): List<T> =
         attachmentHolder.getAttachments(schema)
 
     override fun getAllAttachments(): List<ItemAttachment> = attachmentHolder.getAllAttachments()
+
+    /** Controls the rendered appearance of [ProgressArrow]. */
+    public data class ProgressVisual(
+        public val progress: Float,
+        public val unfilledColor: Color = Color.of(0x8B8B8B),
+        public val filledColor: Color = Color.of(0xFFFFFF),
+        public val inventoryBackground: Boolean = true,
+    ) : ItemAttachment {
+        public companion object : Schema<ProgressVisual> by schema(id("cutapi:progress_visual"), {
+            property(ProgressVisual::progress, VariantSerializer.Float)
+            property(ProgressVisual::unfilledColor, BuiltinSerializers.Color) {
+                optional(omitDefaults = true) { Color.of(0x8B8B8B) }
+            }
+            property(ProgressVisual::filledColor, BuiltinSerializers.Color) {
+                optional(omitDefaults = true) { Color.of(0xFFFFFF) }
+            }
+            property(ProgressVisual::inventoryBackground, VariantSerializer.Boolean) {
+                optional(omitDefaults = true) { true }
+            }
+        })
+    }
 
     public companion object :
         IdentifierRegistry<CustomItem<*>>(id("cutapi:registry/custom_item")),
@@ -92,16 +120,47 @@ public open class CustomItem<TStack : CuTItemStack> @PublishedApi internal const
         internal val DeferredRegistry = defer(RegistryPriority(Int.MAX_VALUE))
 
         public val InventoryBackground: CustomItem<CuTItemStack> by DeferredRegistry.registerCustomItem(
-            id = id("cutapi:inventory_background"),
+            id = id("cutapi:ui/inventory_background"),
             backingItem = ItemType.GLISTERING_MELON_SLICE,
         ) {
-            attach(xyz.mastriel.cutapi.item.attachments.HideTooltip)
+            attach(HideTooltip, ItemOriginImmune)
             display {
-                texture = itemModel(
-                    Plugin,
-                    "ui/inventory_bg.model3d.json",
-                )
+                itemModel = ref(Plugin, "ui/inventory_bg.item_model.json")
             }
         }
+
+        public val ProgressArrow: CustomItem<CuTItemStack> by DeferredRegistry.registerCustomItem(
+            id = id("cutapi:ui/progress_arrow"),
+            backingItem = ItemType.GLISTERING_MELON_SLICE,
+        ) {
+            attach(ProgressVisual(0f), HideTooltip, ItemOriginImmune)
+            display {
+                val visual = getAttachmentOrNull(ProgressVisual) ?: return@display
+                itemModel = horizontalProgressItemModelRef(
+                    source = ref<Texture2D>(Plugin, "ui/progress_arrow_empty.png"),
+                    generationSubId = ProgressArrowGenerationSubId,
+                )
+                customModelData {
+                    float(horizontalProgressFrameIndex(visual.progress, ProgressArrowFrameCount).toFloat())
+                    flag(visual.inventoryBackground)
+                    color(visual.unfilledColor)
+                    color(visual.filledColor)
+                }
+            }
+        }
+
+        public val Transparent: CustomItem<CuTItemStack> by DeferredRegistry.registerCustomItem(
+            id = id("cutapi:ui/transparent"),
+            backingItem = ItemType.GLISTERING_MELON_SLICE,
+        ) {
+            attach(HideTooltip, ItemOriginImmune)
+
+            display {
+                itemModel = ref(Plugin, "ui/transparent.png")
+            }
+        }
+
+        private const val ProgressArrowFrameCount: Int = 24
+        private const val ProgressArrowGenerationSubId: String = "frames"
     }
 }

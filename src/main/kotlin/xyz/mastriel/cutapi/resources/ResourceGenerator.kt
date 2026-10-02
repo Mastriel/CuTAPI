@@ -28,7 +28,7 @@ public abstract class ResourceGenerator<O : Any>(
     internal fun decodeBlock(root: Variant.Map, subId: String?): GenerateBlock<O> {
         val normalized = root.normalize(optionsSchema.descriptor)
         val options = optionsSchema.deserialize(normalized).getOrThrow()
-        return GenerateBlock(this, subId, options)
+        return GenerateBlock(this, subId, options, root.without(SCHEMA_TYPE_DISCRIMINATOR))
     }
 
     public companion object :

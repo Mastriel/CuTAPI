@@ -9,7 +9,7 @@ public interface BlockTextures {
 
     public data class Single(val texture: ResourceRef<Texture2D>) : BlockTextures {
         override fun getAll(): All = All(texture, texture, texture, texture, texture, texture)
-        override fun getVanillaModelParent(): ResourceRef<Model3D> = ref(MinecraftAssets, "block/cube_all.json")
+        override fun getVanillaModelParent(): ResourceRef<MinecraftModel> = ref(MinecraftAssets, "block/cube_all.model.json")
     }
 
     public data class All(
@@ -21,7 +21,7 @@ public interface BlockTextures {
         val east: ResourceRef<Texture2D>
     ) : BlockTextures {
         override fun getAll(): All = this
-        override fun getVanillaModelParent(): ResourceRef<Model3D> = ref(MinecraftAssets, "block/cube.json")
+        override fun getVanillaModelParent(): ResourceRef<MinecraftModel> = ref(MinecraftAssets, "block/cube.model.json")
     }
 
     public data class Column(
@@ -30,7 +30,7 @@ public interface BlockTextures {
         val side: ResourceRef<Texture2D>,
     ) : BlockTextures {
         override fun getAll(): All = All(up, down, side, side, side, side)
-        override fun getVanillaModelParent(): ResourceRef<Model3D> = ref(MinecraftAssets, "block/cube_column.json")
+        override fun getVanillaModelParent(): ResourceRef<MinecraftModel> = ref(MinecraftAssets, "block/cube_column.model.json")
     }
 
     public data class Orientable(
@@ -40,27 +40,27 @@ public interface BlockTextures {
         val side: ResourceRef<Texture2D>,
     ) : BlockTextures {
         override fun getAll(): All = All(up, down, front, side, side, side)
-        override fun getVanillaModelParent(): ResourceRef<Model3D> =
-            ref(MinecraftAssets, "block/orientable_with_bottom.json")
+        override fun getVanillaModelParent(): ResourceRef<MinecraftModel> =
+            ref(MinecraftAssets, "block/orientable_with_bottom.model.json")
     }
 
 
     public fun getAll(): All
-    public fun getVanillaModelParent(): ResourceRef<Model3D>
+    public fun getVanillaModelParent(): ResourceRef<MinecraftModel>
 }
 
 public sealed class BlockModel {
     public data class Cubic(val textures: BlockTextures) : BlockModel() {
-        internal val model: Model3D by lazy { textures.getVanillaModelParent().getResource()!! }
+        internal val model: MinecraftModel by lazy { textures.getVanillaModelParent().getResource()!! }
     }
 
-    public data class Model(val model: ResourceRef<Model3D>) : BlockModel() {
+    public data class Model(val model: ResourceRef<MinecraftModel>) : BlockModel() {
         public constructor(plugin: CuTPlugin, path: String) : this(ref(plugin, path))
 
         public constructor(stringPath: String) : this(ref(stringPath))
     }
 
-    public fun toModel3D(): Model3D? {
+    public fun toMinecraftModel(): MinecraftModel? {
         return when (this) {
             is Model -> model.getResource()
             is Cubic -> model

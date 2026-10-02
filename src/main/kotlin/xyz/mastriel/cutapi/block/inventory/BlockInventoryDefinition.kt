@@ -1,15 +1,11 @@
 package xyz.mastriel.cutapi.block.inventory
 
-import org.bukkit.block.BlockFace
-import org.bukkit.entity.Player
-import org.bukkit.inventory.InventoryView
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.block.BlockItemPolicy
-import xyz.mastriel.cutapi.block.CuTPlacedTileEntity
-import xyz.mastriel.cutapi.gui.GuiDefinition
-import xyz.mastriel.cutapi.gui.GuiBoundSlotAccess
-import xyz.mastriel.cutapi.gui.GuiSlotPort
-import xyz.mastriel.cutapi.registry.Identifier
+import org.bukkit.block.*
+import org.bukkit.entity.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.block.*
+import xyz.mastriel.cutapi.gui.*
+import xyz.mastriel.cutapi.registry.*
 
 public enum class BlockInventorySlotAccess {
     Input,

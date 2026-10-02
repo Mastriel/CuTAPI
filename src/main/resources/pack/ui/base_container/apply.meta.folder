@@ -1,0 +1,4 @@
+!<cutapi:folder_apply>
+apply: !<cutapi:texture2d>
+  fontSettings:
+    enabled: false

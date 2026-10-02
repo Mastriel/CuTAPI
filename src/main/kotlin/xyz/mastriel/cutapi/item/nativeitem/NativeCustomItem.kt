@@ -1,6 +1,8 @@
 package xyz.mastriel.cutapi.item.nativeitem
 
 import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.core.Position
 import net.minecraft.core.component.TypedDataComponent
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerLevel
@@ -13,12 +15,17 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.SlotAccess
 import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.entity.projectile.Projectile
 import net.minecraft.world.inventory.ClickAction
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.inventory.tooltip.TooltipComponent
+import net.minecraft.world.item.BowItem
+import net.minecraft.world.item.CrossbowItem
+import net.minecraft.world.item.FishingRodItem
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.ItemUseAnimation
+import net.minecraft.world.item.ProjectileItem
 import net.minecraft.world.item.TooltipFlag
 import net.minecraft.world.item.component.TooltipDisplay
 import net.minecraft.world.item.context.UseOnContext
@@ -27,13 +34,18 @@ import net.minecraft.world.level.block.state.BlockState
 import java.util.Optional
 import java.util.function.Consumer
 
+/** Common identity contract for native custom items projected as their vanilla backing item. */
+internal interface NativeBackedItem {
+    val backing: Item
+}
+
 /** A native registry item whose observable gameplay behavior is supplied by [backing]. */
-internal class NativeCustomItem(
+internal open class NativeCustomItem(
     backing: Item,
     key: ResourceKey<Item>,
-) : Item(properties(backing, key)) {
+) : Item(nativeItemProperties(backing, key)), NativeBackedItem {
     private val behavior: NativeItemBehaviorAdapter = NativeItemBehaviorAdapter.create(backing)
-    internal val backing: Item get() = behavior.backing
+    override val backing: Item get() = behavior.backing
 
     override fun onUseTick(level: Level, entity: LivingEntity, stack: ItemStack, remainingUseDuration: Int) =
         backing.onUseTick(level, entity, stack, remainingUseDuration)
@@ -129,23 +141,73 @@ internal class NativeCustomItem(
     override fun canFitInsideContainerItems(): Boolean = backing.canFitInsideContainerItems()
 
     override fun shouldPrintOpWarning(stack: ItemStack, player: Player?): Boolean = backing.shouldPrintOpWarning(stack, player)
+}
 
-    private companion object {
-        fun properties(backing: Item, key: ResourceKey<Item>): Properties {
-            val properties = Properties().setId(key)
-            backing.components().forEach { copyComponent(properties, it) }
+/**
+ * Bow behavior contains concrete [net.minecraft.world.item.ProjectileWeaponItem] checks in vanilla
+ * code, so forwarding [Item] methods cannot preserve it. Keeping the native item a real [BowItem]
+ * lets vanilla ammo selection, drawing, and firing operate on the authoritative custom stack.
+ */
+internal class NativeBowCustomItem(
+    override val backing: BowItem,
+    key: ResourceKey<Item>,
+) : BowItem(nativeItemProperties(backing, key)), NativeBackedItem
 
-            val remainder = backing.craftingRemainder
-            if (!remainder.isEmpty) properties.craftRemainder(remainder.item)
+/** Crossbow counterpart to [NativeBowCustomItem], including charging and loaded-projectile state. */
+internal class NativeCrossbowCustomItem(
+    override val backing: CrossbowItem,
+    key: ResourceKey<Item>,
+) : CrossbowItem(nativeItemProperties(backing, key)), NativeBackedItem
 
-            val requiredFeatures = Properties::class.java.getDeclaredField("requiredFeatures")
-            requiredFeatures.isAccessible = true
-            requiredFeatures.set(properties, backing.requiredFeatures())
-            return properties
-        }
+/** Preserves vanilla cast, retrieve, durability, event, and item-use-stat behavior. */
+internal class NativeFishingRodCustomItem(
+    override val backing: FishingRodItem,
+    key: ResourceKey<Item>,
+) : FishingRodItem(nativeItemProperties(backing, key)), NativeBackedItem
 
-        private fun <T : Any> copyComponent(properties: Properties, component: TypedDataComponent<T>) {
-            properties.component(component.type(), component.value())
-        }
-    }
+/** Preserves the backing item's player-use and dispenser projectile contract. */
+internal class NativeProjectileCustomItem(
+    backing: Item,
+    key: ResourceKey<Item>,
+) : NativeCustomItem(backing, key), ProjectileItem {
+    private val projectileBacking: ProjectileItem = backing as ProjectileItem
+
+    override fun asProjectile(
+        level: Level,
+        position: Position,
+        stack: ItemStack,
+        direction: Direction,
+    ): Projectile = projectileBacking.asProjectile(level, position, stack, direction)
+
+    override fun createDispenseConfig(): ProjectileItem.DispenseConfig =
+        projectileBacking.createDispenseConfig()
+
+    override fun shoot(
+        projectile: Projectile,
+        x: Double,
+        y: Double,
+        z: Double,
+        power: Float,
+        uncertainty: Float,
+    ) = projectileBacking.shoot(projectile, x, y, z, power, uncertainty)
+}
+
+private fun nativeItemProperties(backing: Item, key: ResourceKey<Item>): Item.Properties {
+    val properties = Item.Properties().setId(key)
+    backing.components().forEach { copyComponent(properties, it) }
+
+    val remainder = backing.craftingRemainder
+    if (!remainder.isEmpty) properties.craftRemainder(remainder.item)
+
+    val requiredFeatures = Item.Properties::class.java.getDeclaredField("requiredFeatures")
+    requiredFeatures.isAccessible = true
+    requiredFeatures.set(properties, backing.requiredFeatures())
+    return properties
+}
+
+private fun <T : Any> copyComponent(
+    properties: Item.Properties,
+    component: TypedDataComponent<T>,
+) {
+    properties.component(component.type(), component.value())
 }

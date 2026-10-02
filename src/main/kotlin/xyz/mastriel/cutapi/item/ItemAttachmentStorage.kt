@@ -7,24 +7,6 @@ import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
 import xyz.mastriel.cutapi.registry.*
 
-internal class ItemDescriptorAttachmentHolder(private val descriptor: ItemDescriptor) :
-    AttachmentHolder<ItemAttachment> {
-    override fun hasAttachment(schema: Schema<out ItemAttachment>): Boolean =
-        descriptor.attachments.any { it.schema().id == schema.id }
-
-    override fun <T : ItemAttachment> getAttachment(schema: Schema<T>): T =
-        getAttachmentOrNull(schema) ?: error("Attachment ${schema.id} does not exist on this descriptor.")
-
-    override fun <T : ItemAttachment> getAttachmentOrNull(schema: Schema<T>): T? =
-        getAttachments(schema).firstOrNull()
-
-    override fun <T : ItemAttachment> getAttachments(schema: Schema<T>): List<T> =
-        descriptor.attachments.matching(schema)
-
-    override fun getAllAttachments(): List<ItemAttachment> =
-        descriptor.attachments.toList()
-}
-
 internal class CustomItemAttachmentHolder(private val item: CustomItem<*>) :
     AttachmentHolder<ItemAttachment> {
     private val holder: AttachmentHolder<ItemAttachment> get() = item.identity

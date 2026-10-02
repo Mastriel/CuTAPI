@@ -92,12 +92,11 @@ internal fun generateResources(resources: List<Resource>, stage: ResourceGenerat
             try {
                 val generator = block.generator
                 if (generator.stage != stage) continue
-                val subId = block.subId ?: error("No subId supplied.")
                 val newResources = generate(
                     generator,
                     resource,
                     block,
-                    resource.ref.generatedSubId(subId)
+                    block.subId?.let(resource.ref::generatedSubId) ?: resource.ref
                 )
                 generateResources(newResources, stage)
             } catch (exception: Exception) {

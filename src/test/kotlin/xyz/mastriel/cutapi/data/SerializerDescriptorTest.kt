@@ -110,11 +110,11 @@ class SerializerDescriptorTest {
 
     @Test
     fun `tagged mapped serializers retain logical identity and encoded shape`() {
-        val descriptor = ComponentSerializer.descriptor
+        val descriptor = BuiltinSerializers.Component.descriptor
         val mapped = assertIs<SerializerShape.Mapped>(descriptor.shape)
         val encoded = assertIs<SerializerShape.Primitive>(mapped.encoded.shape)
 
-        assertEquals(ComponentSerializer.id, descriptor.id)
+        assertEquals(BuiltinSerializers.Component.id, descriptor.id)
         assertEquals(VariantKind.String, encoded.kind)
         assertEquals(VariantKind.String.id, mapped.encoded.id)
     }

@@ -72,6 +72,9 @@ public interface BlockSystem : CuTSystem<CuTPlacedTile> {
     public fun onPlaced(context: BlockPlaceContext) {}
     public fun onLeftClick(context: BlockInteractContext) {}
     public fun onRightClick(context: BlockInteractContext) {}
+
+    /** triggered specifically when the player right-clicks a block while not sneaking. usually, prefer this over onRightClick */
+    public fun onInteract(context: BlockInteractContext) {}
     public fun onNeighborChanged(context: BlockNeighborChangeContext) {}
     public fun onStateChanged(context: BlockStateChangeContext) {}
     public fun onPreBreak(context: BlockPreBreakContext) {}

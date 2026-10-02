@@ -1,7 +1,5 @@
 package xyz.mastriel.cutapi.item.internal
 
-import io.papermc.paper.datacomponent.*
-import io.papermc.paper.datacomponent.item.*
 import org.bukkit.*
 import org.bukkit.inventory.*
 import xyz.mastriel.cutapi.*
@@ -9,7 +7,7 @@ import xyz.mastriel.cutapi.block.*
 import xyz.mastriel.cutapi.block.inventory.*
 import xyz.mastriel.cutapi.gui.*
 import xyz.mastriel.cutapi.item.*
-import xyz.mastriel.cutapi.item.attachments.*
+import xyz.mastriel.cutapi.item.systems.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.utils.*
@@ -44,30 +42,34 @@ public object DebugItems {
         type = GuiType.Chest(4),
         context = guiContext<EvilMachineGuiContext>()
     ) {
+        title {
+            text {
+                val miniText = "implosion chamber".toSmallCaps()
+                "<gradient:${CatLatte.Pink}:${CatLatte.Flamingo}>${miniText}".miniMessage
+            }
+        }
         var progress by state { 0.0 }
         fill(all()) {
             item {
                 CustomItem.InventoryBackground.createItemStack().vanilla()
             }
         }
-        boundSlot(EvilMachineInputPort, slot = 12)
-        boundSlot(EvilMachineOutputPort, slot = 14)
-        for (i in 27..35) {
-            val threshold = (i - 27) / 9.0
-            slot(i) {
-                item {
-                    if (progress <= threshold) {
-                        CustomItem.InventoryBackground.createItemStack().vanilla()
-                    } else {
-                        ItemStack(Material.RED_STAINED_GLASS_PANE).emptyName().also {
-                            it.setData(
-                                DataComponentTypes.TOOLTIP_DISPLAY,
-                                TooltipDisplay.tooltipDisplay().hideTooltip(true)
-                            )
-                        }
-                    }
-                }
+        boundSlot(EvilMachineInputPort, slot = 11)
+        boundSlot(EvilMachineOutputPort, slot = 15)
+        // ProgressArrow renders the backgrounds for its neighboring slots as part of one
+        // oversized item model, so those slots must not also render standalone backgrounds.
+        slot(12) {
+            item { null }
+        }
+        slot(13) {
+            item {
+                CustomItem.ProgressArrow.createItemStack().also {
+                    it.setAttachment(CustomItem.ProgressVisual(progress.toFloat()))
+                }.vanilla()
             }
+        }
+        slot(14) {
+            item { null }
         }
 
         whileOpen {
@@ -85,7 +87,7 @@ public object DebugItems {
         attach(EvilMachineData(0, 100))
 
         states {
-            define(HorizontalFacingState.Companion) { HorizontalFacingState.North }
+            define(HorizontalFacingState) { HorizontalFacingState.North }
         }
         orientation { horizontal() }
 
@@ -117,15 +119,5 @@ public object DebugItems {
         )
 
 
-    }
-
-    public object Extensions : DeferredRegistry<ItemIdentityExtension> by ItemIdentityExtension.defer() {
-
-        public val StickExtension: ItemIdentityExtension by registerItemIdentityExtension(
-            id(Plugin, "debug/stick_extension"),
-            ItemType.STICK,
-        ) {
-            attach { Shiny }
-        }
     }
 }

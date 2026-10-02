@@ -7,7 +7,6 @@ import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.data.*
 import xyz.mastriel.cutapi.item.*
 import xyz.mastriel.cutapi.registry.*
-import org.bukkit.Registry as BukkitRegistry
 
 @Suppress("UnstableApiUsage")
 @RepeatableAttachment
@@ -20,8 +19,8 @@ public data class ModifyAttribute(
 ) : ItemAttachment {
     public companion object : Schema<ModifyAttribute> by schema(id(Plugin, "attribute"), {
         property(ModifyAttribute::key, VariantSerializer.Id)
-        property(ModifyAttribute::slotGroup, EquipmentSlotGroupSerializer, name = "slot_group")
-        property(ModifyAttribute::attribute, AttributeSerializer)
+        property(ModifyAttribute::slotGroup, BuiltinSerializers.EquipmentSlotGroup, name = "slot_group")
+        property(ModifyAttribute::attribute, BuiltinSerializers.Attribute)
         property(ModifyAttribute::amount, VariantSerializer.Double)
         property(ModifyAttribute::operation, VariantSerializer.Enum<AttributeModifier.Operation>())
     })
@@ -47,21 +46,3 @@ internal val ModifyAttributeMaterializer: ItemAttachmentMaterializer<ModifyAttri
         )
     }
 }
-
-private val EquipmentSlotGroupSerializer: Serializer<EquipmentSlotGroup> = VariantSerializer.mapped(
-    serializer = VariantSerializer.String,
-    serialize = { it.toString() },
-    deserialize = { name ->
-        EquipmentSlotGroup.getByName(name)
-            ?: throw DataSerializationException("Unknown equipment slot group '$name'")
-    }
-)
-
-private val AttributeSerializer: Serializer<Attribute> = VariantSerializer.mapped(
-    serializer = VariantSerializer.Id,
-    serialize = { it.key.toIdentifier() },
-    deserialize = { identifier ->
-        BukkitRegistry.ATTRIBUTE.get(identifier.toNamespacedKey())
-            ?: throw DataSerializationException("Unknown attribute '$identifier'")
-    }
-)

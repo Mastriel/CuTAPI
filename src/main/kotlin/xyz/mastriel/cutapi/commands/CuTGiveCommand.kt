@@ -35,7 +35,7 @@ private fun BrigadierCommandExecutorContext.sendItemStacks(
         target.inventory.addItem(cutItem.handle)
         sender.sendMessage(
             "&aSuccessfully sent ${target.name} ${amount}x ".colored
-                .append(cutItem.getRenderedItemStack(target).chatTooltip)
+                .append(cutItem.vanilla().chatTooltip(target))
                 .append("&a!".colored)
         )
     }

@@ -54,7 +54,7 @@ public class ResourcePackManager {
      * @return The folder where textures are stored.
      */
     public fun getTexturesFolder(namespace: String): File {
-        return File(tempFolder, "assets/$namespace/textures/item")
+        return File(tempFolder, "assets/$namespace/textures/")
     }
 
     /**
@@ -91,10 +91,9 @@ public class ResourcePackManager {
     /**
      * The generator used to create the resource pack.
      */
-    public val generator: ResourcePackGenerator
+    public val generator: PackVersion75Generator
         get() {
-            // TODO: Detect versions dynamically
-            return PackVersion46Generator()
+            return PackVersion75Generator()
         }
 
     /**
@@ -190,10 +189,7 @@ public class ResourcePackManager {
      * @return The sanitized name.
      */
     public fun sanitizeName(name: String): String {
-        return name.replace(Locator.SUBRESOURCE_SEPARATOR, "__sre__")
-            .replace(Locator.GENERATED_SEPARATOR, "__gen__")
-            .replace(Locator.CLONE_SEPARATOR, "__cln__")
-            .lowercase()
+        return sanitizeResourcePath(name)
     }
 
     /**
@@ -212,3 +208,14 @@ public class ResourcePackManager {
     }
 
 }
+
+/** Converts CuTAPI locator separators and casing into a Minecraft-safe resource path. */
+public fun sanitizeResourcePath(name: String): String =
+    name.replace(Locator.SUBRESOURCE_SEPARATOR, "__sre__")
+        .replace(Locator.GENERATED_SEPARATOR, "__gen__")
+        .replace(Locator.CLONE_SEPARATOR, "__cln__")
+        .lowercase()
+
+/** The owning Minecraft namespace; CuTAPI resource-root aliases are intentionally not pack namespaces. */
+public val Locator.minecraftNamespace: String
+    get() = root.namespace.substringBefore(Locator.ROOT_SEPARATOR)

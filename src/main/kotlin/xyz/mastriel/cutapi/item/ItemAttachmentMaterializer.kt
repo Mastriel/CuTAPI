@@ -189,7 +189,11 @@ public class ItemTraitPatchBuilder internal constructor(
         }
     }
 
-    internal fun setUsing(type: DataComponentType, operation: (ItemStack) -> Unit) {
+    /**
+     * Contributes a component-owned stack edit when the Paper component value is exposed through mutable item meta.
+     * The edit runs against the detached materialization target and may only change the declared component.
+     */
+    public fun setUsing(type: DataComponentType, operation: (ItemStack) -> Unit) {
         contributeComponent(type, operation)
     }
 

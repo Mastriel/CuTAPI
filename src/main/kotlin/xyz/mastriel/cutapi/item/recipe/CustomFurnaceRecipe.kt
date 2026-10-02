@@ -14,8 +14,8 @@ public data class CustomFurnaceRecipe(
     val output: CuTItemStack,
     val cookTime: Duration,
     val experienceGranted: Float = 1.0f,
-    // doesn't work; spigot hates me.
-    val inputRequirement : Computable<CuTItemStack, Boolean> = computable(true)
+    /** Evaluated against the source stack before a furnace, smoker, or blast furnace completes cooking. */
+    val inputRequirement: Computable<CuTItemStack, Boolean> = computable(true)
 ) : Identifiable {
 
     public companion object :

@@ -3,33 +3,18 @@
 
 package xyz.mastriel.cutapi.block.nativeblock
 
-import net.minecraft.world.level.block.Blocks
-import net.minecraft.world.level.block.state.BlockState
-import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData
-import net.minecraft.world.level.chunk.LevelChunk
-import net.minecraft.world.level.chunk.status.ChunkStatus
-import org.bukkit.Bukkit
-import org.bukkit.Material
-import org.bukkit.NamespacedKey
-import org.bukkit.craftbukkit.CraftChunk
-import org.bukkit.craftbukkit.block.data.CraftBlockData
-import org.bukkit.entity.ItemDisplay.ItemDisplayTransform
-import org.bukkit.inventory.ItemStack
-import xyz.mastriel.cutapi.block.BlockModel
-import xyz.mastriel.cutapi.block.BlockVisualAllocation
-import xyz.mastriel.cutapi.block.BlockVisualAllocationManifest
-import xyz.mastriel.cutapi.block.BlockVisualAllocationRequest
-import xyz.mastriel.cutapi.block.BlockVisualAllocator
-import xyz.mastriel.cutapi.block.BlockVisualCarrier
-import xyz.mastriel.cutapi.block.BlockVisualKey
-import xyz.mastriel.cutapi.block.BlockVisualMethod
-import xyz.mastriel.cutapi.block.CustomBlockState
-import xyz.mastriel.cutapi.block.CustomTile
-import xyz.mastriel.cutapi.block.ResolvedBlockVisual
-import xyz.mastriel.cutapi.block.VirtualItemDisplayDefinition
-import xyz.mastriel.cutapi.item.nativeitem.NativeItemNetworkContext
-import xyz.mastriel.cutapi.item.nativeitem.NetworkDirection
-import java.util.IdentityHashMap
+import net.minecraft.network.protocol.game.*
+import net.minecraft.world.level.block.*
+import net.minecraft.world.level.block.state.*
+import net.minecraft.world.level.chunk.*
+import net.minecraft.world.level.chunk.status.*
+import org.bukkit.*
+import org.bukkit.craftbukkit.*
+import org.bukkit.craftbukkit.block.data.*
+import org.bukkit.inventory.*
+import xyz.mastriel.cutapi.block.*
+import xyz.mastriel.cutapi.item.nativeitem.*
+import java.util.*
 
 public object NativeBlockClientBridge {
     private val visuals: MutableMap<BlockState, ResolvedBlockVisual> = IdentityHashMap()
@@ -60,8 +45,7 @@ public object NativeBlockClientBridge {
             for (customState in definition.descriptor.states.permutations) {
                 val key = BlockVisualKey(definition.id, customState.canonicalValues())
                 val allocation = allocationManifest.assignments.getValue(key)
-                val method = definition.descriptor.visualMethod(customState)
-                val resolved = resolve(definition, customState, allocation, method, noteStates, mushroomStates)
+                val resolved = resolve(definition, customState, allocation, noteStates, mushroomStates)
                 val nativeState = NativeBlockTypes.state(definition, customState)
                 check(visuals.put(nativeState, resolved) == null) { "Duplicate native visual for $key." }
                 if (allocation is BlockVisualAllocation.Carrier) {
@@ -149,13 +133,13 @@ public object NativeBlockClientBridge {
         definition: CustomTile<*>,
         customState: CustomBlockState,
         allocation: BlockVisualAllocation,
-        method: BlockVisualMethod,
         noteStates: List<BlockState>,
         mushroomStates: List<BlockState>,
     ): ResolvedBlockVisual = when (allocation) {
         is BlockVisualAllocation.Vanilla -> ResolvedBlockVisual(
             definition.descriptor.orientCarrier(allocation.state.nmsState(), customState),
         )
+
         is BlockVisualAllocation.Carrier -> {
             val state = when (allocation.carrier) {
                 BlockVisualCarrier.NoteBlock -> noteStates[allocation.slot]
@@ -163,9 +147,9 @@ public object NativeBlockClientBridge {
             }
             ResolvedBlockVisual(definition.descriptor.orientCarrier(state, customState))
         }
+
         is BlockVisualAllocation.DisplayEntity -> {
-            val displayMethod = method as BlockVisualMethod.DisplayEntity
-            val item = ItemStack(Material.PAPER).apply {
+            val item = ItemStack(Material.STONE).apply {
                 itemMeta = itemMeta.apply {
                     val location = displayItemModelLocation(definition, customState)
                     itemModel = NamespacedKey(location.first, location.second)
@@ -174,9 +158,14 @@ public object NativeBlockClientBridge {
             ResolvedBlockVisual(
                 definition.descriptor.orientCarrier(allocation.carrier.nmsState(), customState),
                 VirtualItemDisplayDefinition(
-                    item,
-                    displayMethod.transform,
-                    definition.descriptor.orientation?.modelYRotation(customState) ?: 0,
+                    item = item,
+                    transform = allocation.transform,
+                    yRotationDegrees = definition.descriptor.orientation?.modelYRotation(customState) ?: 0,
+                    brightness = allocation.brightness,
+                    breakingItemModels = (0..9).map { stage ->
+                        val location = displayBreakingItemModelLocation(definition, customState, stage)
+                        NamespacedKey(location.first, location.second)
+                    },
                 ),
             )
         }
@@ -192,9 +181,11 @@ public object NativeBlockClientBridge {
             is BlockVisualMethod.Vanilla -> require(model == null) {
                 "Vanilla visual ${definition.id}[${state.canonicalValues()}] cannot define a custom model."
             }
+
             BlockVisualMethod.NoteBlock, BlockVisualMethod.Mushroom -> require(model != null) {
                 "${method::class.simpleName} visual ${definition.id}[${state.canonicalValues()}] requires a block model."
             }
+
             is BlockVisualMethod.DisplayEntity -> require(model != null) {
                 "DisplayEntity visual ${definition.id}[${state.canonicalValues()}] requires a block model."
             }
@@ -242,6 +233,16 @@ internal fun displayItemModelLocation(
 ): Pair<String, String> {
     val stateName = blockStateModelPath(state)
     return definition.id.namespace to "cutapi/block_display/${definition.id.key}/$stateName"
+}
+
+internal fun displayBreakingItemModelLocation(
+    definition: CustomTile<*>,
+    state: CustomBlockState,
+    stage: Int,
+): Pair<String, String> {
+    require(stage in 0..9) { "Block breaking stage must be between 0 and 9, got $stage." }
+    val (namespace, path) = displayItemModelLocation(definition, state)
+    return namespace to "${path}__breaking_$stage"
 }
 
 internal fun blockStateModelPath(state: CustomBlockState): String = state.canonicalValues()

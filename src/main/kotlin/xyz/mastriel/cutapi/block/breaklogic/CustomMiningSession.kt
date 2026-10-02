@@ -4,6 +4,7 @@
 package xyz.mastriel.cutapi.block.breaklogic
 
 import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket
 import net.minecraft.server.MinecraftServer
 import net.minecraft.world.entity.ai.attributes.Attributes
@@ -15,6 +16,8 @@ import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
 import org.bukkit.potion.PotionEffectType
 import xyz.mastriel.cutapi.block.CustomTile
+import xyz.mastriel.cutapi.block.nativeblock.NativeBlockClientBridge
+import xyz.mastriel.cutapi.block.nativeblock.NativeBlockDisplayManager
 import xyz.mastriel.cutapi.block.nativeblock.NativeBlockTypes
 import xyz.mastriel.cutapi.item.CuTItemStack
 import xyz.mastriel.cutapi.item.attachments.Tool
@@ -73,12 +76,13 @@ internal object CustomMiningBreakerIds {
 internal class CustomMiningSession(
     val player: Player,
     val pos: BlockPos,
+    private val hitFace: Direction,
     val initialState: BlockState,
     val definition: CustomTile<*>,
-    val startSequence: Int,
     private val onComplete: (CustomMiningSession) -> Unit,
 ) {
-    val initialWorldId: java.util.UUID = player.world.uid
+    private val initialWorld = player.world
+    val initialWorldId: java.util.UUID = initialWorld.uid
     var progress: Float = 0.0f
         private set
     var correctToolUsed: Boolean = false
@@ -87,6 +91,7 @@ internal class CustomMiningSession(
         private set
     private var lastStage: Int = -1
     private var ended: Boolean = false
+    private val displayVisual = NativeBlockClientBridge.resolve(initialState)?.displayEntity
     // The client writes its own predicted crack stage under the player's entity ID every tick.
     // Keeping the authoritative overlay under a separate ID prevents those two stages from
     // alternately replacing one another. Negative IDs cannot collide with normal entity IDs.
@@ -156,6 +161,14 @@ internal class CustomMiningSession(
     }
 
     private fun sendCrack(stage: Int) {
+        if (displayVisual != null) {
+            NativeBlockDisplayManager.setBreakingStage(
+                initialWorld.getBlockAt(pos.x, pos.y, pos.z),
+                breakerId,
+                stage,
+            )
+            return
+        }
         val packet = ClientboundBlockDestructionPacket(breakerId, pos, stage)
         packet.sendTo(player)
         val level = player.nms().level()
@@ -180,6 +193,20 @@ internal class CustomMiningSession(
             sound.volume,
             sound.pitch,
         )
+        displayVisual?.let { display ->
+            repeat(2) {
+                player.world.spawnParticle(
+                    Particle.ITEM,
+                    displayBreakParticleLocation(block, hitFace),
+                    1,
+                    0.03,
+                    0.03,
+                    0.03,
+                    0.02,
+                    display.item,
+                )
+            }
+        }
     }
 
     companion object {

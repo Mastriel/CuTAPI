@@ -12,7 +12,7 @@ public class VariantPdcCodecTest : MockBukkitTest() {
     @Test
     public fun `mapped serializer values retain their canonical Variant PDC type`() {
         val player = server.addPlayer()
-        val variant = ComponentSerializer.serialize(Component.text("hello")).getOrThrow()
+        val variant = BuiltinSerializers.Component.serialize(Component.text("hello")).getOrThrow()
         val encoded = VariantPdcCodec.encode(
             player.persistentDataContainer.adapterContext,
             variant

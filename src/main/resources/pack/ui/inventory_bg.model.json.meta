@@ -1,0 +1,5 @@
+!<cutapi:minecraft_model>
+generate:
+  - !<cutapi:item_model>
+    hand_animation_on_swap: false
+    oversized_in_gui: true

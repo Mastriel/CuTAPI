@@ -28,7 +28,9 @@ import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.server.MinecraftServer
 import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.craftbukkit.inventory.CraftItemStack
+import org.bukkit.persistence.PersistentDataType
 import xyz.mastriel.cutapi.item.CuTItemStack
 import xyz.mastriel.cutapi.item.CustomItem
 import xyz.mastriel.cutapi.item.clearStoredItemAttachments
@@ -55,6 +57,8 @@ import kotlin.random.Random
 public object NativeItemClientBridge {
     private const val EnvelopeKey = "cutapi:network_item_v2"
     private const val Version = 2
+    private val RenderedPresentationKey: NamespacedKey =
+        requireNotNull(NamespacedKey.fromString("cutapi:rendered_presentation"))
     private val secret = Random.Default.nextBytes(32)
     private val componentProjectionCalls = AtomicLong()
     private val pendingCreativeStacks: MutableMap<ItemStack, PendingCreativeStack> =
@@ -64,6 +68,14 @@ public object NativeItemClientBridge {
     public fun encode(stack: ItemStack): ItemStack {
         val call = NativeItemNetworkContext.current() ?: return stack
         if (call.direction != NetworkDirection.Clientbound || stack.isEmpty) return stack
+        consumeRenderedPresentation(stack)?.let { cleaned ->
+            val definition = NativeItemTypes.idOf(cleaned.item)?.let { CustomItem.getOrNull(it) }
+            if (definition == null && !hasProtectedItemState(cleaned)) return cleaned
+
+            // A presentation marker on authoritative state is invalid. Continue normal projection
+            // with the marker removed so it cannot expose native identity or protected data.
+            return encode(cleaned)
+        }
 
         val definition = NativeItemTypes.idOf(stack.item)?.let { CustomItem.getOrNull(it) }
         if (definition != null) NativeItemLifecycle.requireActive()
@@ -82,6 +94,7 @@ public object NativeItemClientBridge {
         rendered.clearStoredItemAttachments()
         rendered.clearStoredItemMaterialization()
         val renderedNms = CraftItemStack.asNMSCopy(rendered)
+        val explicitRenderedModel = renderedNms.componentsPatch.get(DataComponents.ITEM_MODEL)
         val displayedType = definition?.let {
             wrapped.getAttachmentOrNull<DisplayAs>()?.itemType ?: it.backingItem
         }
@@ -89,6 +102,14 @@ public object NativeItemClientBridge {
             renderedNms
         } else {
             renderedNms.transmuteCopy(NativeItemTypes.getMinecraft(requireNotNull(displayedType)))
+        }
+        if (definition != null && explicitRenderedModel == null) {
+            wrapped.declaredClientItemModel(call.player)?.let { model ->
+                projected.set(
+                    DataComponents.ITEM_MODEL,
+                    MinecraftIdentifier.fromNamespaceAndPath(model.namespace, model.key),
+                )
+            }
         }
         if (
             displayedType == org.bukkit.inventory.ItemType.PIG_SPAWN_EGG &&
@@ -117,6 +138,21 @@ public object NativeItemClientBridge {
         return projected
     }
 
+    /** Marks a detached, fully rendered stack so clientbound projection only removes this marker. */
+    internal fun markRenderedPresentation(stack: org.bukkit.inventory.ItemStack) {
+        stack.editMeta { meta ->
+            meta.persistentDataContainer.set(RenderedPresentationKey, PersistentDataType.BYTE, 1)
+        }
+    }
+
+    private fun consumeRenderedPresentation(stack: ItemStack): ItemStack? {
+        val bukkit = CraftItemStack.asCraftMirror(stack.copy())
+        val container = bukkit.itemMeta.persistentDataContainer
+        if (!container.has(RenderedPresentationKey, PersistentDataType.BYTE)) return null
+        bukkit.editMeta { meta -> meta.persistentDataContainer.remove(RenderedPresentationKey) }
+        return CraftItemStack.asNMSCopy(bukkit)
+    }
+
     internal fun verifyRoundTrips(definitions: Collection<CustomItem<*>>) {
         for (definition in definitions) {
             val authoritative = ItemStack(NativeItemTypes.getMinecraft(definition.id))
@@ -141,17 +177,28 @@ public object NativeItemClientBridge {
 
             val expectedPresentation = CraftItemStack.asNMSCopy(expectedWrapper.getRenderedItemStack(null))
             val explicitModel = expectedPresentation.componentsPatch.get(DataComponents.ITEM_MODEL)
+            val declaredModel = expectedWrapper.declaredClientItemModel(null)?.let { modelId ->
+                MinecraftIdentifier.fromNamespaceAndPath(modelId.namespace, modelId.key)
+            }
             val forcedModel = definition.descriptor.forcedItemModelId?.let { modelId ->
                 MinecraftIdentifier.fromNamespaceAndPath(modelId.namespace, modelId.key)
             }
             val expectedModel = forcedModel ?: if (explicitModel == null) {
-                ItemStack(expectedDisplayedItem).get(DataComponents.ITEM_MODEL)
+                declaredModel ?: ItemStack(expectedDisplayedItem).get(DataComponents.ITEM_MODEL)
             } else {
                 explicitModel.orElse(null)
             }
             val actualModel = projected.get(DataComponents.ITEM_MODEL)
             check(actualModel == expectedModel) {
                 "Client projection for ${definition.id} used item model $actualModel; expected $expectedModel."
+            }
+            val staticPresentation = CraftItemStack.asNMSCopy(expectedWrapper.getStaticItemStack(null))
+            check(staticPresentation.item === expectedDisplayedItem) {
+                "Static presentation for ${definition.id} did not use ${expectedDisplayedType.key}."
+            }
+            check(staticPresentation.get(DataComponents.ITEM_MODEL) == expectedModel) {
+                "Static presentation for ${definition.id} used item model " +
+                    "${staticPresentation.get(DataComponents.ITEM_MODEL)}; expected $expectedModel."
             }
             if (forcedModel != null) {
                 check(actualModel == forcedModel) {
@@ -174,10 +221,71 @@ public object NativeItemClientBridge {
         verifyVanillaMaterializationRoundTrip()
         verifyCreativeBundleMutationRoundTrip()
         verifyUnattachedVanillaRenderRoundTrip()
+        verifyRenderedPresentationBypass()
         verifyTagProjection()
     }
 
+    private fun verifyRenderedPresentationBypass() {
+        val expectedName = net.kyori.adventure.text.Component.text("rendered presentation")
+        val expectedLore = listOf(net.kyori.adventure.text.Component.text("single origin"))
+        val bukkit = org.bukkit.inventory.ItemStack(Material.STICK).apply {
+            editMeta { meta ->
+                meta.itemName(expectedName)
+                meta.lore(expectedLore)
+            }
+        }
+        markRenderedPresentation(bukkit)
+
+        val bytes = Unpooled.buffer()
+        try {
+            val buffer = RegistryFriendlyByteBuf(bytes, MinecraftServer.getServer().registryAccess())
+            val component = Component.literal("rendered presentation")
+                .setStyle(Style.EMPTY.withHoverEvent(HoverEvent.ShowItem(CraftItemStack.asNMSCopy(bukkit))))
+            val projectedComponent = NativeItemNetworkContext.with(
+                NativeItemNetworkCall(NetworkDirection.Clientbound, null),
+            ) { encodeComponent(buffer, component) }
+            val projected = (projectedComponent.style.hoverEvent as? HoverEvent.ShowItem)?.item()
+                ?: error("Rendered presentation projection removed its item hover event.")
+            val result = CraftItemStack.asCraftMirror(projected.copy())
+
+            check(result.itemMeta.itemName() == expectedName) {
+                "A rendered presentation lost its item name during clientbound projection."
+            }
+            check(result.itemMeta.lore() == expectedLore) {
+                "A rendered presentation was processed more than once."
+            }
+            check(!result.itemMeta.persistentDataContainer.has(RenderedPresentationKey)) {
+                "A rendered presentation exposed its internal projection marker."
+            }
+            check(readEnvelope(projected) == null) {
+                "A rendered presentation was unnecessarily wrapped in a network envelope."
+            }
+        } finally {
+            bytes.release()
+        }
+    }
+
     private fun verifyUnattachedVanillaRenderRoundTrip() {
+        val explicitModel = MinecraftIdentifier.fromNamespaceAndPath(
+            "cutapi",
+            "verification/vanilla_item_model",
+        )
+        val modeled = ItemStack(net.minecraft.world.item.Items.PAPER).apply {
+            set(DataComponents.ITEM_MODEL, explicitModel)
+        }
+        val renderedModeled = CraftItemStack.asNMSCopy(
+            CuTItemStack.wrap(CraftItemStack.asCraftMirror(modeled.copy())).getRenderedItemStack(null),
+        )
+        check(renderedModeled.get(DataComponents.ITEM_MODEL) == explicitModel) {
+            "Rendering an unattached vanilla item discarded its explicit item model."
+        }
+        val projectedModeled = NativeItemNetworkContext.with(
+            NativeItemNetworkCall(NetworkDirection.Clientbound, null),
+        ) { encode(modeled) }
+        check(projectedModeled.get(DataComponents.ITEM_MODEL) == explicitModel) {
+            "Client projection of an unattached vanilla item discarded its explicit item model."
+        }
+
         val authoritative = ItemStack(net.minecraft.world.item.Items.STONE)
         val expected = CraftItemStack.asNMSCopy(
             CuTItemStack.wrap(CraftItemStack.asCraftMirror(authoritative.copy())).getRenderedItemStack(null),
@@ -544,7 +652,7 @@ public object NativeItemClientBridge {
         tagsField.isAccessible = true
         val tags = tagsField.get(payload) as Map<net.minecraft.resources.Identifier, IntList>
         check(tags.values.none { ids ->
-            ids.intStream().anyMatch { BuiltInRegistries.ITEM.byId(it) is NativeCustomItem }
+            ids.intStream().anyMatch { BuiltInRegistries.ITEM.byId(it) is NativeBackedItem }
         }) { "Client item tag projection retained a native custom numeric ID." }
     }
 
@@ -672,7 +780,7 @@ public object NativeItemClientBridge {
         val call = NativeItemNetworkContext.current() ?: return holder
         if (call.direction != NetworkDirection.Clientbound) return holder
         val item = holder.value()
-        if (item !is NativeCustomItem) return holder
+        if (item !is NativeBackedItem) return holder
         NativeItemLifecycle.requireActive()
         return item.backing.builtInRegistryHolder()
     }
@@ -694,7 +802,7 @@ public object NativeItemClientBridge {
                 entry.value.intStream()
                     .map { numericId ->
                         val item = BuiltInRegistries.ITEM.byId(numericId)
-                        if (item is NativeCustomItem) BuiltInRegistries.ITEM.getId(item.backing) else numericId
+                        if (item is NativeBackedItem) BuiltInRegistries.ITEM.getId(item.backing) else numericId
                     }
                     .distinct()
                     .toArray()

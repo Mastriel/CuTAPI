@@ -3,9 +3,13 @@
 package xyz.mastriel.cutapi.item
 
 import net.kyori.adventure.text.Component
+import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent
+import io.papermc.paper.event.player.PlayerStopUsingItemEvent
 import org.bukkit.*
 import org.bukkit.block.*
+import org.bukkit.entity.*
 import org.bukkit.event.block.*
+import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.player.*
 import org.bukkit.inventory.*
 import org.bukkit.persistence.*
@@ -17,6 +21,7 @@ import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.system.*
 import xyz.mastriel.cutapi.testing.*
+import xyz.mastriel.cutapi.utils.chatTooltipPresentation
 import kotlin.test.*
 
 public class ItemAttachmentSystemTest : MockBukkitTest() {
@@ -209,6 +214,24 @@ public class ItemAttachmentSystemTest : MockBukkitTest() {
     }
 
     @Test
+    public fun `chat tooltip presentation uses viewer-specific rendering without mutating the source`() {
+        val viewer = server.addPlayer("TooltipViewer")
+        val stack = ItemStack(Material.STICK).apply {
+            setAttachment(TestItemAttachment(24))
+        }
+
+        val presentation = stack.chatTooltipPresentation(viewer)
+
+        assertEquals(Component.text("Rendered for TooltipViewer"), presentation.name)
+        assertEquals(Component.text("Rendered for TooltipViewer"), presentation.item.itemMeta.itemName())
+        assertEquals(listOf(Component.text("general render")), presentation.item.itemMeta.lore())
+        assertFalse(presentation.item.hasStoredItemAttachments())
+        assertFalse(presentation.item.hasStoredItemMaterialization())
+        assertFalse(stack.itemMeta.hasItemName())
+        assertNull(stack.itemMeta.lore())
+    }
+
+    @Test
     public fun `late item identity extension commits fail`() {
         val late: DeferredRegistry<ItemIdentityExtension> =
             BasicDeferredRegistry(ItemIdentityExtension, RegistryPriority.Medium)
@@ -369,13 +392,13 @@ public class ItemAttachmentSystemTest : MockBukkitTest() {
     }
 
     @Test
-    public fun `item systems filter by attachments in priority order`() {
+    public fun `item systems filter by attachments in ascending priority order`() {
         val plainItem = vanillaStack()
         assertEquals(listOf(GeneralTestItemSystem), ItemSystem.applicableTo(plainItem))
 
         val attachedItem = vanillaStack().also { it.setAttachment(TestItemAttachment(10)) }
         assertEquals(
-            listOf(AttachedTestItemSystem, GeneralTestItemSystem),
+            listOf(GeneralTestItemSystem, AttachedTestItemSystem),
             ItemSystem.applicableTo(attachedItem)
         )
     }
@@ -398,7 +421,92 @@ public class ItemAttachmentSystemTest : MockBukkitTest() {
             )
         )
 
-        assertEquals(listOf("attached:right_click", "general:right_click"), itemSystemCalls)
+        assertEquals(listOf("general:right_click", "attached:right_click"), itemSystemCalls)
+    }
+
+    @Test
+    public fun `consume dispatch selects the consumed item and propagates cancellation`() {
+        val player = server.addPlayer()
+        val item = vanillaStack().also { it.setAttachment(TestItemAttachment(10)) }
+        player.inventory.setItemInMainHand(ItemStack(Material.DIRT))
+        val event = PlayerItemConsumeEvent(player, item.handle, EquipmentSlot.HAND)
+        itemSystemCalls.clear()
+
+        ItemSystemEvents().onConsume(event)
+
+        assertEquals(listOf("general:consume", "attached:consume"), itemSystemCalls)
+        assertTrue(event.isCancelled)
+    }
+
+    @Test
+    public fun `projectile launch dispatch selects the launch item and propagates cancellation`() {
+        val player = server.addPlayer()
+        val item = vanillaStack().also { it.setAttachment(TestItemAttachment(10)) }
+        val projectile = player.world.spawnEntity(player.location, EntityType.SNOWBALL) as Projectile
+        val event = PlayerLaunchProjectileEvent(player, item.handle, projectile)
+        itemSystemCalls.clear()
+
+        ItemSystemEvents().onLaunchProjectile(event)
+
+        assertEquals(listOf("general:launch", "attached:launch"), itemSystemCalls)
+        assertTrue(event.isCancelled)
+    }
+
+    @Test
+    public fun `fishing dispatch selects the event hand item and propagates cancellation`() {
+        val player = server.addPlayer()
+        val item = vanillaStack().also { it.setAttachment(TestItemAttachment(10)) }
+        player.inventory.setItemInMainHand(item.handle)
+        val hook = player.world.spawnEntity(player.location, EntityType.FISHING_BOBBER) as FishHook
+        val event = PlayerFishEvent(player, null, hook, EquipmentSlot.HAND, PlayerFishEvent.State.FISHING)
+        itemSystemCalls.clear()
+
+        ItemSystemEvents().onFish(event)
+
+        assertEquals(listOf("general:fish", "attached:fish"), itemSystemCalls)
+        assertTrue(event.isCancelled)
+    }
+
+    @Test
+    public fun `bow dispatch selects the event bow and propagates cancellation`() {
+        val player = server.addPlayer()
+        val item = vanillaStack().also { it.setAttachment(TestItemAttachment(10)) }
+        val projectile = player.world.spawnEntity(player.location, EntityType.ARROW)
+        val event = EntityShootBowEvent(player, item.handle, projectile, 1f)
+        itemSystemCalls.clear()
+
+        ItemSystemEvents().onShootBow(event)
+
+        assertEquals(listOf("general:shoot_bow", "attached:shoot_bow"), itemSystemCalls)
+        assertTrue(event.isCancelled)
+    }
+
+    @Test
+    public fun `stop using dispatch selects the stopped item and requires its attachment`() {
+        val player = server.addPlayer()
+        val attached = vanillaStack().also { it.setAttachment(TestItemAttachment(10)) }
+        itemSystemCalls.clear()
+
+        ItemSystemEvents().onStopUsing(PlayerStopUsingItemEvent(player, attached.handle, 4))
+        ItemSystemEvents().onStopUsing(PlayerStopUsingItemEvent(player, ItemStack(Material.DIRT), 4))
+
+        assertEquals(
+            listOf("general:stop_using", "attached:stop_using", "general:stop_using"),
+            itemSystemCalls,
+        )
+    }
+
+    @Test
+    public fun `riptide dispatch selects the riptide item and propagates cancellation`() {
+        val player = server.addPlayer()
+        val item = vanillaStack().also { it.setAttachment(TestItemAttachment(10)) }
+        val event = PlayerRiptideEvent(player, item.handle)
+        itemSystemCalls.clear()
+
+        ItemSystemEvents().onRiptide(event)
+
+        assertEquals(listOf("general:riptide", "attached:riptide"), itemSystemCalls)
+        assertTrue(event.isCancelled)
     }
 
     @Test
@@ -537,6 +645,13 @@ private object GeneralTestItemSystem : ItemSystem {
         itemSystemCalls += "general:right_click"
     }
 
+    override fun onConsume(context: ItemConsumeContext) { itemSystemCalls += "general:consume" }
+    override fun onLaunchProjectile(context: ItemLaunchProjectileContext) { itemSystemCalls += "general:launch" }
+    override fun onFish(context: ItemFishContext) { itemSystemCalls += "general:fish" }
+    override fun onShootBow(context: ItemShootBowContext) { itemSystemCalls += "general:shoot_bow" }
+    override fun onStopUsing(context: ItemStopUsingContext) { itemSystemCalls += "general:stop_using" }
+    override fun onRiptide(context: ItemRiptideContext) { itemSystemCalls += "general:riptide" }
+
     override fun onRender(context: ItemRenderContext) {
         itemSystemCalls += "general:render"
         context.item.handle.editMeta { meta ->
@@ -552,8 +667,43 @@ private object AttachedTestItemSystem : ItemSystem {
     override fun prerequisite(target: CuTItemStack): Boolean =
         target.hasAttachment(TestItemAttachment)
 
+    override fun onRender(context: ItemRenderContext) {
+        context.item.handle.editMeta { meta ->
+            meta.itemName(Component.text("Rendered for ${context.viewer?.name ?: "default"}"))
+        }
+    }
+
     override fun onRightClick(context: ItemInteractContext) {
         itemSystemCalls += "attached:right_click"
+    }
+
+    override fun onConsume(context: ItemConsumeContext) {
+        itemSystemCalls += "attached:consume"
+        context.event.isCancelled = true
+    }
+
+    override fun onLaunchProjectile(context: ItemLaunchProjectileContext) {
+        itemSystemCalls += "attached:launch"
+        context.event.isCancelled = true
+    }
+
+    override fun onFish(context: ItemFishContext) {
+        itemSystemCalls += "attached:fish"
+        context.event.isCancelled = true
+    }
+
+    override fun onShootBow(context: ItemShootBowContext) {
+        itemSystemCalls += "attached:shoot_bow"
+        context.event.isCancelled = true
+    }
+
+    override fun onStopUsing(context: ItemStopUsingContext) {
+        itemSystemCalls += "attached:stop_using"
+    }
+
+    override fun onRiptide(context: ItemRiptideContext) {
+        itemSystemCalls += "attached:riptide"
+        context.event.isCancelled = true
     }
 }
 

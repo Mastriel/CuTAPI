@@ -17,7 +17,7 @@ public class PostProcessDefinitionsResource(
 
         public companion object : Schema<Data> by schema(id("cutapi:post_process_definitions"), {
             extends { CuTMeta }
-            property(Data::postProcess, VariantSerializer.ListOf(TexturePostprocessTableSerializer))
+            property(Data::postProcess, VariantSerializer.ListOf(TexturePostprocessTable))
         })
     }
 

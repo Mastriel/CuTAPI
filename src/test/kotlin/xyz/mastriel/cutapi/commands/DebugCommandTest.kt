@@ -24,6 +24,7 @@ public class DebugCommandTest : MockBukkitTest() {
     public fun registerCommandSchemas() {
         Schema.registerSchema(CommandItemAttachment)
         Schema.registerSchema(CommandPlayerAttachment)
+        Schema.registerSchema(CommandBlockAttachment)
         Schema.registerSchema(CommandSharedAttachment)
         Schema.registerSchema(CommandData)
     }
@@ -43,7 +44,8 @@ public class DebugCommandTest : MockBukkitTest() {
     public fun `attachment command exposes the requested grammar`() {
         val targetNodes = listOf(
             AttachmentsCommand.child("player").child("player"),
-            AttachmentsCommand.child("helditem")
+            AttachmentsCommand.child("helditem"),
+            AttachmentsCommand.child("block"),
         )
         for (targetNode in targetNodes) {
             assertNotNull(targetNode.child("view").command)
@@ -63,6 +65,7 @@ public class DebugCommandTest : MockBukkitTest() {
     public fun `attachment id arguments reject schemas for other data`() {
         CommandItemAttachment.id
         CommandPlayerAttachment.id
+        CommandBlockAttachment.id
         CommandSharedAttachment.id
         CommandData.id
         val playerIdNode = AttachmentsCommand
@@ -74,6 +77,10 @@ public class DebugCommandTest : MockBukkitTest() {
             .child("helditem")
             .child("set")
             .child("id")
+        val blockIdNode = AttachmentsCommand
+            .child("block")
+            .child("set")
+            .child("id")
 
         @Suppress("UNCHECKED_CAST")
         val playerType =
@@ -83,6 +90,10 @@ public class DebugCommandTest : MockBukkitTest() {
         val itemType =
             assertIs<ArgumentCommandNode<CommandSourceStack, *>>(itemIdNode).type as ArgumentType<Schema<*>>
 
+        @Suppress("UNCHECKED_CAST")
+        val blockType =
+            assertIs<ArgumentCommandNode<CommandSourceStack, *>>(blockIdNode).type as ArgumentType<Schema<*>>
+
         assertEquals(
             CommandPlayerAttachment.id,
             playerType.parse(StringReader(CommandPlayerAttachment.id.toString())).id
@@ -90,6 +101,10 @@ public class DebugCommandTest : MockBukkitTest() {
         assertEquals(
             CommandItemAttachment.id,
             itemType.parse(StringReader(CommandItemAttachment.id.toString())).id
+        )
+        assertEquals(
+            CommandBlockAttachment.id,
+            blockType.parse(StringReader(CommandBlockAttachment.id.toString())).id
         )
         assertEquals(
             CommandSharedAttachment.id,
@@ -104,6 +119,12 @@ public class DebugCommandTest : MockBukkitTest() {
         }
         assertFailsWith<CommandSyntaxException> {
             itemType.parse(StringReader(CommandPlayerAttachment.id.toString()))
+        }
+        assertFailsWith<CommandSyntaxException> {
+            blockType.parse(StringReader(CommandItemAttachment.id.toString()))
+        }
+        assertFailsWith<CommandSyntaxException> {
+            itemType.parse(StringReader(CommandBlockAttachment.id.toString()))
         }
         assertFailsWith<CommandSyntaxException> {
             itemType.parse(StringReader(CommandData.id.toString()))
@@ -262,6 +283,23 @@ public class DebugCommandTest : MockBukkitTest() {
     }
 
     @Test
+    public fun `suppressed intrinsic block attachments remain visible`() {
+        val attachment = CommandBlockAttachment("default")
+
+        val entries = blockAttachmentCommandEntries(
+            intrinsic = listOf(attachment),
+            overlay = emptyList(),
+            suppressed = setOf(CommandBlockAttachment.id),
+        )
+
+        assertEquals(1, entries.size)
+        val entry = entries.single()
+        assertSame(attachment, entry.attachment)
+        assertTrue(entry.intrinsic)
+        assertTrue(entry.suppressed)
+    }
+
+    @Test
     public fun `suppressed intrinsic attachment entries use a red cross`() {
         val component = debugEntryComponent(
             id = CommandItemAttachment.id,
@@ -388,6 +426,12 @@ private data class CommandItemAttachment(val value: String) : ItemAttachment {
 private data class CommandPlayerAttachment(val value: String) : PlayerAttachment {
     companion object : Schema<CommandPlayerAttachment> by schema(id("test:command_player_attachment"), {
         property(CommandPlayerAttachment::value, VariantSerializer.String)
+    })
+}
+
+private data class CommandBlockAttachment(val value: String) : BlockAttachment {
+    companion object : Schema<CommandBlockAttachment> by schema(id("test:command_block_attachment"), {
+        property(CommandBlockAttachment::value, VariantSerializer.String)
     })
 }
 

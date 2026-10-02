@@ -4,6 +4,8 @@
 package xyz.mastriel.cutapi.item
 
 import net.kyori.adventure.text.*
+import net.minecraft.core.component.DataComponents
+import net.minecraft.resources.Identifier as MinecraftIdentifier
 import org.bukkit.*
 import org.bukkit.craftbukkit.inventory.*
 import org.bukkit.enchantments.*
@@ -15,6 +17,7 @@ import xyz.mastriel.cutapi.item.attachments.*
 import xyz.mastriel.cutapi.item.nativeitem.*
 import xyz.mastriel.cutapi.pdc.tags.*
 import xyz.mastriel.cutapi.registry.*
+import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.utils.*
 import xyz.mastriel.cutapi.utils.Color
 import xyz.mastriel.cutapi.utils.personalized.*
@@ -89,6 +92,12 @@ public open class CuTItemStack protected constructor(public val handle: ItemStac
         return result
     }
 
+    internal fun declaredClientItemModel(viewer: Player?): NamespacedKey? {
+        val display = customItem?.descriptor?.display ?: return null
+        val model = ItemDisplayBuilder(this, viewer).apply(display).itemModel ?: return null
+        return id(model.toMinecraftItemModelLocator()).toNamespacedKey()
+    }
+
     override fun withViewer(viewer: Player): ItemStack = getRenderedItemStack(viewer)
 
     override fun getDefault(): ItemStack = getRenderedItemStack(null)
@@ -98,17 +107,20 @@ public open class CuTItemStack protected constructor(public val handle: ItemStac
         val rendered = handle.clone()
         val display = customItem?.descriptor?.display
 
-        rendered.editMeta { meta ->
-            meta.itemModel = customItem?.descriptor?.forcedItemModelId?.toNamespacedKey()
+        customItem?.let { definition ->
+            rendered.editMeta { meta ->
+                meta.itemModel = definition.descriptor.forcedItemModelId?.toNamespacedKey()
+            }
         }
         if (display != null) {
+            val builder = ItemDisplayBuilder(this, viewer).apply(display)
             rendered.editMeta { meta ->
-                val builder = ItemDisplayBuilder(this, viewer).apply(display)
                 meta.lore(getLore(viewer))
                 meta.itemName(if (nameHasChanged) name else builder.name ?: "&c${customItem?.id}".colored)
-                val itemModelId = builder.texture?.getItemModelId()
-                if (itemModelId != null) meta.itemModel = itemModelId.toNamespacedKey()
+                val itemModelId = builder.itemModel?.toMinecraftItemModelLocator()
+                if (itemModelId != null) meta.itemModel = id(itemModelId).toNamespacedKey()
             }
+            builder.applyCustomModelDataTo(rendered)
         } else if (!isCustom) {
             val addedLore = getLore(viewer)
             if (addedLore.isNotEmpty()) {
@@ -123,10 +135,34 @@ public open class CuTItemStack protected constructor(public val handle: ItemStac
     /** Returns a permanent vanilla representation with no native custom identity. */
     public fun getStaticItemStack(viewer: Player?): ItemStack {
         val rendered = getRenderedItemStack(viewer)
-        val definition = customItem ?: return rendered
-        val displayedType = getAttachmentOrNull<DisplayAs>()?.itemType ?: definition.backingItem
-        val displayedItem = NativeItemTypes.getMinecraft(displayedType)
-        return CraftItemStack.asBukkitCopy(CraftItemStack.asNMSCopy(rendered).transmuteCopy(displayedItem))
+        val definition = customItem
+        val result = if (definition == null) {
+            rendered
+        } else {
+            val displayedType = getAttachmentOrNull<DisplayAs>()?.itemType ?: definition.backingItem
+            val displayedItem = NativeItemTypes.getMinecraft(displayedType)
+            val renderedNms = CraftItemStack.asNMSCopy(rendered)
+            val explicitModel = renderedNms.componentsPatch.get(DataComponents.ITEM_MODEL)
+            val projected = renderedNms.transmuteCopy(displayedItem)
+            if (explicitModel == null) {
+                declaredClientItemModel(viewer)?.let { model ->
+                    projected.set(
+                        DataComponents.ITEM_MODEL,
+                        MinecraftIdentifier.fromNamespaceAndPath(model.namespace, model.key),
+                    )
+                }
+            }
+            definition.descriptor.forcedItemModelId?.let { model ->
+                projected.set(
+                    DataComponents.ITEM_MODEL,
+                    MinecraftIdentifier.fromNamespaceAndPath(model.namespace, model.key),
+                )
+            }
+            CraftItemStack.asBukkitCopy(projected)
+        }
+        result.clearStoredItemAttachments()
+        result.clearStoredItemMaterialization()
+        return result
     }
 
     public companion object {

@@ -130,7 +130,9 @@ public class GuiManager {
         presentation: BlockInventoryPresentation<*, out InventoryView>,
     ): GuiOpenResult {
         val inventory = tile.inventoryOrNull
-            ?: return GuiOpenResult.Unsupported("Tile ${tile.type.id} does not have a usable block inventory.")
+            ?: return GuiOpenResult.Unsupported(
+                "Tile ${tile.identity.customTile?.id ?: tile.identity} does not have a usable block inventory.",
+            )
         return openBlockUntyped(player, tile, inventory, presentation)
     }
 

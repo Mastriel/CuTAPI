@@ -4,6 +4,8 @@ package xyz.mastriel.cutapi.block
 
 import org.bukkit.Material
 import org.bukkit.block.Block
+import org.bukkit.entity.Display
+import org.bukkit.entity.ItemDisplay
 import xyz.mastriel.cutapi.attachment.BlockAttachment
 import xyz.mastriel.cutapi.block.nativeblock.blockStateModelPath
 import xyz.mastriel.cutapi.block.nativeblock.blockTextureModelLocation
@@ -19,6 +21,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotSame
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 public class BlockStateVisualApiTest : MockBukkitTest() {
@@ -104,6 +107,33 @@ public class BlockStateVisualApiTest : MockBukkitTest() {
     }
 
     @Test
+    public fun `display entity allocation retains explicit brightness`() {
+        val brightness = Display.Brightness(15, 15)
+        val request = BlockVisualAllocationRequest(
+            BlockVisualKey(id("test:lit_display"), ""),
+            BlockVisualMethod.DisplayEntity(
+                Material.BARRIER.createBlockData(),
+                ItemDisplay.ItemDisplayTransform.FIXED,
+                brightness,
+            ),
+        )
+
+        val allocation = assertIs<BlockVisualAllocation.DisplayEntity>(
+            BlockVisualAllocator.allocate(listOf(request), "1.21.11", "hash")
+                .assignments.getValue(request.key),
+        )
+
+        assertEquals(brightness, allocation.brightness)
+    }
+
+    @Test
+    public fun `display entity defaults to raw block model scale`() {
+        val method = BlockVisualMethod.DisplayEntity(Material.BARRIER.createBlockData())
+
+        assertEquals(ItemDisplay.ItemDisplayTransform.NONE, method.transform)
+    }
+
+    @Test
     public fun `descriptor exposes mining settings attachments and per state visuals`() {
         val powered = BlockStateType.Boolean("powered")
         val definition = customTileEntity(id("test:configured_tile")) {
@@ -113,6 +143,7 @@ public class BlockStateVisualApiTest : MockBukkitTest() {
                 hardness = 3.0f
                 explosionResistance = 6.0f
                 requiresCorrectToolForDrops = true
+                occludes = false
             }
             attach(TestBlockAttachment(4))
             visuals { state ->
@@ -124,12 +155,18 @@ public class BlockStateVisualApiTest : MockBukkitTest() {
 
         assertEquals(3.0f, definition.descriptor.settings.hardness)
         assertEquals(6.0f, definition.descriptor.settings.explosionResistance)
+        assertFalse(definition.descriptor.settings.occludes)
         assertEquals(TestBlockAttachment(4), definition.getAttachment(TestBlockAttachment))
         assertEquals(
             Material.REDSTONE_BLOCK,
             (definition.descriptor.visualMethod(definition.descriptor.states.state(mapOf(powered to true))) as
                 BlockVisualMethod.Vanilla).state.material,
         )
+    }
+
+    @Test
+    public fun `block settings occlude by default`() {
+        assertTrue(defaultBlockDescriptor().settings.occludes)
     }
 
     @Test

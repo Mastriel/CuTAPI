@@ -78,7 +78,7 @@ public open class IdentifierRegistry<T : Identifiable> private constructor(
     protected val eventHandlers: MutableList<Handler<T>> = mutableListOf()
 
     protected fun getSortedEventHandlers(): List<Handler<T>> {
-        return eventHandlers.sortedByDescending { it.priority }
+        return eventHandlers.sortedBy { it.priority }
     }
 
     public var isOpen: Boolean = true
@@ -102,7 +102,12 @@ public open class IdentifierRegistry<T : Identifiable> private constructor(
         // run all handlers
         for (handler in getSortedEventHandlers()) {
             val event = RegistryEvent(this, ::register, ::replace)
-            handler.handler(event)
+            try {
+                handler.handler(event)
+            } catch (e: Exception) {
+                Plugin.error("Exception occured while initializing registry '${this.id}'.")
+                throw e
+            }
         }
 
         isOpen = false

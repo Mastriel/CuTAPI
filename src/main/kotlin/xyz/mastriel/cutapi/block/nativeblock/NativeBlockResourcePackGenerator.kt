@@ -20,11 +20,21 @@ import xyz.mastriel.cutapi.block.CustomBlockState
 import xyz.mastriel.cutapi.block.CustomTile
 import xyz.mastriel.cutapi.block.generatedBlockItemModelId
 import xyz.mastriel.cutapi.resources.ResourceRef
+import xyz.mastriel.cutapi.resources.ref
+import xyz.mastriel.cutapi.resources.minecraftNamespace
+import xyz.mastriel.cutapi.resources.builtin.MinecraftModel
 import xyz.mastriel.cutapi.resources.builtin.Texture2D
+import xyz.mastriel.cutapi.resources.builtin.toMinecraftLocator
+import xyz.mastriel.cutapi.resources.builtin.toMinecraftModelLocator
 import xyz.mastriel.cutapi.resources.data.minecraft.AnimationMcMeta
+import xyz.mastriel.cutapi.resources.minecraft.MinecraftAssets
 import xyz.mastriel.cutapi.resources.process.fixInvalidResourcePath
 import xyz.mastriel.cutapi.utils.createAndWrite
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
 import java.io.File
+import javax.imageio.ImageIO
+import kotlin.math.roundToInt
 
 internal object NativeBlockResourcePackGenerator {
     private data class BlockModelVariant(
@@ -54,6 +64,7 @@ internal object NativeBlockResourcePackGenerator {
                 if (definition.descriptor.visualMethod(state) !is BlockVisualMethod.DisplayEntity) return@forEach
                 val modelLocation = writeOrResolveModel(packRoot, definition, state)
                 writeDisplayItemModel(packRoot, definition, state, modelLocation)
+                writeDisplayBreakingModels(packRoot, definition, state, modelLocation)
             }
         }
 
@@ -119,6 +130,135 @@ internal object NativeBlockResourcePackGenerator {
         }
         val itemModelId = generatedBlockItemModelId(definition)
         writeItemModel(packRoot, itemModelId.namespace, itemModelId.key, blockModelLocation)
+    }
+
+    private fun writeDisplayBreakingModels(
+        packRoot: File,
+        definition: CustomTile<*>,
+        state: CustomBlockState,
+        baseModelLocation: String,
+    ) {
+        val textureRefs = resolveBlockModelTextures(definition, state)
+        require(textureRefs.isNotEmpty()) {
+            "DisplayEntity model for ${definition.id}[${state.canonicalValues()}] has no resolvable textures."
+        }
+        val statePath = blockStateModelPath(state)
+
+        for (stage in 0..9) {
+            val overlay = requireNotNull(
+                ref<Texture2D>(MinecraftAssets, "block/destroy_stage_$stage.png").getResource(),
+            ) { "Minecraft destroy-stage texture $stage is not loaded." }
+            val crackModelPath = "block/cutapi/block_display/${definition.id.key}/$statePath/breaking_$stage"
+            val crackedTextures = linkedMapOf<String, kotlinx.serialization.json.JsonElement>()
+
+            textureRefs.entries.sortedBy { it.key }.forEachIndexed { index, (textureKey, textureRef) ->
+                val source = requireNotNull(textureRef.getResource()) {
+                    "Block model texture $textureRef is not loaded."
+                }
+                val texturePath = "$crackModelPath/texture_$index"
+                val textureFile = File(
+                    packRoot,
+                    "assets/${definition.id.namespace}/textures/$texturePath.png",
+                )
+                writeOwnedResource(
+                    packRoot,
+                    textureFile,
+                    compositeBreakingTexture(source.data, overlay.data).toPngBytes(),
+                )
+                source.metadata.animation?.let { animation ->
+                    writeOwnedResource(
+                        packRoot,
+                        File("${textureFile.path}.mcmeta"),
+                        CuTAPI.json.encodeToString(AnimationMcMeta(animation)).toByteArray(),
+                    )
+                }
+                crackedTextures[textureKey] = JsonPrimitive("${definition.id.namespace}:$texturePath")
+            }
+
+            val modelFile = File(
+                packRoot,
+                "assets/${definition.id.namespace}/models/$crackModelPath.json",
+            )
+            val modelJson = JsonObject(
+                mapOf(
+                    "parent" to JsonPrimitive(baseModelLocation),
+                    "textures" to JsonObject(crackedTextures),
+                ),
+            )
+            modelFile.parentFile.mkdirs()
+            modelFile.createAndWrite(modelJson.toString())
+
+            val (itemNamespace, itemPath) = displayBreakingItemModelLocation(definition, state, stage)
+            writeItemModel(
+                packRoot,
+                itemNamespace,
+                itemPath,
+                "${definition.id.namespace}:$crackModelPath",
+            )
+        }
+    }
+
+    private fun resolveBlockModelTextures(
+        definition: CustomTile<*>,
+        state: CustomBlockState,
+    ): Map<String, ResourceRef<Texture2D>> = when (val blockModel = requireNotNull(definition.descriptor.model(state))) {
+        is BlockModel.Cubic -> blockModel.textures.getAll().let { textures ->
+            linkedMapOf(
+                "up" to textures.up,
+                "down" to textures.down,
+                "north" to textures.north,
+                "south" to textures.south,
+                "west" to textures.west,
+                "east" to textures.east,
+                "particle" to textures.north,
+            )
+        }
+        is BlockModel.Model -> resolveModelTextures(
+            requireNotNull(blockModel.model.getResource()) { "Block model ${blockModel.model} is not loaded." },
+        )
+    }
+
+    private fun resolveModelTextures(model: MinecraftModel): Map<String, ResourceRef<Texture2D>> {
+        val resources = CuTAPI.resourceManager.getAllResources()
+        val modelsByLocator = resources.filterIsInstance<MinecraftModel>()
+            .associateBy { it.ref.toMinecraftModelLocator() }
+        val texturesByLocator = resources.filterIsInstance<Texture2D>()
+            .associateBy { it.ref.toMinecraftLocator() }
+        val declarations = linkedMapOf<String, String>()
+        val visited = mutableSetOf<String>()
+
+        fun collect(current: MinecraftModel) {
+            val locator = current.ref.toMinecraftModelLocator()
+            if (!visited.add(locator)) return
+            val parent = current.json["parent"] as? JsonPrimitive
+            if (parent?.isString == true) {
+                modelsByLocator[parent.content.toModelLookupLocator()]?.let(::collect)
+            }
+            (current.json["textures"] as? JsonObject)?.forEach { (key, value) ->
+                val primitive = value as? JsonPrimitive
+                    ?: error("Model texture $key in ${current.ref} must be a string.")
+                declarations[key] = primitive.content
+            }
+        }
+        collect(model)
+
+        fun resolveTexture(key: String, resolving: MutableSet<String>): ResourceRef<Texture2D>? {
+            if (!resolving.add(key)) error("Cyclic model texture reference #$key in ${model.ref}.")
+            val declaration = declarations[key] ?: return null
+            val result = if (declaration.startsWith("#")) {
+                resolveTexture(declaration.removePrefix("#"), resolving)
+            } else {
+                texturesByLocator[declaration.toTextureLookupLocator()]?.ref
+            }
+            resolving.remove(key)
+            return result
+        }
+
+        return declarations.keys.associateWith { key ->
+            requireNotNull(resolveTexture(key, mutableSetOf())) {
+                "Model texture #$key in ${model.ref} does not resolve to a loaded texture."
+            }
+        }
     }
 
     private fun vanillaItemModelLocation(
@@ -201,7 +341,7 @@ internal object NativeBlockResourcePackGenerator {
     ): String = when (val model = requireNotNull(definition.descriptor.model(state))) {
         is BlockModel.Model -> {
             val ref = model.model
-            "${ref.namespace}:${ref.path(withExtension = false, fixInvalids = true)}"
+            ref.toMinecraftModelLocator()
         }
         is BlockModel.Cubic -> {
             val stateName = blockStateModelPath(state)
@@ -245,7 +385,7 @@ internal object NativeBlockResourcePackGenerator {
         val ownedPath = blockTextureResourcePath(texturePath)
         val textureFile = File(
             packRoot,
-            "assets/${textureRef.namespace}/textures/$ownedPath.png",
+            "assets/${textureRef.minecraftNamespace}/textures/$ownedPath.png",
         )
         writeOwnedResource(packRoot, textureFile, texture.toBytes())
 
@@ -254,7 +394,7 @@ internal object NativeBlockResourcePackGenerator {
             val metadata = CuTAPI.json.encodeToString(AnimationMcMeta(animation)).toByteArray()
             writeOwnedResource(packRoot, metadataFile, metadata)
         }
-        return blockTextureModelLocation(textureRef.namespace, texturePath)
+        return blockTextureModelLocation(textureRef.minecraftNamespace, texturePath)
     }
 
     private fun writeOwnedResource(
@@ -279,6 +419,62 @@ internal object NativeBlockResourcePackGenerator {
     @Suppress("UNCHECKED_CAST")
     private fun propertyName(property: Property<*>, value: Comparable<*>): String =
         (property as Property<Comparable<Any>>).getName(value as Comparable<Any>)
+}
+
+private fun String.toModelLookupLocator(): String = when {
+    "://" in this -> ref<MinecraftModel>(this).toMinecraftModelLocator()
+    ":" in this -> this
+    else -> "minecraft:$this"
+}
+
+private fun String.toTextureLookupLocator(): String = when {
+    "://" in this -> ref<Texture2D>(this).toMinecraftLocator()
+    ":" in this -> this
+    else -> "minecraft:$this"
+}
+
+internal fun compositeBreakingTexture(source: BufferedImage, overlay: BufferedImage): BufferedImage {
+    val result = BufferedImage(source.width, source.height, BufferedImage.TYPE_INT_ARGB)
+    val frameSize = source.width.coerceAtLeast(1)
+    for (y in 0 until source.height) {
+        val frameStart = (y / frameSize) * frameSize
+        val frameHeight = minOf(frameSize, source.height - frameStart)
+        val overlayY = ((y - frameStart) * overlay.height / frameHeight).coerceAtMost(overlay.height - 1)
+        for (x in 0 until source.width) {
+            val sourceArgb = source.getRGB(x, y)
+            val sourceAlpha = sourceArgb ushr 24
+            if (sourceAlpha == 0) {
+                result.setRGB(x, y, 0)
+                continue
+            }
+
+            val overlayX = (x * overlay.width / source.width).coerceAtMost(overlay.width - 1)
+            val overlayArgb = overlay.getRGB(overlayX, overlayY)
+            val overlayAlpha = overlayArgb ushr 24
+            // rendertype_crumbling discards alpha below 0.1. Vanilla's white background has
+            // alpha 1/255, so it must not brighten the entire model.
+            if (overlayAlpha / 255.0 < 0.1) {
+                result.setRGB(x, y, sourceArgb)
+                continue
+            }
+
+            // Vanilla uses DST_COLOR + SRC_COLOR, or 2 * base * overlay per channel. Preserve
+            // both the dark crack centers and their bright edges, and keep the model's alpha.
+            val red = blendBreakingChannel((sourceArgb ushr 16) and 0xFF, (overlayArgb ushr 16) and 0xFF)
+            val green = blendBreakingChannel((sourceArgb ushr 8) and 0xFF, (overlayArgb ushr 8) and 0xFF)
+            val blue = blendBreakingChannel(sourceArgb and 0xFF, overlayArgb and 0xFF)
+            result.setRGB(x, y, sourceAlpha shl 24 or (red shl 16) or (green shl 8) or blue)
+        }
+    }
+    return result
+}
+
+private fun blendBreakingChannel(base: Int, overlay: Int): Int =
+    (2.0 * base * overlay / 255.0).roundToInt().coerceIn(0, 255)
+
+private fun BufferedImage.toPngBytes(): ByteArray = ByteArrayOutputStream().use { output ->
+    check(ImageIO.write(this, "png", output)) { "No PNG writer is available." }
+    output.toByteArray()
 }
 
 internal fun blockTextureResourcePath(texturePath: String): String = "block/cutapi/$texturePath"

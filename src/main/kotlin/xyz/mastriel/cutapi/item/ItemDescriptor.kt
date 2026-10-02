@@ -1,8 +1,9 @@
 package xyz.mastriel.cutapi.item
 
+import io.papermc.paper.datacomponent.*
+import io.papermc.paper.datacomponent.item.*
 import net.kyori.adventure.text.*
 import org.bukkit.entity.*
-import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.registry.*
 import xyz.mastriel.cutapi.resources.*
@@ -125,63 +126,6 @@ public class ItemDescriptorBuilder {
     }
 }
 
-public sealed class ItemTexture {
-
-    public abstract fun isAvailable(): Boolean
-    public abstract fun getRef(): ResourceRef<*>
-    public abstract fun getItemModelId(): Identifier
-    public abstract val showSwapAnimation: Boolean
-
-    public data class Texture(val texture: ResourceRef<Texture2D>, override val showSwapAnimation: Boolean) :
-        ItemTexture() {
-
-        override fun getItemModelId(): Identifier {
-            val id = texture.getResource()?.getItemModel()?.toIdentifier() ?: unknownID()
-            val swapMode = if (showSwapAnimation) "__swap" else "__noswap"
-            return id("${id}${swapMode}")
-        }
-
-        override fun isAvailable(): Boolean = texture.isAvailable()
-
-        override fun getRef(): ResourceRef<*> {
-            return texture
-        }
-    }
-
-    public data class Model(val model: ResourceRef<Model3D>, override val showSwapAnimation: Boolean) : ItemTexture() {
-
-        override fun getItemModelId(): Identifier {
-            val id = model.getResource()?.getItemModel()?.toIdentifier() ?: unknownID()
-            val swapMode = if (showSwapAnimation) "__swap" else "__noswap"
-            return id("${id}${swapMode}")
-        }
-
-        override fun isAvailable(): Boolean = model.isAvailable()
-
-        override fun getRef(): ResourceRef<*> {
-            return model
-        }
-    }
-}
-
-public fun itemTexture(texture: ResourceRef<Texture2D>, showSwapAnimation: Boolean = true): ItemTexture.Texture =
-    ItemTexture.Texture(texture, showSwapAnimation)
-
-public fun itemModel(model: ResourceRef<Model3D>, showSwapAnimation: Boolean = true): ItemTexture.Model =
-    ItemTexture.Model(model, showSwapAnimation)
-
-public fun itemTexture(plugin: CuTPlugin, path: String, showSwapAnimation: Boolean = true): ItemTexture.Texture =
-    ItemTexture.Texture(ref(plugin, path), showSwapAnimation)
-
-public fun itemModel(plugin: CuTPlugin, path: String, showSwapAnimation: Boolean = true): ItemTexture.Model =
-    ItemTexture.Model(ref(plugin, path), showSwapAnimation)
-
-public fun itemTexture(stringPath: String, showSwapAnimation: Boolean = true): ItemTexture.Texture =
-    ItemTexture.Texture(ref(stringPath), showSwapAnimation)
-
-public fun itemModel(stringPath: String, showSwapAnimation: Boolean = true): ItemTexture.Model =
-    ItemTexture.Model(ref(stringPath), showSwapAnimation)
-
 /**
  * A class for creating dynamic displays (lore, name, etc.) for [CuTItemStack]s.
  * Whenever the server sends an ItemStack to the client for any reason, this will be
@@ -197,7 +141,26 @@ public open class ItemDisplayBuilder(public val itemStack: CuTItemStack, public 
     private val lines = mutableListOf<Component>()
     public var name: Component? = null
 
-    public var texture: ItemTexture? = null
+    /** The exact client item definition assigned to the rendered stack. */
+    public var itemModel: ResourceRef<ItemModel>? = null
+
+    private var customModelDataBuilder: ItemDisplayCustomModelDataBuilder? = null
+
+    /**
+     * Supplies the ordered values read by `minecraft:custom_model_data` item-model properties.
+     * Each value kind has its own zero-based index space.
+     */
+    public fun customModelData(block: ItemDisplayCustomModelDataBuilder.() -> Unit) {
+        customModelDataBuilder = ItemDisplayCustomModelDataBuilder().apply(block)
+    }
+
+    internal fun buildCustomModelDataOrNull(): CustomModelData? = customModelDataBuilder?.build()
+
+    internal fun applyCustomModelDataTo(rendered: org.bukkit.inventory.ItemStack) {
+        buildCustomModelDataOrNull()?.let { component ->
+            rendered.setData(DataComponentTypes.CUSTOM_MODEL_DATA, component)
+        }
+    }
 
     /**
      * Adds a Component to this item description.
@@ -244,6 +207,39 @@ public open class ItemDisplayBuilder(public val itemStack: CuTItemStack, public 
     public fun <T : ItemAttachment> getAttachmentOrNull(schema: xyz.mastriel.cutapi.data.Schema<T>): T? =
         itemStack.getAttachmentOrNull(schema)
 
+}
+
+/** Builds the component-side inputs consumed by a client [ItemModel]. */
+@Suppress("UnstableApiUsage")
+@ItemDescriptorDsl
+public class ItemDisplayCustomModelDataBuilder internal constructor() {
+    private val floats: MutableList<Float> = mutableListOf()
+    private val flags: MutableList<Boolean> = mutableListOf()
+    private val strings: MutableList<String> = mutableListOf()
+    private val colors: MutableList<Color> = mutableListOf()
+
+    public fun float(value: Float) {
+        floats += value
+    }
+
+    public fun flag(value: Boolean) {
+        flags += value
+    }
+
+    public fun string(value: String) {
+        strings += value
+    }
+
+    public fun color(value: Color) {
+        colors += value
+    }
+
+    internal fun build(): CustomModelData = CustomModelData.customModelData()
+        .addFloats(floats)
+        .addFlags(flags)
+        .addStrings(strings)
+        .addColors(colors.map(Color::bukkit))
+        .build()
 }
 
 public interface ItemLoreAttachment : ItemAttachment {

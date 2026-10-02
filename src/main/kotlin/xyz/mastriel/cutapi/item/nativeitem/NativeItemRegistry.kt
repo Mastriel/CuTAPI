@@ -39,15 +39,15 @@ internal object NativeItemRegistry {
         resetBoundTagView()
         setField("unregisteredIntrusiveHolders", IdentityHashMap<Item, Holder.Reference<Item>>())
 
-        val installed = linkedMapOf<NativeItemSpecification, NativeCustomItem>()
+        val installed = linkedMapOf<NativeItemSpecification, NativeItemImplementation>()
         try {
             for (specification in specifications) {
                 val definition = specification.definition
                 val key = definition.id.minecraftKey()
                 val backing = NativeItemTypes.getMinecraft(definition.backingItem)
-                val item = NativeCustomItem(backing, key)
-                registry.register(key, item, RegistrationInfo.BUILT_IN)
-                installed[specification] = item
+                val implementation = NativeItemImplementationAdapters.create(backing, key)
+                registry.register(key, implementation.item, RegistrationInfo.BUILT_IN)
+                installed[specification] = implementation
             }
 
             restoreAndExtendBackingTags(installed, existingTags)
@@ -56,8 +56,8 @@ internal object NativeItemRegistry {
             registry.freeze()
         }
 
-        for ((specification, item) in installed) {
-            NativeItemTypes.bind(specification.definition.id, item)
+        for ((specification, implementation) in installed) {
+            NativeItemTypes.bind(specification.definition.id, implementation.item)
         }
         verify(specifications, existingTags)
     }
@@ -90,14 +90,14 @@ internal object NativeItemRegistry {
         registry.listTags().toList().associate { named -> named.key() to named.stream().toList() }
 
     private fun restoreAndExtendBackingTags(
-        installed: Map<NativeItemSpecification, NativeCustomItem>,
+        installed: Map<NativeItemSpecification, NativeItemImplementation>,
         existingTags: Map<net.minecraft.tags.TagKey<Item>, List<Holder<Item>>>,
     ) {
         for ((tag, existingHolders) in existingTags) {
             val rebuilt = existingHolders.toMutableList()
-            for ((_, item) in installed) {
-                if (item.backing.builtInRegistryHolder() in existingHolders) {
-                    rebuilt += item.builtInRegistryHolder()
+            for ((_, implementation) in installed) {
+                if (implementation.backing.builtInRegistryHolder() in existingHolders) {
+                    rebuilt += implementation.item.builtInRegistryHolder()
                 }
             }
             registry.bindTag(tag, rebuilt)
@@ -111,12 +111,12 @@ internal object NativeItemRegistry {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun installBukkitMaterialMappings(installed: Map<NativeItemSpecification, NativeCustomItem>) {
+    private fun installBukkitMaterialMappings(installed: Map<NativeItemSpecification, NativeItemImplementation>) {
         val field = CraftMagicNumbers::class.java.getDeclaredField("ITEM_MATERIAL")
         field.isAccessible = true
         val itemMaterials = field.get(null) as MutableMap<Item, org.bukkit.Material>
-        for ((specification, item) in installed) {
-            itemMaterials[item] = specification.definition.backingItem.asMaterial()
+        for ((specification, implementation) in installed) {
+            itemMaterials[implementation.item] = specification.definition.backingItem.asMaterial()
                 ?: error("Backing item ${specification.definition.backingItem.key} has no Bukkit Material.")
         }
     }
@@ -170,6 +170,11 @@ internal object NativeItemRegistry {
 
             val customHolder = nms.builtInRegistryHolder()
             val backing = NativeItemTypes.getMinecraft(definition.backingItem)
+            NativeItemImplementationAdapters.verify(NativeItemImplementation(nms, backing))
+            check(net.minecraft.world.item.ItemStack(nms).`is`(backing)) {
+                "Native item ${definition.id} does not satisfy backing identity checks for " +
+                    "${definition.backingItem.key}."
+            }
             backing.builtInRegistryHolder().tags().forEach { tag ->
                 check(customHolder.`is`(tag)) {
                     "Native item ${definition.id} is missing projected backing tag ${tag.location}."

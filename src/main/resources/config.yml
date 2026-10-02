@@ -35,21 +35,16 @@ generated-pack-name: "pack.zip"
 # Default: CuTAPI Generated Resource Pack
 pack-description: "CuTAPI Generated Resource Pack"
 
-# The version of the pack generated. Currently supported: 9 to 39 (1.19-1.21.4)
-# "auto" will automatically choose the resource pack version based on the version the server is running.
-#
-# Type: integer | "auto"
-# Default: auto
-pack-version: auto
-
 # The formatter used for item origins (the tag in item lores which show where they come from). {} represents the name
 # of the data source it came from. Set to "$DISABLE" to disable item origins from appearing.
 #
 # {small} represents the name of the item's data source written in sᴍᴀʟʟ ᴄᴀᴘs.
 #
-# Type: string
-# Default: &9{}
-item-origin-formatter: "&9{}"
+# Type: object
+# Default: ->
+#   default: "&9{}"
+item-origin-formatter:
+  default: "&9{}"
 
 uploader:
   # The port for the internal server (if that's the uploader being used). You may need

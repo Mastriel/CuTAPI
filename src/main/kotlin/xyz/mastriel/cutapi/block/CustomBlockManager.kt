@@ -1,6 +1,7 @@
 package xyz.mastriel.cutapi.block
 
 import org.bukkit.*
+import org.bukkit.block.TileState
 import xyz.mastriel.cutapi.*
 import xyz.mastriel.cutapi.block.nativeblock.*
 import org.bukkit.craftbukkit.*
@@ -29,7 +30,28 @@ public class CustomBlockManager {
     private val types = mutableMapOf<Identifier, CustomTileType<*>>()
 
     public fun getPlacedTile(block: BukkitBlock): CuTPlacedTile {
-        val type = types[block.customTypeId] ?: error("Block ${block.customId} has no registered placed wrapper type!")
+        val definition = NativeBlockTypes.definition(block)
+        if (definition == null) {
+            return if (block.state is TileState) CuTPlacedTileEntity(block) else CuTPlacedBlock(block)
+        }
+        return constructCustomPlacedTile(block, definition)
+    }
+
+    internal fun getPlacedTile(
+        block: BukkitBlock,
+        definition: CustomTile<*>,
+        state: CustomBlockState,
+    ): CuTPlacedTile = PlacedTileConstructionContext.withSnapshot(
+        PlacedTileConstructionSnapshot(definition.asIdentity(), state),
+    ) {
+        constructCustomPlacedTile(block, definition)
+    }
+
+    private fun constructCustomPlacedTile(block: BukkitBlock, definition: CustomTile<*>): CuTPlacedTile {
+        val typeId = getType(definition.placedBlockTypeClass)
+            ?: error("Custom block ${definition.id} has no registered placed wrapper type!")
+        val type = types[typeId]
+            ?: error("Custom block ${definition.id} has no registered placed wrapper type!")
         return type.constructor(block)
     }
 
@@ -134,17 +156,24 @@ public class CustomBlockManager {
 
 
         public val BukkitBlock.customTile: CustomTile<*>
-            get() = CustomTile.get(customId)
+            get() = customTileOrNull ?: error("Block at $location is not a native custom block.")
 
         public val BukkitBlock.customTileOrNull: CustomTile<*>?
-            get() = CustomTile.getOrNull(customId)
+            get() = NativeBlockTypes.definition(this)
+
+        public val BukkitBlock.typeClass: KClass<out CuTPlacedTile>
+            get() = customTileOrNull?.placedBlockTypeClass
+                ?: if (state is TileState) CuTPlacedTileEntity::class else CuTPlacedBlock::class
 
         public val BukkitBlock.tags: TagContainer
             get() = BlockDataTagContainer(this)
 
-        @Suppress("UNCHECKED_CAST")
-        public fun <T : CuTPlacedTile> BukkitBlock.wrap(): T? {
-            return CuTAPI.blockManager.getPlacedTile(this) as? T
-        }
+        public fun BukkitBlock.wrap(): CuTPlacedTile = CuTAPI.blockManager.getPlacedTile(this)
+
+        @JvmName("wrapWithType")
+        public inline fun <reified T : CuTPlacedTile> BukkitBlock.wrap(): T? =
+            CuTAPI.blockManager.getPlacedTile(this) as? T
+
+        public inline fun <reified T : CuTPlacedTile> BukkitBlock.isType(): Boolean = wrap() is T
     }
 }

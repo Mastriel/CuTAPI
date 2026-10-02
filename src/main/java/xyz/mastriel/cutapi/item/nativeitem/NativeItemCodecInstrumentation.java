@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Item;
 import xyz.mastriel.cutapi.item.nativeitem.NativeItemClientBridge;
 import xyz.mastriel.cutapi.item.nativeitem.advice.ItemHolderEncodeAdvice;
+import xyz.mastriel.cutapi.item.nativeitem.advice.ItemStackBackingIdentityAdvice;
 import xyz.mastriel.cutapi.item.nativeitem.advice.ItemStackDecodeAdvice;
 import xyz.mastriel.cutapi.item.nativeitem.advice.ItemStackEncodeAdvice;
 import xyz.mastriel.cutapi.item.nativeitem.advice.ItemTagPayloadAdvice;
@@ -28,6 +29,7 @@ import xyz.mastriel.cutapi.item.nativeitem.advice.StartupPluginFinalizerAdvice;
 import xyz.mastriel.cutapi.block.nativeblock.NativeBlockClientBridge;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
+import static net.bytebuddy.matcher.ElementMatchers.returns;
 import static net.bytebuddy.matcher.ElementMatchers.takesArgument;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
@@ -36,6 +38,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.lang.reflect.Method;
 import java.io.InputStream;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class NativeItemCodecInstrumentation {
     private static final String HOOK_CLASS = "xyz.mastriel.cutapi.injected.NativeItemCodecHooks";
     private static final Set<String> EXPECTED_TYPES = Set.of(
+        "net.minecraft.world.item.ItemStack",
         "net.minecraft.world.item.ItemStack$2",
         "net.minecraft.network.chat.ComponentSerialization$1",
         "net.minecraft.network.codec.ByteBufCodecs$34",
@@ -110,6 +114,12 @@ public final class NativeItemCodecInstrumentation {
                     transformationErrors.put(typeName, throwable);
                 }
             })
+            .type(named("net.minecraft.world.item.ItemStack"))
+            .transform((builder, type, classLoader, module, protectionDomain) -> builder
+                .visit(Advice.to(ItemStackBackingIdentityAdvice.class).on(
+                    named("is")
+                        .and(takesArguments(Item.class))
+                        .and(returns(boolean.class)))))
             .type(named("net.minecraft.world.item.ItemStack$2"))
             .transform((builder, type, classLoader, module, protectionDomain) -> builder
                 .visit(Advice.to(ItemStackEncodeAdvice.class).on(
@@ -197,18 +207,31 @@ public final class NativeItemCodecInstrumentation {
         BiConsumer<Registry<?>, TagNetworkSerialization.NetworkPayload> tags = NativeItemClientBridge::projectTags;
         BiFunction<RegistryFriendlyByteBuf, net.minecraft.network.chat.Component, net.minecraft.network.chat.Component>
             components = NativeItemClientBridge::encodeComponent;
+        BiPredicate<Item, Item> backingItems = (actual, expected) ->
+            actual instanceof NativeBackedItem backed && backed.getBacking() == expected;
         Function<Object, Object> blockStates = NativeBlockClientBridge::encodeState;
         Function<Object, Object> projectedBlockStates = NativeBlockClientBridge::projectValue;
         int vanillaBlockStateCount = xyz.mastriel.cutapi.block.nativeblock.NativeBlockRegistry.INSTANCE.getVanillaBlockStateCount$CuTAPI();
         invoke(
             hookClass,
             "bind",
-            new Class<?>[]{Function.class, Function.class, Function.class, BiConsumer.class, BiFunction.class, Function.class, Function.class, int.class},
+            new Class<?>[]{
+                Function.class,
+                Function.class,
+                Function.class,
+                BiConsumer.class,
+                BiFunction.class,
+                BiPredicate.class,
+                Function.class,
+                Function.class,
+                int.class
+            },
             encoder,
             decoder,
             holder,
             tags,
             components,
+            backingItems,
             blockStates,
             projectedBlockStates,
             vanillaBlockStateCount

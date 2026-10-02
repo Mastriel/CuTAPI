@@ -7,17 +7,6 @@ import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.utils.*
 
-private val SpecificTextureMetadataSerializer: Serializer<MutableMap<Int, Texture2D.Metadata>> =
-    VariantSerializer.mapped(
-        VariantSerializer.MapOf(Texture2D.Metadata.embedded()),
-        serialize = { values -> values.mapKeys { (key, _) -> key.toString() } },
-        deserialize = { values ->
-            values.mapKeysTo(mutableMapOf()) { (key, _) ->
-                key.toIntOrNull() ?: throw IllegalArgumentException("Specific metadata key '$key' must be an integer.")
-            }
-        }
-    )
-
 public data class HorizontalAtlasTextureGeneratorOptions(
     public val metadata: Texture2D.Metadata,
     public val width: Int? = null,
@@ -28,14 +17,13 @@ public data class HorizontalAtlasTextureGeneratorOptions(
         property(HorizontalAtlasTextureGeneratorOptions::width, VariantSerializer.Int.nullable()) {
             optional(omitDefaults = true) { null }
         }
-        property(HorizontalAtlasTextureGeneratorOptions::specificMetadata, SpecificTextureMetadataSerializer) {
+        property(HorizontalAtlasTextureGeneratorOptions::specificMetadata, BuiltinSerializers.SpecificTextureMetadata) {
             optional(omitDefaults = true) { mutableMapOf() }
         }
     })
 }
 
-// The options schema references a file-level serializer, so the generator must not read the
-// companion object until that schema has finished its own static initialization.
+// Initialize the generator after its options schema has finished static initialization.
 public val HorizontalAtlasTextureGenerator: ResourceGenerator<HorizontalAtlasTextureGeneratorOptions> by lazy {
     resourceGenerator<Texture2D, HorizontalAtlasTextureGeneratorOptions>(
         optionsSchema = HorizontalAtlasTextureGeneratorOptions,

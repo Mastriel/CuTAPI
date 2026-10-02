@@ -4,6 +4,7 @@
 package xyz.mastriel.cutapi.block.breaklogic
 
 import net.minecraft.core.BlockPos
+import net.minecraft.core.component.DataComponents
 import net.minecraft.network.protocol.game.ClientboundBlockChangedAckPacket
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket
@@ -11,6 +12,7 @@ import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket.Att
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket
 import net.minecraft.network.protocol.game.ServerboundPickItemFromBlockPacket
 import net.minecraft.world.InteractionHand
+import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.ai.attributes.AttributeInstance
 import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.entity.item.ItemEntity
@@ -54,6 +56,7 @@ import xyz.mastriel.cutapi.block.nativeblock.NativeBlockClientBridge
 import xyz.mastriel.cutapi.block.nativeblock.NativeBlockDisplayManager
 import xyz.mastriel.cutapi.block.nativeblock.NativeBlockTypes
 import xyz.mastriel.cutapi.item.CuTItemStack
+import xyz.mastriel.cutapi.item.attachments.Tool
 import xyz.mastriel.cutapi.item.nativeitem.NativeItemTypes
 import xyz.mastriel.cutapi.nms.PacketEvent
 import xyz.mastriel.cutapi.nms.PacketHandler
@@ -199,9 +202,9 @@ public class BlockBreakManager : Listener, PacketListener {
         val session = CustomMiningSession(
             player,
             packet.pos,
+            packet.direction,
             state,
             definition,
-            packet.sequence,
             ::complete,
         )
         acknowledge(player, packet.sequence)
@@ -235,7 +238,9 @@ public class BlockBreakManager : Listener, PacketListener {
             val tile = block.wrap<CuTPlacedTile>() ?: return
             val oldBukkitState = GenericBlockState(block)
             val sound = block.blockSoundGroup
-            val particleData = NativeBlockClientBridge.project(session.initialState).createCraftBlockData()
+            val visual = requireNotNull(NativeBlockClientBridge.resolve(session.initialState)) {
+                "Custom block ${session.definition.id} has no resolved client visual."
+            }
             val breakEvent = BlockBreakEvent(block, player)
             Plugin.server.pluginManager.callEvent(breakEvent)
             val pre = BlockPreBreakContext(tile, player, cause, breakEvent)
@@ -262,7 +267,7 @@ public class BlockBreakManager : Listener, PacketListener {
             }
             NativeBlockDisplayManager.refresh(block)
             if (cause != BlockBreakCause.Creative) {
-                player.nms().mainHandItem.mineBlock(level, session.initialState, session.pos, player.nms())
+                damageHeldItem(player, Tool.from(held))
             }
 
             val mayDrop = cause != BlockBreakCause.Creative &&
@@ -287,7 +292,7 @@ public class BlockBreakManager : Listener, PacketListener {
                     BlockPostBreakContext(tile, player, cause, dropContext.drops.toList(), dropContext.experience),
                 )
             }
-            playBreakEffects(block, sound, particleData)
+            playBreakEffects(block, sound, visual)
         } finally {
             session.finishClientState(restoreAttribute = true)
         }
@@ -320,24 +325,73 @@ public class BlockBreakManager : Listener, PacketListener {
     private fun playBreakEffects(
         block: org.bukkit.block.Block,
         sound: org.bukkit.SoundGroup,
-        particleData: org.bukkit.block.data.BlockData,
+        visual: xyz.mastriel.cutapi.block.ResolvedBlockVisual,
     ) {
         block.world.playSound(block.location, sound.breakSound, SoundCategory.BLOCKS, sound.volume, sound.pitch)
-        block.world.spawnParticle(
-            org.bukkit.Particle.BLOCK,
-            block.location.toCenterLocation(),
-            20,
-            0.25,
-            0.25,
-            0.25,
-            particleData,
-        )
+        val displayItem = visual.displayEntity?.item
+        if (displayItem != null) {
+            val origin = block.location
+            displayBreakCompletionParticles().forEach { particle ->
+                block.world.spawnParticle(
+                    org.bukkit.Particle.ITEM,
+                    origin.x + particle.offsetX,
+                    origin.y + particle.offsetY,
+                    origin.z + particle.offsetZ,
+                    0,
+                    particle.velocityX,
+                    particle.velocityY,
+                    particle.velocityZ,
+                    1.0,
+                    displayItem,
+                )
+            }
+        } else {
+            val particleData = visual.clientBlockState.createCraftBlockData()
+            block.world.spawnParticle(
+                org.bukkit.Particle.BLOCK,
+                block.location.toCenterLocation(),
+                20,
+                0.25,
+                0.25,
+                0.25,
+                particleData,
+            )
+        }
     }
 
     private fun cancel(id: PlayerUUID, repairBlock: Boolean) {
         val session = sessions.remove(id) ?: return
         session.finishClientState(restoreAttribute = true)
         if (repairBlock) repair(session.player, session.pos)
+    }
+
+    /**
+     * Native custom blocks are removed entirely by CuTAPI, so their successful-break durability
+     * must be applied here instead of delegated to Minecraft's block-breaking implementation.
+     */
+    private fun damageHeldItem(player: Player, tools: List<Tool>) {
+        val damage = tools.maxOfOrNull { it.category.attributes.breakBlockItemDamage } ?: return
+        if (damage <= 0) return
+        player.nms().mainHandItem.hurtAndBreak(damage, player.nms(), EquipmentSlot.MAINHAND)
+    }
+
+    /**
+     * A custom item whose backing item is not a native tool has no TOOL component for Minecraft to
+     * consume after an ordinary block break. Supply the same server-owned durability fallback for
+     * its explicit CuTAPI Tool attachment. Native-tool-backed items remain handled by Minecraft.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public fun onVanillaBlockBreak(event: BlockBreakEvent) {
+        if (event.player.gameMode == GameMode.CREATIVE) return
+        if (NativeBlockTypes.definition(event.block) != null) return
+
+        val held = CuTItemStack.wrap(event.player.inventory.itemInMainHand)
+        if (!held.isCustom) return
+        val tools = held.getAttachments(Tool)
+        if (tools.isEmpty()) return
+        if (event.player.nms().mainHandItem.has(DataComponents.TOOL)) return
+
+        damageHeldItem(event.player, tools)
     }
 
     private fun invalidateTarget(pos: BlockPos, worldId: java.util.UUID, excluding: PlayerUUID? = null) {

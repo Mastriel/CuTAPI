@@ -3,7 +3,6 @@
 package xyz.mastriel.cutapi.block
 
 import org.bukkit.Material
-import org.bukkit.entity.ItemDisplay.ItemDisplayTransform
 
 /** Source bridge for the pre-native visual API. New definitions should use [BlockVisualMethod]. */
 @Deprecated("Use BlockVisualMethod.", ReplaceWith("BlockVisualMethod"))
@@ -17,9 +16,6 @@ public sealed class BlockStrategy {
         NoteBlock -> BlockVisualMethod.NoteBlock
         Mushroom -> BlockVisualMethod.Mushroom
         is Vanilla -> BlockVisualMethod.Vanilla(blockVisualData(material))
-        FakeEntity -> BlockVisualMethod.DisplayEntity(
-            blockVisualData(Material.BARRIER),
-            ItemDisplayTransform.FIXED,
-        )
+        FakeEntity -> BlockVisualMethod.DisplayEntity(blockVisualData(Material.BARRIER))
     }
 }

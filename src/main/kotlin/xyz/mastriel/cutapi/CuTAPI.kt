@@ -44,7 +44,6 @@ public object CuTAPI {
     public val resourceManager: ResourceManager = ResourceManager()
     public val resourcePackManager: ResourcePackManager = ResourcePackManager()
     public val periodicManager: PeriodicManager = PeriodicManager()
-    public val serviceManager: ServiceManager = ServiceManager()
     public val blockManager: CustomBlockManager by lazy { CustomBlockManager() }
     public val guiManager: GuiManager = GuiManager()
     public val minecraftAssetLoader: MinecraftAssetLoader = MinecraftAssetLoader()
@@ -56,7 +55,6 @@ public object CuTAPI {
     public val packetEventManager: PacketEventManager = PacketEventManager()
     internal val blockBreakManager = BlockBreakManager()
 
-    public val experimentalBlockSupport: Boolean by cutConfigValue("experimental_block_support") { false }
     public val enableDebugItems: Boolean by cutConfigValue($$"$enable_debug_items") { false }
 
     /**

@@ -1,18 +1,14 @@
 package xyz.mastriel.cutapi.block
 
-import org.bukkit.event.EventHandler
-import org.bukkit.event.EventPriority
-import org.bukkit.event.Listener
-import org.bukkit.event.block.Action
-import org.bukkit.event.block.BlockExplodeEvent
-import org.bukkit.event.block.BlockPhysicsEvent
-import org.bukkit.event.entity.EntityExplodeEvent
-import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.*
+import org.bukkit.event.block.*
+import org.bukkit.event.entity.*
+import org.bukkit.event.player.*
 import xyz.mastriel.cutapi.block.CustomBlockManager.Companion.isCustom
 import xyz.mastriel.cutapi.block.CustomBlockManager.Companion.wrap
 
 internal object BlockRuntimeEvents : Listener {
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onInteract(event: PlayerInteractEvent) {
         val block = event.clickedBlock ?: return
         if (!block.isCustom) return
@@ -20,7 +16,11 @@ internal object BlockRuntimeEvents : Listener {
         val context = BlockInteractContext(tile, event.player, event)
         when (event.action) {
             Action.LEFT_CLICK_BLOCK -> BlockSystem.dispatch(tile) { it.onLeftClick(context) }
-            Action.RIGHT_CLICK_BLOCK -> BlockSystem.dispatch(tile) { it.onRightClick(context) }
+            Action.RIGHT_CLICK_BLOCK -> {
+                BlockSystem.dispatch(tile) { it.onRightClick(context) }
+                if (!event.player.isSneaking) BlockSystem.dispatch(tile) { it.onInteract(context) }
+            }
+
             else -> Unit
         }
     }

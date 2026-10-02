@@ -1,5 +1,7 @@
 package xyz.mastriel.cutapi.item
 
+import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent
+import io.papermc.paper.event.player.PlayerStopUsingItemEvent
 import org.bukkit.*
 import org.bukkit.entity.*
 import org.bukkit.event.*
@@ -48,6 +50,44 @@ public class ItemRightClickEntityContext(
 public class ItemDropContext(item: CuTItemStack, public val player: Player, public val event: PlayerDropItemEvent) :
     ItemSystemContext(item)
 
+public class ItemConsumeContext(
+    item: CuTItemStack,
+    public val player: Player,
+    public val event: PlayerItemConsumeEvent,
+) : ItemSystemContext(item)
+
+public class ItemLaunchProjectileContext(
+    item: CuTItemStack,
+    public val player: Player,
+    public val projectile: Projectile,
+    public val event: PlayerLaunchProjectileEvent,
+) : ItemSystemContext(item)
+
+public class ItemFishContext(
+    item: CuTItemStack,
+    public val player: Player,
+    public val event: PlayerFishEvent,
+) : ItemSystemContext(item)
+
+public class ItemShootBowContext(
+    item: CuTItemStack,
+    public val shooter: LivingEntity,
+    public val projectile: Entity,
+    public val event: EntityShootBowEvent,
+) : ItemSystemContext(item)
+
+public class ItemStopUsingContext(
+    item: CuTItemStack,
+    public val player: Player,
+    public val event: PlayerStopUsingItemEvent,
+) : ItemSystemContext(item)
+
+public class ItemRiptideContext(
+    item: CuTItemStack,
+    public val player: Player,
+    public val event: PlayerRiptideEvent,
+) : ItemSystemContext(item)
+
 public class ItemOffhandEquipContext(item: CuTItemStack, public val player: Player, public val event: Cancellable) :
     ItemSystemContext(item)
 
@@ -87,6 +127,12 @@ public interface ItemSystem : CuTSystem<CuTItemStack> {
     public fun onRightClick(context: ItemInteractContext) {}
     public fun onRightClickEntity(context: ItemRightClickEntityContext) {}
     public fun onDrop(context: ItemDropContext) {}
+    public fun onConsume(context: ItemConsumeContext) {}
+    public fun onLaunchProjectile(context: ItemLaunchProjectileContext) {}
+    public fun onFish(context: ItemFishContext) {}
+    public fun onShootBow(context: ItemShootBowContext) {}
+    public fun onStopUsing(context: ItemStopUsingContext) {}
+    public fun onRiptide(context: ItemRiptideContext) {}
     public fun onOffhandEquip(context: ItemOffhandEquipContext) {}
     public fun onDamageEntity(context: ItemDamageEntityContext) {}
     public fun onBreak(context: ItemBlockBreakContext) {}

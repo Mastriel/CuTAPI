@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.StateDefinition
 import net.minecraft.world.phys.shapes.CollisionContext
+import net.minecraft.world.phys.shapes.Shapes
 import net.minecraft.world.phys.shapes.VoxelShape
 import xyz.mastriel.cutapi.block.CustomTile
 import xyz.mastriel.cutapi.block.CustomTileEntity
@@ -55,6 +56,23 @@ internal open class NativeCustomBlock(
 
     override fun getOcclusionShape(state: BlockState): VoxelShape =
         carrierState(state).getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)
+
+    override fun getVisualShape(
+        state: BlockState,
+        level: BlockGetter,
+        pos: BlockPos,
+        context: CollisionContext,
+    ): VoxelShape = if (definition.descriptor.settings.occludes) {
+        super.getVisualShape(state, level, pos, context)
+    } else {
+        Shapes.empty()
+    }
+
+    override fun propagatesSkylightDown(state: BlockState): Boolean =
+        !definition.descriptor.settings.occludes || super.propagatesSkylightDown(state)
+
+    override fun getShadeBrightness(state: BlockState, level: BlockGetter, pos: BlockPos): Float =
+        if (definition.descriptor.settings.occludes) super.getShadeBrightness(state, level, pos) else 1.0f
 
     override fun rotate(state: BlockState, rotation: Rotation): BlockState {
         val customState = stateSchema.toCustom(state)
@@ -125,6 +143,14 @@ internal open class NativeCustomBlock(
                 .strength(settings.hardness, settings.explosionResistance)
                 .noLootTable()
             if (settings.requiresCorrectToolForDrops) properties = properties.requiresCorrectToolForDrops()
+            if (!settings.occludes) {
+                properties = properties
+                    .noOcclusion()
+                    .isValidSpawn { _, _, _, _ -> false }
+                    .isRedstoneConductor { _, _, _ -> false }
+                    .isSuffocating { _, _, _ -> false }
+                    .isViewBlocking { _, _, _ -> false }
+            }
             return properties
         }
     }

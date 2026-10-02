@@ -24,6 +24,8 @@ public open class Color protected constructor(
     }
 
     public val textColor: TextColor get() = TextColor.color(rgb.first, rgb.second, rgb.third)
+    public val bukkit: org.bukkit.Color
+        get() = org.bukkit.Color.fromRGB(rgb.first, rgb.second, rgb.third)
 
     public val rgb: Triple<Int, Int, Int>
         get() =

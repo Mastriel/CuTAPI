@@ -12,4 +12,4 @@ public interface CuTSystem<T> : Identifiable {
 public fun <T, S : CuTSystem<T>> IdentifierRegistry<S>.applicableTo(target: T): List<S> =
     getAllValues()
         .filter { system -> system.prerequisite(target) }
-        .sortedByDescending { it.priority }
+        .sortedBy { it.priority }

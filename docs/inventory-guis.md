@@ -87,6 +87,8 @@ slot(5) {
 }
 ```
 
+Paginator navigation controls are conditional replacements. When a previous or next page exists, the control item wins. When that page does not exist, the control falls through to the item renderer that previously occupied its slot, so a background fill can act as its placeholder.
+
 Named slot ports form a reusable contract between a GUI layout and canonical item storage. Ports are opaque: callers must use the exact `GuiSlotPort` object declared by the GUI, so keep shared ports in a constants object. A port may receive its backing from a block presentation, an open-time binding, or a session-local backing. When the selected backing is empty—or no backing exists—the placeholder is rendered instead.
 
 `boundSlot` participates in the same last-declaration-wins rules as `slot` and `fill`. Declare it after a background fill when the port should replace that background position. A later ordinary `slot` declaration at the same position removes the port again.
@@ -174,6 +176,34 @@ val MachineGui = gui(
 
 Overlay definitions must be constructed during startup, before resource-pack processing begins. Ordinary definitions without overlays may be constructed at any time. Identical overlay declarations may share an identifier; conflicting declarations fail immediately.
 
+Generic 9×1 through 9×6 inventories use a transparent vanilla container texture. CuTAPI automatically prepends the matching bundled `ui/base_container/generic_9xN.png` background to outgoing inventory titles, beneath any custom overlay. This also preserves the background for ordinary chests, barrels, ender chests, and inventories opened by other plugins. Other menu types keep their vanilla textures.
+
+Set `showBaseTexture = false` to leave the base transparent, so transparent parts of your custom texture show through:
+
+```kotlin
+overlay(ref<Texture2D>(MyPlugin, "gui/machine.png")) {
+    showBaseTexture = false
+}
+```
+
+The flag defaults to `true`. To hide the background without adding any custom layers, use `overlay { showBaseTexture = false }`. Visible title text keeps its normal position in either mode.
+
+## Progress-arrow items
+
+`CustomItem.ProgressArrow` renders the bundled 24×16 furnace-style arrow. Control it by replacing its `CustomItem.Progress` attachment with a normalized value:
+
+```kotlin
+slot(13) {
+    item {
+        CustomItem.ProgressArrow.createItemStack().also { arrow ->
+            arrow.setAttachment(CustomItem.Progress(machineProgress.toFloat()))
+        }.vanilla()
+    }
+}
+```
+
+Values are clamped to `0f..1f`. The resource generator combines `progress_arrow_empty.png` and `progress_arrow_full.png` into 25 pixel-aligned stages and selects the first nonempty stage for any positive progress, matching the furnace GUI's fill behavior. Generated models disable swap animation and opt into oversized GUI rendering so the arrow remains 24×16 rather than being squeezed into a 16×16 item icon.
+
 ## Tile inventories
 
 Only a `CustomTileEntity` can own persistent storage. Logical storage is distinct from its GUI presentation, so decorative items are never persisted, dropped, placed into a content-bearing block item, or exposed to hoppers.
@@ -256,6 +286,8 @@ presentation(
 The producer receiver exposes `player`, `tile`, and the canonical block `inventory`. The context argument is part of the contextual `presentation` overload rather than an optional builder call. Omitting it cannot match the Unit-only overload and therefore fails at compile time. Unit-context presentations retain `presentation(gui = { MachineGui }) { ... }`.
 
 Opening `MachineGui` directly creates a normal standalone GUI. Its ports use their session backings when declared, otherwise they render their placeholders. Calling `placedMachine.openInventory(player)`, or right-clicking it when `openOnRightClick` is enabled, projects logical storage through the named ports and overrides any session backing. Required ports must be bound by every block presentation; ports marked `required = false` may remain unbound and continue showing their placeholder.
+
+Automatic opening skips sneaking players and respects denied block interactions. An inventory interaction consumes the click before held items can place blocks or activate, even if opening the GUI is rejected. Off-hand interactions are consumed without opening the GUI a second time. Calling `placedMachine.openInventory(player)` directly remains an explicit opening request.
 
 For players, `Input` and `Storage` slots allow both insertion and extraction by default; `Output` slots allow extraction only. Override the player-facing behavior per port with `playerAccess = GuiBoundSlotAccess.ReadWrite`, `InsertOnly`, `ExtractOnly`, or `ReadOnly`. These overrides do not change automation: hoppers still treat `Input` as insertion-only, `Output` as extraction-only, and `Storage` as unrestricted, with the declared predicates and face filters.
 

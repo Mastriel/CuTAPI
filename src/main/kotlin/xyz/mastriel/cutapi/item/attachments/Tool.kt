@@ -33,7 +33,7 @@ public data class Tool(val category: ToolCategory, val tier: ToolTier, val toolS
     public companion object : Schema<Tool> by schema(id(Plugin, "tool"), {
         property(Tool::category, VariantSerializer.Identifiable(ToolCategory))
         property(Tool::tier, VariantSerializer.Identifiable(ToolTier))
-        property(Tool::toolSpeed, ToolSpeedSerializer, name = "tool_speed")
+        property(Tool::toolSpeed, BuiltinSerializers.ToolSpeed, name = "tool_speed")
     }) {
 
         public val Fists: Tool = Tool(ToolCategory.Fists, ToolTier.Nothing, ToolSpeed.Fists)
@@ -62,11 +62,11 @@ public data class Tool(val category: ToolCategory, val tier: ToolTier, val toolS
 
         private fun categoryFromVanilla(itemStack: ItemStack): ToolCategory {
             return when (itemStack.type) {
-                Material.WOODEN_SHOVEL, Material.STONE_SHOVEL, Material.IRON_SHOVEL, Material.DIAMOND_SHOVEL, Material.NETHERITE_SHOVEL, Material.GOLDEN_SHOVEL -> ToolCategory.Shovel
-                Material.WOODEN_PICKAXE, Material.STONE_PICKAXE, Material.IRON_PICKAXE, Material.DIAMOND_PICKAXE, Material.NETHERITE_PICKAXE, Material.GOLDEN_PICKAXE -> ToolCategory.Pickaxe
-                Material.WOODEN_AXE, Material.STONE_AXE, Material.IRON_AXE, Material.DIAMOND_AXE, Material.NETHERITE_AXE, Material.GOLDEN_AXE -> ToolCategory.Axe
-                Material.WOODEN_HOE, Material.STONE_HOE, Material.IRON_HOE, Material.DIAMOND_HOE, Material.NETHERITE_HOE, Material.GOLDEN_HOE -> ToolCategory.Hoe
-                Material.WOODEN_SWORD, Material.STONE_SWORD, Material.IRON_SWORD, Material.DIAMOND_SWORD, Material.NETHERITE_SWORD, Material.GOLDEN_SWORD -> ToolCategory.Sword
+                Material.WOODEN_SHOVEL, Material.STONE_SHOVEL, Material.COPPER_SHOVEL, Material.IRON_SHOVEL, Material.DIAMOND_SHOVEL, Material.NETHERITE_SHOVEL, Material.GOLDEN_SHOVEL -> ToolCategory.Shovel
+                Material.WOODEN_PICKAXE, Material.STONE_PICKAXE, Material.COPPER_PICKAXE, Material.IRON_PICKAXE, Material.DIAMOND_PICKAXE, Material.NETHERITE_PICKAXE, Material.GOLDEN_PICKAXE -> ToolCategory.Pickaxe
+                Material.WOODEN_AXE, Material.STONE_AXE, Material.COPPER_AXE, Material.IRON_AXE, Material.DIAMOND_AXE, Material.NETHERITE_AXE, Material.GOLDEN_AXE -> ToolCategory.Axe
+                Material.WOODEN_HOE, Material.STONE_HOE, Material.COPPER_HOE, Material.IRON_HOE, Material.DIAMOND_HOE, Material.NETHERITE_HOE, Material.GOLDEN_HOE -> ToolCategory.Hoe
+                Material.WOODEN_SWORD, Material.STONE_SWORD, Material.COPPER_SWORD, Material.IRON_SWORD, Material.DIAMOND_SWORD, Material.NETHERITE_SWORD, Material.GOLDEN_SWORD -> ToolCategory.Sword
                 Material.SHEARS -> ToolCategory.Shears
                 else -> ToolCategory.Fists
             }
@@ -76,6 +76,7 @@ public data class Tool(val category: ToolCategory, val tier: ToolTier, val toolS
             return when (itemStack.type) {
                 Material.WOODEN_SHOVEL, Material.WOODEN_PICKAXE, Material.WOODEN_AXE, Material.WOODEN_HOE, Material.WOODEN_SWORD -> ToolTier.Wood
                 Material.STONE_SHOVEL, Material.STONE_PICKAXE, Material.STONE_AXE, Material.STONE_HOE, Material.STONE_SWORD -> ToolTier.Stone
+                Material.COPPER_SHOVEL, Material.COPPER_PICKAXE, Material.COPPER_AXE, Material.COPPER_HOE, Material.COPPER_SWORD -> ToolTier.Copper
                 Material.IRON_SHOVEL, Material.IRON_PICKAXE, Material.IRON_AXE, Material.IRON_HOE, Material.IRON_SWORD -> ToolTier.Iron
                 Material.GOLDEN_SHOVEL, Material.GOLDEN_PICKAXE, Material.GOLDEN_AXE, Material.GOLDEN_HOE, Material.GOLDEN_SWORD -> ToolTier.Gold
                 Material.DIAMOND_SHOVEL, Material.DIAMOND_PICKAXE, Material.DIAMOND_AXE, Material.DIAMOND_HOE, Material.DIAMOND_SWORD -> ToolTier.Diamond
@@ -92,6 +93,7 @@ public data class Tool(val category: ToolCategory, val tier: ToolTier, val toolS
                     ToolTier.Nothing -> ToolSpeed(1.0f)
                     ToolTier.Wood -> ToolSpeed(2.0f)
                     ToolTier.Stone -> ToolSpeed(4.0f)
+                    ToolTier.Copper -> ToolSpeed(5.0f)
                     ToolTier.Iron -> ToolSpeed(6.0f)
                     ToolTier.Diamond -> ToolSpeed(8.0f)
                     ToolTier.Netherite -> ToolSpeed(9.0f)
@@ -116,6 +118,7 @@ public value class ToolSpeed(public val speed: Float) {
         public val Fists: ToolSpeed = ToolSpeed(1.0f)
         public val Wood: ToolSpeed = ToolSpeed(2.0f)
         public val Stone: ToolSpeed = ToolSpeed(4.0f)
+        public val Copper: ToolSpeed = ToolSpeed(5.0f)
         public val Iron: ToolSpeed = ToolSpeed(6.0f)
         public val Diamond: ToolSpeed = ToolSpeed(8.0f)
         public val Netherite: ToolSpeed = ToolSpeed(9.0f)
@@ -135,6 +138,7 @@ public value class ToolSpeed(public val speed: Float) {
             register(id(Plugin, "fists"), ToolSpeed(1.0f))
             register(id(Plugin, "wood"), ToolSpeed(2.0f))
             register(id(Plugin, "stone"), ToolSpeed(4.0f))
+            register(id(Plugin, "copper"), ToolSpeed(5.0f))
             register(id(Plugin, "iron"), ToolSpeed(6.0f))
             register(id(Plugin, "diamond"), ToolSpeed(8.0f))
             register(id(Plugin, "netherite"), ToolSpeed(9.0f))
@@ -165,6 +169,7 @@ public class ToolTier private constructor(
         public val Nothing: ToolTier get() = get(id(Plugin, "nothing"))
         public val Wood: ToolTier get() = get(id(Plugin, "wood"))
         public val Stone: ToolTier get() = get(id(Plugin, "stone"))
+        public val Copper: ToolTier get() = get(id(Plugin, "copper"))
         public val Iron: ToolTier get() = get(id(Plugin, "iron"))
         public val Gold: ToolTier get() = get(id(Plugin, "gold"))
         public val Diamond: ToolTier get() = get(id(Plugin, "diamond"))
@@ -178,7 +183,7 @@ public class ToolTier private constructor(
         public fun fromVanillaMaterial(material: Material): ToolTier {
             return when {
                 Tag.NEEDS_STONE_TOOL.isTagged(material) -> Stone
-                Tag.NEEDS_IRON_TOOL.isTagged(material) -> Gold
+                Tag.NEEDS_IRON_TOOL.isTagged(material) -> Iron
                 Tag.NEEDS_DIAMOND_TOOL.isTagged(material) -> Diamond
                 else -> Nothing
             }
@@ -189,6 +194,7 @@ public class ToolTier private constructor(
             register(ToolTier(id(Plugin, "gold"), 1f, true))
             register(ToolTier(id(Plugin, "wood"), 1f, true))
             register(ToolTier(id(Plugin, "stone"), 2f, true))
+            register(ToolTier(id(Plugin, "copper"), 2f, true))
             register(ToolTier(id(Plugin, "iron"), 3f, true))
             register(ToolTier(id(Plugin, "diamond"), 4f, true))
             register(ToolTier(id(Plugin, "netherite"), 5f, true))
@@ -218,7 +224,6 @@ public class ToolCategory private constructor(
         public val Pickaxe: ToolCategory = ToolCategory(
             id(Plugin, "pickaxe"),
             ToolCategoryAttributes(
-                attackEntityItemDamage = 2,
                 breakBlockItemDamage = 1
             ),
             true
@@ -226,7 +231,6 @@ public class ToolCategory private constructor(
         public val Axe: ToolCategory = ToolCategory(
             id(Plugin, "axe"),
             ToolCategoryAttributes(
-                attackEntityItemDamage = 2,
                 breakBlockItemDamage = 1
             ),
             true
@@ -234,7 +238,6 @@ public class ToolCategory private constructor(
         public val Sword: ToolCategory = ToolCategory(
             id(Plugin, "sword"),
             ToolCategoryAttributes(
-                attackEntityItemDamage = 1,
                 breakBlockItemDamage = 2,
                 specialBreakingMultipliers = SpecialBreakingMultipliers(
                     Predicate<Material> { material -> material == Material.COBWEB } to 15.0f,
@@ -246,7 +249,6 @@ public class ToolCategory private constructor(
         public val Hoe: ToolCategory = ToolCategory(
             id(Plugin, "hoe"),
             ToolCategoryAttributes(
-                attackEntityItemDamage = 2,
                 breakBlockItemDamage = 1
             ),
             true
@@ -254,7 +256,6 @@ public class ToolCategory private constructor(
         public val Shovel: ToolCategory = ToolCategory(
             id(Plugin, "shovel"),
             ToolCategoryAttributes(
-                attackEntityItemDamage = 2,
                 breakBlockItemDamage = 1
             ),
             true
@@ -262,7 +263,6 @@ public class ToolCategory private constructor(
         public val Shears: ToolCategory = ToolCategory(
             id(Plugin, "shears"),
             ToolCategoryAttributes(
-                attackEntityItemDamage = 2,
                 breakBlockItemDamage = 1,
                 specialBreakingMultipliers = SpecialBreakingMultipliers(
                     Predicate<Material> { it == Material.VINE || it == Material.GLOW_LICHEN } to 1.0f,
@@ -276,7 +276,6 @@ public class ToolCategory private constructor(
         public val Fists: ToolCategory = ToolCategory(
             id(Plugin, "fists"),
             ToolCategoryAttributes(
-                attackEntityItemDamage = 0,
                 breakBlockItemDamage = 0
             ), false
         )
@@ -315,7 +314,6 @@ public class ToolCategory private constructor(
 
 public open class ToolCategoryAttributes(
     public val breakBlockItemDamage: Int,
-    public val attackEntityItemDamage: Int,
     public val specialBreakingMultipliers: SpecialBreakingMultipliers = SpecialBreakingMultipliers()
 ) : Serializable<ToolCategoryAttributes> by +ToolCategoryAttributes {
 
@@ -328,7 +326,6 @@ public open class ToolCategoryAttributes(
 
     public companion object : Schema<ToolCategoryAttributes> by schema(id(Plugin, "tool_category_attributes"), {
         property(ToolCategoryAttributes::breakBlockItemDamage, VariantSerializer.Int)
-        property(ToolCategoryAttributes::attackEntityItemDamage, VariantSerializer.Int)
     })
 }
 
@@ -362,10 +359,3 @@ public class SpecialBreakingMultipliers(
 
 public fun SpecialBreakingMultipliers(vararg pairs: Pair<Predicate<Material>, Float>): SpecialBreakingMultipliers =
     SpecialBreakingMultipliers(mapOf(*pairs))
-
-internal val ToolSpeedSerializer: Serializer<ToolSpeed> = VariantSerializer.mapped(
-    serializer = VariantSerializer.Float,
-    id = id(Plugin, "tool_speed"),
-    serialize = { it.speed },
-    deserialize = { ToolSpeed(it) }
-)

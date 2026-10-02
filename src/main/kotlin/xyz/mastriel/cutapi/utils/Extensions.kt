@@ -4,9 +4,12 @@ import net.kyori.adventure.text.*
 import net.kyori.adventure.text.format.*
 import net.kyori.adventure.text.minimessage.*
 import net.kyori.adventure.text.serializer.legacy.*
+import net.minecraft.core.component.*
+import org.bukkit.entity.*
 import org.bukkit.inventory.*
 import org.bukkit.inventory.meta.*
-import xyz.mastriel.cutapi.item.attachments.*
+import xyz.mastriel.cutapi.item.ItemStackUtility.wrap
+import xyz.mastriel.cutapi.item.nativeitem.*
 import xyz.mastriel.cutapi.nms.*
 import java.time.Instant
 import kotlin.math.*
@@ -23,14 +26,50 @@ public val String.miniMessage: Component
 
 @OptIn(UsesNMS::class)
 public val ItemStack.chatTooltip: Component
-    get() {
-        // fixes a problem with Adventure not processing tool components properly
-        val item = stripToolData(clone())
+    get() = chatTooltip(null)
 
-        return Component.empty()
-            .hoverEvent(item)
-            .append(item.itemMeta?.displayName() ?: item.itemMeta.itemNameOrNull() ?: Component.translatable(item))
-    }
+/**
+ * Builds a chat-safe presentation of this stack for [viewer].
+ *
+ * The hover event intentionally contains a detached vanilla representation. Native custom-item
+ * identity is server-only, while the rendered name, lore, model, and display type are the data the
+ * client needs to show. The authoritative stack is never mutated.
+ */
+@OptIn(UsesNMS::class)
+public fun ItemStack.chatTooltip(viewer: Player?): Component {
+    val presentation = chatTooltipPresentation(viewer)
+    val hoverItem = stripToolData(presentation.item)
+    NativeItemClientBridge.markRenderedPresentation(hoverItem)
+
+    return Component.empty()
+        .hoverEvent(hoverItem)
+        .append(presentation.name)
+}
+
+internal data class ChatTooltipPresentation(
+    val item: ItemStack,
+    val name: Component,
+)
+
+@OptIn(UsesNMS::class)
+internal fun ItemStack.chatTooltipPresentation(viewer: Player?): ChatTooltipPresentation {
+    val item = clone().wrap().getStaticItemStack(viewer)
+    val name = item.itemMeta?.displayName()
+        ?: item.itemMeta.itemNameOrNull()
+        ?: Component.translatable(item.translationKey())
+    return ChatTooltipPresentation(item, name)
+}
+
+@OptIn(UsesNMS::class)
+private fun stripToolData(itemStack: ItemStack): ItemStack {
+    val nmsItem = itemStack.nms()
+    nmsItem.applyComponents(
+        DataComponentPatch.builder()
+            .remove(DataComponents.TOOL)
+            .build(),
+    )
+    return nmsItem.bukkit()
+}
 
 private fun ItemMeta.itemNameOrNull(): Component? {
     return if (hasItemName()) itemName() else null
@@ -39,12 +78,12 @@ private fun ItemMeta.itemNameOrNull(): Component? {
 public val Instant.hasPassed: Boolean get() = this.isBefore(Instant.now())
 
 public fun ItemStack.emptyName(): ItemStack {
-    this.editMeta { it.displayName("&7".colored) }
+    this.editMeta { it.itemName("&7".colored) }
     return this
 }
 
 public fun ItemStack.withName(name: Component): ItemStack {
-    this.editMeta { it.displayName(name) }
+    this.editMeta { it.itemName(name) }
     return this
 }
 

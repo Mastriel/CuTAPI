@@ -24,7 +24,7 @@ public object EvilMachineSystem :
     TileSystem by attachmentTileSystem(EvilMachineData, id(Plugin, "evil_machine_system")) {
 
     override fun tilePrerequisite(tile: CuTPlacedTileEntity): Boolean {
-        return tile.type == DebugItems.EvilMachine
+        return tile.identity == DebugItems.EvilMachine.asIdentity()
     }
 
     override fun onTick(context: TileTickContext) {

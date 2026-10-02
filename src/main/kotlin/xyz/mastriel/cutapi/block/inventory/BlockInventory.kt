@@ -184,6 +184,7 @@ public class BlockInventory internal constructor(
         requireUsableSlot(slot)
         val previous = items[slot]
         val next = item?.takeUnless { it.type.isAir || it.amount <= 0 }?.clone()
+        if (sameContents(previous, next)) return
         val slotDefinition = definition.slot(slot)
         val inserts = when {
             next == null -> false
@@ -203,7 +204,10 @@ public class BlockInventory internal constructor(
         commit(slot, next, BlockInventorySourceKind.Automation)
     }
 
-    internal fun flushPending() = Unit
+    internal fun flushPending() {
+        val entity = runCatching { tile.nativeEntity() }.getOrNull() ?: return
+        entity.flushInventoryChanges()
+    }
 
     internal fun snapshot(): BlockContents? {
         requireAvailable()
@@ -241,8 +245,10 @@ public class BlockInventory internal constructor(
             definition.changeHandlers.forEach { handler -> handler(context) }
         } catch (failure: Throwable) {
             items[slot] = previous?.clone()
+            invalidateNativeInventorySlot(slot)
             throw failure
         }
+        invalidateNativeInventorySlot(slot)
         if (!sameContents(previous, item)) {
             val update = GuiSlotBackingUpdate(previous, item, source.toGuiSlotUpdateSource())
             slotListeners[slot].toList().forEach { listener -> listener(update) }
@@ -265,6 +271,10 @@ public class BlockInventory internal constructor(
         }
         runCatching { tile.nativeEntity().setChanged() }
         CuTAPI.guiManager.refreshBlock(tile)
+    }
+
+    private fun invalidateNativeInventorySlot(slot: Int) {
+        runCatching { tile.nativeEntity().invalidateInventorySlot(slot) }
     }
 
     private fun load() {
@@ -342,7 +352,7 @@ internal object BlockInventoryStore {
     private val inventories: MutableMap<BlockInventoryKey, BlockInventory> = mutableMapOf()
 
     fun get(tile: CuTPlacedTileEntity): BlockInventory? {
-        val definition = (tile.type as? CustomTileEntity<*>)?.descriptor?.inventory ?: return null
+        val definition = (tile.identity.customTile as? CustomTileEntity<*>)?.descriptor?.inventory ?: return null
         val key = BlockInventoryKey(tile.handle.world.uid, tile.handle.x, tile.handle.y, tile.handle.z)
         return inventories.getOrPut(key) { BlockInventory(tile, definition) }
     }
@@ -355,8 +365,10 @@ internal object BlockInventoryStore {
     fun all(): List<BlockInventory> = inventories.values.toList()
 
     fun install(tile: CuTPlacedTileEntity, contents: BlockContents) {
-        val definition = (tile.type as? CustomTileEntity<*>)?.descriptor?.inventory
-            ?: error("Custom tile ${tile.type.id} cannot receive block contents because it has no inventory.")
+        val tileDefinition = tile.identity.customTile as? CustomTileEntity<*>
+            ?: error("Block at ${tile.location} is not a native custom tile entity.")
+        val definition = tileDefinition.descriptor.inventory
+            ?: error("Custom tile ${tileDefinition.id} cannot receive block contents because it has no inventory.")
         require(contents.inventoryId == definition.id) {
             "Content inventory id ${contents.inventoryId} does not match ${definition.id}."
         }
@@ -400,4 +412,4 @@ public val CuTPlacedTileEntity.inventoryOrNull: BlockInventory?
     get() = BlockInventoryStore.get(this)
 
 public fun CuTPlacedTileEntity.requireInventory(): BlockInventory =
-    inventoryOrNull ?: error("Custom tile ${type.id} does not define an inventory.")
+    inventoryOrNull ?: error("Custom tile ${identity.customTile?.id ?: identity} does not define an inventory.")

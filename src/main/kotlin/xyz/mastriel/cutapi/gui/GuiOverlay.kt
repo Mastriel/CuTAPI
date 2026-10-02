@@ -2,16 +2,22 @@ package xyz.mastriel.cutapi.gui
 
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import xyz.mastriel.cutapi.registry.Identifier
 import xyz.mastriel.cutapi.resources.ResourceRef
 import xyz.mastriel.cutapi.resources.builtin.Texture2D
 
+/**
+ * Positioning metrics for an inventory screen overlay.
+ *
+ * Layer textures are always rendered at their native pixel dimensions. [canvasWidth] and
+ * [canvasHeight] describe the underlying GUI coordinate space; they do not resize layers.
+ */
 public data class GuiOverlayProfile(
     public val name: String,
     public val canvasWidth: Int,
     public val canvasHeight: Int,
-    public val bitmapHeight: Int = canvasHeight,
-    public val bitmapAscent: Int = canvasHeight - 7,
+    public val bitmapAscent: Int = 13,
     public val horizontalOriginShift: Int = -8,
     public val verticalOffset: Int = 0,
     public val visibleTitleX: Int = 0,
@@ -58,9 +64,10 @@ public data class GuiOverlayLayer(
 public data class GuiOverlaySpec(
     public val profile: GuiOverlayProfile,
     public val layers: List<GuiOverlayLayer>,
+    /** Whether generic 9-column containers retain their vanilla background beneath these layers. */
+    public val showBaseTexture: Boolean = true,
 ) {
     init {
-        require(layers.isNotEmpty()) { "A GUI overlay must contain at least one layer." }
         require(profile.supportsTitleOverlay) { "Overlay profile ${profile.name} does not support title overlays." }
         require(layers.size <= 128) { "A GUI overlay may contain at most 128 layers." }
     }
@@ -73,6 +80,7 @@ public class GuiOverlayBuilder internal constructor(
     public var profile: GuiOverlayProfile? = defaultProfile
     public var x: Int = 0
     public var y: Int = 0
+    public var showBaseTexture: Boolean = true
 
     private val layers: MutableList<GuiOverlayLayer> = mutableListOf()
 
@@ -88,6 +96,7 @@ public class GuiOverlayBuilder internal constructor(
     internal fun build(): GuiOverlaySpec = GuiOverlaySpec(
         profile = requireNotNull(profile) { "A GUI overlay profile is required." },
         layers = layers.toList(),
+        showBaseTexture = showBaseTexture,
     )
 }
 
@@ -106,12 +115,16 @@ public object GuiOverlayComposer {
         visibleTitle: Component = Component.empty(),
     ): Component {
         val artifact = GuiOverlayCatalog.requireArtifact(guiId, overlay)
-        var result: Component = Component.empty()
+        var result: Component = if (overlay.showBaseTexture) Component.empty() else GuiBaseContainerOverlay.suppress()
         artifact.layerGlyphs.forEachIndexed { index, glyph ->
             val layer = overlay.layers[index]
             val shift = overlay.profile.horizontalOriginShift + layer.x
             result = result.append(spacing(artifact, shift))
-                .append(Component.text(glyph).font(artifact.fontKey))
+                .append(
+                    Component.text(glyph)
+                        .font(artifact.fontKey)
+                        .color(NamedTextColor.WHITE),
+                )
                 .append(spacing(artifact, -shift - overlay.profile.canvasWidth))
         }
         return result.append(visibleTitle.font(Key.key("minecraft", "default")))

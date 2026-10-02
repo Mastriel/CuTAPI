@@ -55,6 +55,8 @@ public class GuiPaginationBuilder<C, V : InventoryView, E : Any> internal constr
         val next = nextSlot
         val renderPrevious = previousItem
         val renderNext = nextItem
+        val renderPreviousFallback = previous?.let { owner.itemFallback(GuiSlot.Top(it)) }
+        val renderNextFallback = next?.let { owner.itemFallback(GuiSlot.Top(it)) }
         require(previous == null || GuiSlot.Top(previous) !in slots) {
             "Paginator '$key' previous control overlaps its entries."
         }
@@ -93,7 +95,7 @@ public class GuiPaginationBuilder<C, V : InventoryView, E : Any> internal constr
             owner.slot(previous) {
                 this.key = "$key/previous"
                 item {
-                    if (currentPage > 0) renderPrevious(this) else null
+                    if (currentPage > 0) renderPrevious(this) else renderPreviousFallback?.invoke(this)
                 }
                 onClick {
                     if (currentPage > 0) currentPage -= 1
@@ -105,7 +107,11 @@ public class GuiPaginationBuilder<C, V : InventoryView, E : Any> internal constr
                 this.key = "$key/next"
                 item {
                     val values = entries(this)
-                    if ((currentPage + 1) * entrySlots.size < values.size) renderNext(this) else null
+                    if ((currentPage + 1) * entrySlots.size < values.size) {
+                        renderNext(this)
+                    } else {
+                        renderNextFallback?.invoke(this)
+                    }
                 }
                 onClick {
                     val values = entries(GuiRenderContext(session))

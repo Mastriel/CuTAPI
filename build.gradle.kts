@@ -5,7 +5,7 @@ plugins {
     java
 
     id("com.gradleup.shadow") version "9.2.0"
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.5.31"
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.3.0"
     id("xyz.jpenilla.run-paper") version "2.3.1"
 
     `maven-publish`
@@ -32,6 +32,17 @@ repositories {
     maven {
         name = "lunari"
         url = uri("https://repo.lunari.studio/repository/maven-public/")
+    }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "aikar"
+                url = uri("https://repo.aikar.co/nexus/content/repositories/aikar/")
+            }
+        }
+        filter {
+            includeGroup("me.lucko")
+        }
     }
 }
 val kotlinVersion: String by properties
@@ -83,7 +94,7 @@ dependencies {
 tasks {
 
     runServer {
-        pluginJars("../CuTAPI/build/libs/CuTAPI-v0.1.1.jar")
+        pluginJars("../CuTAPI/build/libs/CuTAPI-v${version.get()}.jar")
 
         minecraftVersion(minecraftVersion)
     }

@@ -14,19 +14,17 @@ public data class InventoryTextureGeneratorOptions(public val texture: ResourceR
 }
 
 public val InventoryTextureGenerator: ResourceGenerator<InventoryTextureGeneratorOptions> =
-    resourceGenerator<Model3D, InventoryTextureGeneratorOptions>(
+    resourceGenerator<MinecraftModel, InventoryTextureGeneratorOptions>(
         optionsSchema = InventoryTextureGeneratorOptions,
         stage = ResourceGenerationStage.BeforeProcessors
     ) {
-        val model = ref<Model3D>(Plugin, "ui/inventory_bg.model3d.json").getResource()!!
-        val newModel = Model3D(
+        val model = ref<MinecraftModel>(Plugin, "ui/inventory_bg.model.json").getResource()!!
+        val newModel = MinecraftModel(
             ref = ref.cast(),
-            modelJson = model.modelJson.copy(
-                textures = model.modelJson.textures + ("2" to options.texture.toMinecraftLocator())
+            data = model.data.copy(
+                textures = model.data.textures + ("2" to options.texture.toString())
             ),
-            metadata = model.metadata.copy(
-                textures = model.metadata.textures + ("2" to options.texture)
-            )
+            metadata = MinecraftModel.Metadata(),
         )
         register(newModel)
     }

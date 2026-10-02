@@ -25,6 +25,7 @@ import xyz.mastriel.cutapi.item.bukkitevents.*
 import xyz.mastriel.cutapi.item.internal.*
 import xyz.mastriel.cutapi.item.nativeitem.*
 import xyz.mastriel.cutapi.item.recipe.*
+import xyz.mastriel.cutapi.item.systems.*
 import xyz.mastriel.cutapi.nms.*
 import xyz.mastriel.cutapi.player.*
 import xyz.mastriel.cutapi.registry.*
@@ -68,6 +69,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
         CustomBlock.DeferredRegistry.commitToRegistry()
         CustomTileEntity.DeferredRegistry.commitToRegistry()
         registerBuiltInItemAttachmentMaterializers()
+        registerBuiltInItemProductionSources()
         ItemSystem.registerBuiltins()
         registerCommands()
         registerEvents()
@@ -96,7 +98,11 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             register(MultiplyOpaquePixelsProcessor)
         }
 
-        ResourcePackProcessor.register(TextureAndModelProcessor, name = "Texture Processor")
+        ResourcePackProcessor.register(TexturePackProcessor, name = "Texture Processor")
+        ResourcePackProcessor.register(MinecraftModelPackProcessor, name = "Minecraft Model Processor")
+        ResourcePackProcessor.register(ItemModelPackProcessor, name = "Item Model Processor")
+        ResourcePackProcessor.register(ModelTextureAtlasProcessor, name = "Model Texture Atlas Processor")
+        ResourcePackProcessor.register(TextureGlyphProcessor, name = "Texture Glyph Processor")
         ResourcePackProcessor.register(GuiOverlayResourceProcessor, name = "GUI Overlay Processor")
 
         MinecraftAssetDownloader.modifyRegistry {
@@ -110,6 +116,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
         CuTAPI.packetEventManager.registerPacketListener(PacketItemHandler)
         CuTAPI.packetEventManager.registerPacketListener(NativeBlockPacketProjector)
+        CuTAPI.packetEventManager.registerPacketListener(GuiBaseContainerPacketListener)
         CuTAPI.packetEventManager.registerPacketListener(CuTAPI.blockBreakManager)
 
         NativeItemChannelInitializer.register()
@@ -126,7 +133,6 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             DebugItems.Items.commitToRegistry();
             DebugItems.Blocks.commitToRegistry();
             DebugItems.TileEntities.commitToRegistry();
-            DebugItems.Extensions.commitToRegistry();
             info("Debug items are enabled!")
         }
 
@@ -139,6 +145,11 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             MinecraftAssetDownloader.initialize()
             TexturePostProcessor.initialize()
             Uploader.initialize()
+
+            ToolCategory.initialize()
+            ToolTier.initialize()
+
+            ItemProductionSource.initialize()
             ItemSystem.initialize()
             BlockSystem.initialize()
             GuiType.initialize()
@@ -157,8 +168,8 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
                 ItemIdentityExtension.initialize()
                 ItemAttachmentMaterializer.initialize()
                 NativeItemRegistry.installAll(CustomItem.getAllValues().map(CustomItem<*>::nativeSpecification))
-                CustomItem.getAllValues().forEach(CustomItem<*>::activate)
                 NativeItemLifecycle.state = NativeItemState.Active
+                CustomItem.getAllValues().forEach(CustomItem<*>::activate)
                 NativeBlockClientBridge.bind(
                     CustomTile.getAllValues(),
                     server.minecraftVersion,
@@ -180,8 +191,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             CustomFurnaceRecipe.initialize()
             CustomSmithingTableRecipe.initialize()
 
-            ToolCategory.initialize()
-            ToolTier.initialize()
+
             ItemMaterializationManager.verifyBuiltInRoundTrips()
         }
 
@@ -200,17 +210,20 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             register(CuTMeta)
             register(Animation)
             register(AnimationFrame)
-            register(ItemModelData)
             register(FontSettings)
             register(FolderApplyResource.Metadata)
             register(JsonResource.Metadata)
             register(MetadataResource.GenericMetadata)
-            register(Model3D.Metadata)
+            register(MinecraftModel.Metadata)
+            register(ItemModel.Metadata)
             register(PostProcessDefinitionsResource.Data)
             register(TemplateResource.Metadata)
             register(Texture2D.Metadata)
+            register(TextureModelGeneratorOptions)
+            register(ItemModelGeneratorOptions)
             register(GenerateResource.Metadata)
             register(HorizontalAtlasTextureGeneratorOptions)
+            register(HorizontalProgressTextureGeneratorOptions)
             register(InventoryTextureGeneratorOptions)
             register(GrayscaleOptions)
             register(PaletteSwapOptions)
@@ -222,15 +235,17 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             register(Equipable)
             register(HideAttributes)
             register(HideTooltip)
+            register(MeleeWeapon)
             register(ModifyAttribute)
             register(Shiny)
             register(StaticLore)
             register(Tool)
             register(ToolCategoryAttributes)
             register(Unstackable)
-            register(VanillaTool)
             register(CraftsAsBaseMaterial)
             register(BlockContents)
+            register(CustomItem.ProgressVisual)
+            register(ItemOriginImmune)
 
             register(EvilMachineData)
         }
@@ -269,7 +284,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
                 "&${CatMocha.Green}${value}".colored
             })
 
-            register(ComponentSerializer.debugFormatter {
+            register(BuiltinSerializers.Component.debugFormatter {
                 Component.empty()
                     .append("&${DebugFormatter.IdentifierColor}\"".colored)
                     .append(value)
@@ -312,7 +327,10 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
     private fun registerResourceLoaders() {
         ResourceGenerator.modifyRegistry {
+            register(TextureModelGenerator)
+            register(ItemModelGenerator)
             register(HorizontalAtlasTextureGenerator)
+            register(HorizontalProgressTextureGenerator)
             register(InventoryTextureGenerator)
         }
 
@@ -320,7 +338,9 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
             register(TemplateResourceLoader)
             register(FolderApplyResourceLoader)
             register(Texture2DResourceLoader)
-            register(Model3DResourceLoader)
+            register(MinecraftModelResourceLoader)
+            register(ItemModelResourceLoader)
+            register(JsonResourceLoader)
             register(MetadataResource.Loader)
             register(PostProcessDefinitionsResource.Loader)
             register(GenerateResource.Loader)
@@ -338,6 +358,7 @@ public class CuTAPIPlugin : JavaPlugin(), CuTPlugin {
 
         server.pluginManager.registerEvents(CuTAPI.blockBreakManager, this)
         server.pluginManager.registerEvents(CraftingRecipeEvents(), this)
+        server.pluginManager.registerEvents(CookingRecipeEvents(), this)
 
         server.pluginManager.registerEvents(UploaderJoinEvents(), this)
         server.pluginManager.registerEvents(CuTAPI.playerPacketManager, this)

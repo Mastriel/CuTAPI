@@ -1,0 +1,4 @@
+!<cutapi:texture2d>
+emit: false
+fontSettings:
+  enabled: false

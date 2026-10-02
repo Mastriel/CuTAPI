@@ -1,0 +1,5 @@
+!<cutapi:texture2d>
+generate:
+  - !<cutapi:texture_model>
+    generate:
+      - !<cutapi:item_model> { }

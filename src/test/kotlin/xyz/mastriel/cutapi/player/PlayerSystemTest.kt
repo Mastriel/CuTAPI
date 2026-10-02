@@ -1,5 +1,10 @@
 package xyz.mastriel.cutapi.player
 
+import org.bukkit.entity.Projectile
+import org.bukkit.entity.EntityType
+import org.bukkit.event.entity.EntityToggleGlideEvent
+import org.bukkit.event.entity.ProjectileHitEvent
+import org.bukkit.event.player.PlayerItemHeldEvent
 import org.bukkit.persistence.*
 import xyz.mastriel.cutapi.attachment.*
 import xyz.mastriel.cutapi.data.*
@@ -15,6 +20,8 @@ public class PlayerSystemTest : MockBukkitTest() {
         Schema.registerSchema(TestPlayerAttachment)
         Schema.registerSchema(TestRepeatablePlayerAttachment)
         Schema.registerSchema(TestIntrinsicPlayerAttachment)
+        PlayerSystemTestFixtures.initialize()
+        playerSystemCalls.clear()
     }
 
     @Test
@@ -96,27 +103,66 @@ public class PlayerSystemTest : MockBukkitTest() {
     }
 
     @Test
-    public fun `player systems filter by attachment and sort by priority`() {
+    public fun `player systems filter by attachment and sort by ascending priority`() {
         val player = server.addPlayer()
-        val general = generalPlayerSystem(
-            id("test:player_system/general"),
-            RegistryPriority.Low
-        )
-        val attached = attachmentPlayerSystem(
-            TestPlayerAttachment,
-            id("test:player_system/attached"),
-            RegistryPriority.High
-        )
-        PlayerSystem.modifyRegistry {
-            register(general)
-            register(attached)
-        }
-        PlayerSystem.initialize()
-
-        assertEquals(listOf(general), PlayerSystem.applicableTo(player))
+        assertEquals(listOf(GeneralTestPlayerSystem), PlayerSystem.applicableTo(player))
 
         player.setAttachment(TestPlayerAttachment(1))
-        assertEquals(listOf(attached, general), PlayerSystem.applicableTo(player))
+        assertEquals(
+            listOf(GeneralTestPlayerSystem, AttachedTestPlayerSystem),
+            PlayerSystem.applicableTo(player),
+        )
+    }
+
+    @Test
+    public fun `held slot dispatch selects the event player propagates cancellation and requires attachment`() {
+        val attached = server.addPlayer("attached")
+        val plain = server.addPlayer("plain")
+        attached.setAttachment(TestPlayerAttachment(1))
+        val attachedEvent = PlayerItemHeldEvent(attached, 0, 1)
+        val plainEvent = PlayerItemHeldEvent(plain, 0, 1)
+
+        PlayerSystemEvents().onHeldSlotChange(attachedEvent)
+        PlayerSystemEvents().onHeldSlotChange(plainEvent)
+
+        assertEquals(
+            listOf("general:held:attached", "attached:held:attached", "general:held:plain"),
+            playerSystemCalls,
+        )
+        assertTrue(attachedEvent.isCancelled)
+        assertFalse(plainEvent.isCancelled)
+    }
+
+    @Test
+    public fun `projectile hit dispatch selects the player shooter propagates cancellation and requires attachment`() {
+        val player = server.addPlayer("shooter")
+        player.setAttachment(TestPlayerAttachment(1))
+        val projectile = player.world.spawnEntity(player.location, EntityType.SNOWBALL) as Projectile
+        projectile.shooter = player
+        val event = ProjectileHitEvent(projectile)
+
+        PlayerSystemEvents().onProjectileHit(event)
+
+        assertEquals(
+            listOf("general:projectile:shooter", "attached:projectile:shooter"),
+            playerSystemCalls,
+        )
+        assertTrue(event.isCancelled)
+    }
+
+    @Test
+    public fun `toggle glide dispatch selects the event player propagates cancellation and requires attachment`() {
+        val player = server.addPlayer("glider")
+        player.setAttachment(TestPlayerAttachment(1))
+        val event = EntityToggleGlideEvent(player, true)
+
+        PlayerSystemEvents().onToggleGlide(event)
+
+        assertEquals(
+            listOf("general:glide:glider", "attached:glide:glider"),
+            playerSystemCalls,
+        )
+        assertTrue(event.isCancelled)
     }
 
     @Test
@@ -156,4 +202,60 @@ internal data class TestIntrinsicPlayerAttachment(var amount: Int = 0) : PlayerA
             intrinsicPlayerAttachmentCreations++
             TestIntrinsicPlayerAttachment(12)
         })
+}
+
+private val playerSystemCalls: MutableList<String> = mutableListOf()
+
+private object GeneralTestPlayerSystem : PlayerSystem {
+    override val id: Identifier = id("test:player_system/general")
+    override val priority: RegistryPriority = RegistryPriority.Low
+    override fun prerequisite(target: org.bukkit.entity.Player): Boolean = true
+
+    override fun onHeldSlotChange(context: PlayerHeldSlotChangeContext) {
+        playerSystemCalls += "general:held:${context.player.name}"
+    }
+
+    override fun onProjectileHit(context: PlayerProjectileHitContext) {
+        playerSystemCalls += "general:projectile:${context.player.name}"
+    }
+
+    override fun onToggleGlide(context: PlayerToggleGlideContext) {
+        playerSystemCalls += "general:glide:${context.player.name}"
+    }
+}
+
+private object AttachedTestPlayerSystem : PlayerSystem {
+    override val id: Identifier = id("test:player_system/attached")
+    override val priority: RegistryPriority = RegistryPriority.High
+    override fun prerequisite(target: org.bukkit.entity.Player): Boolean =
+        target.hasAttachment(TestPlayerAttachment)
+
+    override fun onHeldSlotChange(context: PlayerHeldSlotChangeContext) {
+        playerSystemCalls += "attached:held:${context.player.name}"
+        context.event.isCancelled = true
+    }
+
+    override fun onProjectileHit(context: PlayerProjectileHitContext) {
+        playerSystemCalls += "attached:projectile:${context.player.name}"
+        context.event.isCancelled = true
+    }
+
+    override fun onToggleGlide(context: PlayerToggleGlideContext) {
+        playerSystemCalls += "attached:glide:${context.player.name}"
+        context.event.isCancelled = true
+    }
+}
+
+private object PlayerSystemTestFixtures {
+    private var initialized: Boolean = false
+
+    fun initialize() {
+        if (initialized) return
+        PlayerSystem.modifyRegistry {
+            register(GeneralTestPlayerSystem)
+            register(AttachedTestPlayerSystem)
+        }
+        PlayerSystem.initialize()
+        initialized = true
+    }
 }

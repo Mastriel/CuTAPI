@@ -23,6 +23,8 @@ public data class BlockSettings(
     val effectiveTools: Set<ToolCategory>,
     val minimumToolTier: ToolTier?,
     val requiresCorrectToolForDrops: Boolean,
+    /** Whether this block blocks skylight and behaves as a solid redstone conductor. */
+    val occludes: Boolean = true,
 ) {
     init {
         require(!hardness.isNaN()) { "Block hardness cannot be NaN." }
@@ -39,6 +41,7 @@ public data class BlockSettings(
         }
         property(BlockSettings::minimumToolTier, ToolTier.nullable())
         property(BlockSettings::requiresCorrectToolForDrops, VariantSerializer.Boolean)
+        property(BlockSettings::occludes, VariantSerializer.Boolean)
     }) {}
 }
 
@@ -48,6 +51,8 @@ public class BlockSettingsBuilder {
     public var effectiveTools: Set<ToolCategory> = emptySet()
     public var minimumToolTier: ToolTier? = null
     public var requiresCorrectToolForDrops: Boolean = false
+    /** Set to false for glass-like skylight, spawning, suffocation, and redstone behavior. */
+    public var occludes: Boolean = true
 
     public fun build(): BlockSettings = BlockSettings(
         hardness = hardness,
@@ -55,6 +60,7 @@ public class BlockSettingsBuilder {
         effectiveTools = effectiveTools.toSet(),
         minimumToolTier = minimumToolTier,
         requiresCorrectToolForDrops = requiresCorrectToolForDrops,
+        occludes = occludes,
     )
 }
 
@@ -67,10 +73,14 @@ public class BlockDropContext(
     public var drops: MutableList<ItemStack> = mutableListOf(),
     public var experience: Int = 0,
 ) {
-    public fun placementItemOrNull(): ItemStack? = tile.type.placementItemOrNull()?.createItemStack()?.vanilla()
+    private val definition: CustomTile<*>
+        get() = tile.identity.customTile
+            ?: error("Block at ${tile.location} is not a native custom block.")
+
+    public fun placementItemOrNull(): ItemStack? = definition.placementItemOrNull()?.createItemStack()?.vanilla()
 
     public fun requirePlacementItem(): ItemStack = placementItemOrNull()
-        ?: error("Custom block ${tile.type.id} has no associated placement item.")
+        ?: error("Custom block ${definition.id} has no associated placement item.")
 }
 
 internal fun defaultBlockDrops(context: BlockDropContext): List<ItemStack> {

@@ -7,9 +7,11 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.Identifier as MinecraftIdentifier
 import org.bukkit.block.data.BlockData
 import org.bukkit.Material
+import org.bukkit.entity.Display.Brightness
 import org.bukkit.craftbukkit.block.data.CraftBlockData
 import org.bukkit.entity.ItemDisplay.ItemDisplayTransform
 import org.bukkit.inventory.ItemStack
+import org.bukkit.NamespacedKey
 import xyz.mastriel.cutapi.nms.UsesNMS
 import xyz.mastriel.cutapi.registry.Identifier
 
@@ -40,11 +42,15 @@ public sealed interface BlockVisualMethod {
     /**
      * Keeps a vanilla carrier in the chunk and sends one packet-only ItemDisplay per visible block and
      * player. This supports transforms and animation without finite carrier slots, but is unsuitable for
-     * dense terrain. Collision and crack overlays remain on the carrier rather than the display model.
+     * dense terrain. Collision remains on the carrier; generated item models provide breaking visuals.
+     * The default [ItemDisplayTransform.NONE] renders model coordinates at their authored block scale
+     * instead of applying inherited item transforms such as `block/block`'s half-sized `fixed` transform.
      */
     public data class DisplayEntity(
         val carrier: BlockData,
-        val transform: ItemDisplayTransform,
+        val transform: ItemDisplayTransform = ItemDisplayTransform.NONE,
+        /** Optional fixed light levels. Null samples the light incident on the carrier. */
+        val brightness: Brightness? = null,
     ) : BlockVisualMethod
 }
 
@@ -69,6 +75,10 @@ public data class VirtualItemDisplayDefinition(
     val transform: ItemDisplayTransform,
     /** Clockwise rotation around the block's vertical axis. */
     val yRotationDegrees: Int = 0,
+    /** Optional fixed light levels. Null samples the light incident on the carrier. */
+    val brightness: Brightness? = null,
+    /** Generated item models containing the vanilla break overlay for stages 0 through 9. */
+    val breakingItemModels: List<NamespacedKey> = emptyList(),
 )
 
 /** The single client representation resolved for one authoritative native state. */
@@ -103,6 +113,7 @@ public sealed interface BlockVisualAllocation {
     public data class DisplayEntity(
         val carrier: BlockData,
         val transform: ItemDisplayTransform,
+        val brightness: Brightness? = null,
     ) : BlockVisualAllocation
 }
 
@@ -144,6 +155,7 @@ public object BlockVisualAllocator {
                 is BlockVisualMethod.DisplayEntity -> BlockVisualAllocation.DisplayEntity(
                     method.carrier,
                     method.transform,
+                    method.brightness,
                 )
                 BlockVisualMethod.NoteBlock -> allocateFinite(
                     request,

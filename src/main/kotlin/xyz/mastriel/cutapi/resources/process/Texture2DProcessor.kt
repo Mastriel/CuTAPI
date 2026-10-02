@@ -1,310 +1,167 @@
 package xyz.mastriel.cutapi.resources.process
 
 import kotlinx.serialization.*
-import kotlinx.serialization.Serializable
 import net.kyori.adventure.text.*
 import xyz.mastriel.cutapi.*
+import xyz.mastriel.cutapi.gui.*
 import xyz.mastriel.cutapi.resources.*
 import xyz.mastriel.cutapi.resources.builtin.*
 import xyz.mastriel.cutapi.resources.data.minecraft.*
 import xyz.mastriel.cutapi.utils.*
-import java.io.*
+import java.io.File
 import kotlin.math.*
-import xyz.mastriel.cutapi.gui.GuiOverlayCatalog
 
-public val TextureAndModelProcessor: ResourceProcessor = resourceProcessor<Resource> {
-    val textures = this.resources.filterIsInstance<Texture2D>().filter { !it.metadata.transient }
-    val models = this.resources.filterIsInstance<Model3D>()
-
-    // puts the textures in the right places
-    generateTexturesInPack(textures)
-
-    // generates the item model and model files
-    generateTextureItemAndModelJsonFiles(textures)
-
-    // puts the models in the right places
-    generateModelsInPack(models)
-    generateModelItemFiles(models)
-
-    // generates the glyphs
-    generateGlyphs(textures.filterNot { GuiOverlayCatalog.isClaimed(it.ref) })
+/** Emits only texture files and their animation metadata. */
+public val TexturePackProcessor: ResourceProcessor = resourceProcessor<Texture2D> {
+    generateTexturesInPack(resources.filter { it.metadata.emit })
 }
 
-@Serializable
-internal data class MinecraftFontFile(
-    val providers: List<@Contextual MinecraftFontProvider>
-)
+/** Emits only Minecraft model JSON files. */
+public val MinecraftModelPackProcessor: ResourceProcessor = resourceProcessor<MinecraftModel> {
+    generateModelsInPack(resources.filter { it.metadata.emit })
+}
+
+/** Emits only client item-definition JSON files. */
+public val ItemModelPackProcessor: ResourceProcessor = resourceProcessor<ItemModel> {
+    generateItemModelsInPack(resources.filter { it.metadata.emit })
+}
+
+/** Automatic bitmap-font tooling intentionally remains texture metadata rather than item rendering. */
+public val TextureGlyphProcessor: ResourceProcessor = resourceProcessor<Texture2D> {
+    generateGlyphs(resources.filter { it.metadata.emit && !GuiOverlayCatalog.isClaimed(it.ref) })
+}
+
+@kotlinx.serialization.Serializable
+internal data class MinecraftFontFile(val providers: List<@Contextual MinecraftFontProvider>)
 
 @OptIn(ExperimentalSerializationApi::class)
-@Serializable
+@kotlinx.serialization.Serializable
 internal data class MinecraftFontProvider(
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val type: String? = null,
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val file: String? = null,
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val ascent: Int? = null,
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val height: Int? = null,
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val chars: List<String>? = null,
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val advances: MutableMap<String, Int>? = null
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val type: String? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val file: String? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val ascent: Int? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val height: Int? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val chars: List<String>? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val advances: MutableMap<String, Int>? = null,
 )
-
 
 internal fun BitmapFontProvider(
     ref: ResourceRef<Texture2D>,
     ascent: Int,
     height: Int,
-    chars: List<String>
+    chars: List<String>,
 ): MinecraftFontProvider {
-    // why does this need the extension exactly??
-    // it wont work without it.
-    val path = ref.path(withExtension = true, withNamespaceAsFolder = false, fixInvalids = true)
-    val filePath = "${ref.namespace}:item/$path"
-    return MinecraftFontProvider("bitmap", filePath, ascent, height, chars)
+    val path = ref.path(withExtension = true, fixInvalids = true)
+    return MinecraftFontProvider("bitmap", "${ref.minecraftNamespace}:$path", ascent, height, chars)
 }
 
-internal fun SpaceMinecraftFontProvider(
-    advances: MutableMap<String, Int>,
-): MinecraftFontProvider {
-    return MinecraftFontProvider("space", advances = advances)
-}
+internal fun SpaceMinecraftFontProvider(advances: MutableMap<String, Int>): MinecraftFontProvider =
+    MinecraftFontProvider("space", advances = advances)
 
-private const val PRIVATE_USE_AREA_START = 0xFF00
+private const val PRIVATE_USE_AREA_START: Int = 0xFF00
+private var privateUseCharIndex: Int = PRIVATE_USE_AREA_START
 
-private var privateUseCharIndex = PRIVATE_USE_AREA_START
-
-/**
- * Decodes the glyph string into a string that can be used in the game.
- * Any resource refs in the string surrounded by <> will be replaced with the emoji, if applicable.
- * If the resource ref is not a texture, it will be left as is.
- *
- * Example: "hi <cutapi://items/unknown_item.png>" will be decoded to have the glyph
- * for the texture at cutapi://items/unknown_item.png.
- */
-public fun String.decodeGlyph(): String {
-    return this.replace(Regex("<[a-zA-Z0-9:/.\\-_+^#]+>")) { matchResult ->
-        val ref = ref<Resource>(matchResult.value.removePrefix("<").removeSuffix(">"))
-
-        if (ref.resourceType isAtleast Texture2D::class) {
-            ref.cast<Texture2D>().getGlyphOrNull() ?: matchResult.value
-        } else {
-            matchResult.value
-        }
+/** Resolves `<namespace://path.png>` occurrences to generated bitmap glyphs. */
+public fun String.decodeGlyph(): String = replace(Regex("<[a-zA-Z0-9:/.\\-_+^#]+>")) { match ->
+    val resourceRef = ref<Resource>(match.value.removePrefix("<").removeSuffix(">"))
+    if (resourceRef.resourceType isAtleast Texture2D::class) {
+        resourceRef.cast<Texture2D>().getGlyphOrNull() ?: match.value
+    } else {
+        match.value
     }
 }
 
-/**
- * Decodes the glyph string into a string that can be used in the game, then colors it.
- *
- * @see decodeGlyph
- */
-public fun String.decodeGlyphAndColor(): Component {
-    return decodeGlyph().colored
-}
+public fun String.decodeGlyphAndColor(): Component = decodeGlyph().colored
 
 public enum class GlyphSize(public val size: (Texture2D) -> Int) {
     Chat({ 12 }),
     Large({ 16 }),
     Preview({ 64 }),
     Small({ 8 }),
-    Default({ it.data.height })
+    Default({ it.data.height }),
 }
 
 internal fun generateGlyphs(textures: List<Texture2D>) {
-    val list = mutableListOf<MinecraftFontProvider>()
-
+    privateUseCharIndex = PRIVATE_USE_AREA_START
+    val providers = mutableListOf<MinecraftFontProvider>()
     val spaceProvider = SpaceMinecraftFontProvider(mutableMapOf())
-
     for (texture in textures) {
-        val fontSettings = texture.metadata.fontSettings
-        if (!fontSettings.enabled) continue
-
+        val settings = texture.metadata.fontSettings
+        if (!settings.enabled) continue
         for (size in GlyphSize.entries) {
             val height = size.size(texture)
-            var ascent = if (size === GlyphSize.Preview) 6 else fontSettings.ascent ?: (height * 0.75).toInt()
-            val finalHeight = if (size === GlyphSize.Default) fontSettings.height ?: height else height
-
-            ascent = min(ascent, finalHeight)
-
-            val privateUseChar = Character.toChars(privateUseCharIndex).joinToString("")
-            privateUseCharIndex += 1
-            if (fontSettings.advance != null) {
-                val advance = fontSettings.advance
-                val spaceChar = Character.toChars(privateUseCharIndex).joinToString("")
-                privateUseCharIndex += 1
-                spaceProvider.advances!![spaceChar] = advance
-                texture.glyphChars[size] = spaceChar + privateUseChar
+            val finalHeight = if (size === GlyphSize.Default) settings.height ?: height else height
+            val ascent = min(if (size === GlyphSize.Preview) 6 else settings.ascent ?: (height * 0.75).toInt(), finalHeight)
+            val glyph = Character.toChars(privateUseCharIndex++).joinToString("")
+            texture.glyphChars[size] = if (settings.advance == null) {
+                glyph
             } else {
-                texture.glyphChars[size] = privateUseChar
+                val spacer = Character.toChars(privateUseCharIndex++).joinToString("")
+                spaceProvider.advances!![spacer] = settings.advance
+                spacer + glyph
             }
-            list += BitmapFontProvider(texture.ref, ascent, finalHeight, listOf(privateUseChar))
+            providers += BitmapFontProvider(texture.ref, ascent, finalHeight, listOf(glyph))
         }
     }
-
-    val fontFile = MinecraftFontFile(list + spaceProvider)
-    val jsonString = CuTAPI.json.encodeToString(fontFile)
-    val packTmp = CuTAPI.resourcePackManager.tempFolder
-    File(packTmp, "assets/minecraft/font/").mkdirs()
-    File(packTmp, "assets/minecraft/font/default.json").createAndWrite(jsonString)
+    val file = File(CuTAPI.resourcePackManager.tempFolder, "assets/minecraft/font/default.json")
+    file.parentFile.mkdirs()
+    file.createAndWrite(CuTAPI.json.encodeToString(MinecraftFontFile(providers + spaceProvider)))
 }
 
-internal fun String.fixInvalidResourcePath(): String {
-    return CuTAPI.resourcePackManager.sanitizeName(this)
-}
+internal fun String.fixInvalidResourcePath(): String = sanitizeResourcePath(this)
 
 internal fun generateTexturesInPack(textures: List<Texture2D>) {
-    // prepare textures by copying them to their folder, and create the item model json files.
-    textures.forEach { texture ->
-        val texturesFolder = CuTAPI.resourcePackManager.getTexturesFolder(texture.ref.plugin)
-
+    for (texture in textures) {
         applyPostProcessing(texture)
-        texture.saveTo(texturesFolder appendPath texture.ref.path(withExtension = true, fixInvalids = true))
-
-        val metadata = texture.metadata
-        val animationData = metadata.animation
-        if (animationData != null) {
-            generateAnimationMcMeta(texture, texturesFolder, animationData)
+        val file = File(CuTAPI.resourcePackManager.tempFolder, texture.ref.texturePackPath())
+        writePackResource(file, texture.toBytes())
+        texture.metadata.animation?.let { animation ->
+            writePackResource(
+                File("${file.path}.mcmeta"),
+                CuTAPI.json.encodeToString(AnimationMcMeta(animation)).toByteArray(),
+            )
         }
-
-        // if there's no texture materials, then we don't need
-        // item model data for it since it's not being used for anything.
-        if (texture.materials.isEmpty()) return@forEach
-
-        val modelData = texture.createItemModelData()
-        val jsonString = CuTAPI.json.encodeToString(modelData)
-
-        val path = texture.ref.path(
-            withExtension = false,
-            withNamespaceAsFolder = false,
-            withNamespace = false,
-            fixInvalids = true
-        )
-        val modelFile = CuTAPI.resourcePackManager.getModelFolder(texture.root.namespace) appendPath "/$path.json"
-
-        modelFile.mkdirsOfParent()
-        modelFile.createAndWrite(jsonString)
     }
 }
 
-internal fun generateModelsInPack(models: List<Model3D>) {
-    // for this one we only need to put the models in the correct folder.
-    models.forEach { model ->
-        val modelsFolder = CuTAPI.resourcePackManager.getModelFolder(model.ref.root.namespace)
-        model.saveTo(modelsFolder appendPath model.ref.path(withExtension = false, fixInvalids = true) + ".json")
+internal fun generateModelsInPack(models: List<MinecraftModel>) {
+    for (model in models) {
+        val file = File(CuTAPI.resourcePackManager.tempFolder, model.ref.minecraftModelPackPath())
+        writePackResource(file, CuTAPI.json.encodeToString(model.toPackData()).toByteArray())
     }
 }
 
-private fun generateAnimationMcMeta(texture: Texture2D, texturesFolder: File, animationData: Animation) {
-    val file = texturesFolder appendPath CuTAPI.resourcePackManager.sanitizeName(texture.ref.path) + ".mcmeta"
+internal fun generateItemModelsInPack(models: List<ItemModel>) {
+    for (model in models) {
+        val file = File(CuTAPI.resourcePackManager.tempFolder, model.ref.itemModelPackPath())
+        writePackResource(file, CuTAPI.json.encodeToString(model.toPackData()).toByteArray())
+    }
+}
 
-    val mcmetaJson = CuTAPI.json.encodeToString(AnimationMcMeta(animationData))
+internal fun ResourceRef<Texture2D>.texturePackPath(): String =
+    "assets/$minecraftNamespace/textures/${path(withExtension = true, fixInvalids = true)}"
 
-    file.createAndWrite(mcmetaJson)
+internal fun ResourceRef<MinecraftModel>.minecraftModelPackPath(): String =
+    "assets/$minecraftNamespace/models/${path(withExtension = false, fixInvalids = true)}.json"
+
+internal fun ResourceRef<ItemModel>.itemModelPackPath(): String =
+    "assets/$minecraftNamespace/items/${path(withExtension = false, fixInvalids = true)}.json"
+
+internal fun writePackResource(file: File, contents: ByteArray) {
+    if (file.exists()) {
+        require(file.readBytes().contentEquals(contents)) {
+            "Resource-pack ownership conflict at ${file.path}."
+        }
+        return
+    }
+    file.parentFile.mkdirs()
+    file.writeBytes(contents)
 }
 
 private fun applyPostProcessing(texture: Texture2D) {
-    texture.metadata.postProcessors.forEach { process(texture, it) }
+    texture.metadata.postProcessors.forEach { table -> process(texture, table) }
 }
 
 private fun <O : Any> process(texture: Texture2D, table: TexturePostprocessTable<O>) {
     table.processor.process(texture, TexturePostProcessContext(table.options))
-}
-
-private fun generateModelFile(texture: Texture2D) {
-    val location = texture.getItemModel().getLocationWithItemFolder()
-
-    val itemModelJson = texture.metadata.itemModelData?.copy(
-        _textures = texture.metadata.itemModelData.textures + mapOf("layer0" to location)
-    ) ?: ItemModelData(parent = "minecraft:item/generated", _textures = mapOf("layer0" to location))
-
-    val jsonString = CuTAPI.json.encodeToString(itemModelJson)
-
-    val path = texture.ref.path(withExtension = false, fixInvalids = true)
-    val file =
-        CuTAPI.resourcePackManager.getModelFolder(texture.ref.namespace) appendPath "${path}.json"
-
-    file.parentFile.mkdirs()
-    file.writeText(jsonString)
-}
-
-@Serializable
-@OptIn(ExperimentalSerializationApi::class)
-private data class ItemModelFile(
-    @SerialName("hand_animation_on_swap")
-    val handAnimationOnSwap: Boolean,
-    val model: ModelData,
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    @SerialName("oversized_in_gui")
-    val oversizedInGui: Boolean = false,
-) {
-
-    @Serializable
-    enum class ModelType {
-        @SerialName("minecraft:model")
-        Model
-    }
-
-    @Serializable
-    data class ModelData(
-        val type: ModelType,
-        val model: VanillaRef
-    )
-}
-
-internal fun encodeItemModelFile(
-    model: VanillaItemModel,
-    handAnimationOnSwap: Boolean,
-    oversizedInGui: Boolean = false,
-): String = CuTApiJson.encodeToString(
-    ItemModelFile(
-        handAnimationOnSwap = handAnimationOnSwap,
-        model = ItemModelFile.ModelData(
-            type = ItemModelFile.ModelType.Model,
-            model = VanillaRef(model.location),
-        ),
-        oversizedInGui = oversizedInGui,
-    )
-)
-
-// we generate 2 different item models, one with no hand swap animation and one with it
-private fun generateItemModelFiles(texture: TextureLike) {
-    val folder = CuTAPI.resourcePackManager.getItemModelFolder(texture.ref.namespace)
-
-    val path = texture.ref.path(withExtension = false)
-    val noSwapFile = folder appendPath "${path}__noswap.json"
-    val swapFile = folder appendPath "${path}__swap.json"
-
-    noSwapFile.parentFile.mkdirs()
-    swapFile.parentFile.mkdirs()
-
-    noSwapFile.createAndWrite(
-        encodeItemModelFile(
-            model = texture.getItemModel(),
-            handAnimationOnSwap = false,
-            oversizedInGui = texture.oversizedInGui,
-        )
-    )
-    swapFile.createAndWrite(
-        encodeItemModelFile(
-            model = texture.getItemModel(),
-            handAnimationOnSwap = true,
-            oversizedInGui = texture.oversizedInGui,
-        )
-    )
-}
-
-private fun generateTextureItemAndModelJsonFiles(textures: Collection<Texture2D>) {
-    for (texture in textures) {
-        generateModelFile(texture)
-        generateItemModelFiles(texture)
-    }
-}
-
-private fun generateModelItemFiles(textures: Collection<Model3D>) {
-    for (texture in textures) {
-        generateItemModelFiles(texture)
-    }
 }

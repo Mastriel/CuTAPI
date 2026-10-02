@@ -81,5 +81,10 @@
       <option name="name" value="ParchmentMC" />
       <option name="url" value="https://maven.parchmentmc.org/" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="aikar" />
+      <option name="name" value="aikar" />
+      <option name="url" value="https://repo.aikar.co/nexus/content/repositories/aikar/" />
+    </remote-repository>
   </component>
 </project>

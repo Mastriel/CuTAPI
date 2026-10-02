@@ -104,6 +104,15 @@ public class GuiBuilder<C, V : InventoryView> internal constructor(
         putElement(GuiSlotBuilder<C, V>().apply(configure).build(slot))
     }
 
+    internal fun itemFallback(slot: GuiSlot): GuiRenderContext<C, V>.() -> ItemStack? {
+        val rawSlot = type.layout.toRaw(slot)
+        val fallback = elements.firstOrNull { type.layout.toRaw(it.slot) == rawSlot }
+            ?: return { null }
+        return {
+            if (fallback.visible(this)) fallback.item?.invoke(this) else null
+        }
+    }
+
     public fun boundSlot(
         port: GuiSlotPort,
         slot: Int,

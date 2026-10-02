@@ -1,5 +1,10 @@
-itemModelData:
-  parent: cutapi:ui/inventory_bg
-  textures:
-    "1": "{{@ref}}"
-    "2": cutapi://ui/inventory_bg.png
+generate:
+  - !<cutapi:texture_model>
+    parent: cutapi://ui/inventory_bg.model.json
+    textures:
+      "1": "{{@ref}}"
+      "2": cutapi://ui/inventory_bg.png
+    generate:
+      - !<cutapi:item_model>
+        hand_animation_on_swap: false
+        oversized_in_gui: true

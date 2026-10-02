@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Iterator;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 /**
@@ -31,6 +32,7 @@ public final class NativeItemCodecHooks implements IdMap<Object> {
     private static volatile Function<Holder<Item>, Holder<Item>> holderEncoder;
     private static volatile BiConsumer<Registry<?>, TagNetworkSerialization.NetworkPayload> tagProjector;
     private static volatile BiFunction<RegistryFriendlyByteBuf, Component, Component> componentEncoder;
+    private static volatile BiPredicate<Item, Item> backingItemMatcher;
     private static volatile Function<Object, Object> blockStateEncoder;
     private static volatile Function<Object, Object> blockStateProjector;
     private static volatile int clientBlockStateCount = -1;
@@ -58,6 +60,7 @@ public final class NativeItemCodecHooks implements IdMap<Object> {
         Function<Holder<Item>, Holder<Item>> holder,
         BiConsumer<Registry<?>, TagNetworkSerialization.NetworkPayload> tags,
         BiFunction<RegistryFriendlyByteBuf, Component, Component> components,
+        BiPredicate<Item, Item> backingItems,
         Function<Object, Object> blockStates,
         Function<Object, Object> projectedBlockStates,
         int vanillaBlockStateCount
@@ -67,6 +70,7 @@ public final class NativeItemCodecHooks implements IdMap<Object> {
         holderEncoder = holder;
         tagProjector = tags;
         componentEncoder = components;
+        backingItemMatcher = backingItems;
         blockStateEncoder = blockStates;
         blockStateProjector = projectedBlockStates;
         clientBlockStateCount = vanillaBlockStateCount;
@@ -109,6 +113,7 @@ public final class NativeItemCodecHooks implements IdMap<Object> {
         holderEncoder = null;
         tagProjector = null;
         componentEncoder = null;
+        backingItemMatcher = null;
         blockStateEncoder = null;
         blockStateProjector = null;
         clientBlockStateCount = -1;
@@ -143,6 +148,11 @@ public final class NativeItemCodecHooks implements IdMap<Object> {
     public static Component encodeComponent(RegistryFriendlyByteBuf buffer, Component component) {
         var encoder = componentEncoder;
         return encoder == null ? component : encoder.apply(buffer, component);
+    }
+
+    public static boolean matchesBackingItem(Item actual, Item expected) {
+        var matcher = backingItemMatcher;
+        return matcher != null && matcher.test(actual, expected);
     }
 
     public static Object encodeBlockState(Object state) {
